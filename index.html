@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Crane | Loan Dashboard</title>
+  <meta name="description" content="Professional loan management dashboard with real-time tracking, AI insights, and seamless repayment">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="dashboard.css">
+</head>
+<body>
+  <div class="page-glow page-glow-left"></div>
+  <div class="page-glow page-glow-right"></div>
+
+  <div class="app-shell">
+    <!-- Header Navigation -->
+    <header class="dashboard-header">
+      <div class="header-brand">
+        <div class="logo-icon"><img src="img/black crane.png" alt=""></div>
+        <span>Crane</span>
+      </div>
+      <nav class="header-nav">
+        <a href="#" class="nav-link active" data-view="overview">Dashboard</a>
+        <a href="#" class="nav-link" data-view="loans">My Loans</a>
+        <a href="#" class="nav-link" data-view="repay">Repay</a>
+        <a href="#" class="nav-link" data-view="score">Credit Score</a>
+        <a href="#" class="nav-link" data-view="insights">AI Insights</a>
+        <a href="#" class="nav-link" data-view="referrals">Referrals</a>
+      </nav>
+      <div class="header-actions">
+        <button type="button" class="mobile-search-btn" id="mobile-search-toggle">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+        </button>
+        <button type="button" class="icon-btn" id="notification-btn">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+            <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+          </svg>
+          <span class="notification-badge">3</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Mobile Sidebar Overlay -->
+    <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+    <!-- Dashboard Sidebar (for mobile) -->
+    <aside class="dashboard-sidebar">
+      <div class="sidebar-header">
+        <div class="logo-icon">S</div>
+        <span>Crane</span>
+      </div>
+      <nav class="sidebar-menu">
+        <a href="#" class="menu-item active" data-view="overview">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="7" height="7"></rect>
+            <rect x="14" y="3" width="7" height="7"></rect>
+            <rect x="14" y="14" width="7" height="7"></rect>
+            <rect x="3" y="14" width="7" height="7"></rect>
+          </svg>
+          <span>Dashboard</span>
+        </a>
+        <a href="#" class="menu-item" data-view="loans">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
+            <line x1="1" y1="10" x2="23" y2="10"></line>
+          </svg>
+          <span>My Loans</span>
+        </a>
+        <a href="#" class="menu-item" data-view="repay">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M23 4v6h-6"></path>
+            <path d="M1 20v-6h6"></path>
+            <path d="M3.51 9a9 9 0 0 1 14.13-3.36L23 10"></path>
+            <path d="M20.49 15a9 9 0 0 1-14.13 3.36L1 14"></path>
+          </svg>
+          <span>Repay</span>
+        </a>
+        <a href="#" class="menu-item" data-view="score">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+          </svg>
+          <span>Credit Score</span>
+        </a>
+        <a href="#" class="menu-item" data-view="insights">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M9 18h6"></path>
+            <path d="M10 22h4"></path>
+            <path d="M12 2a7 7 0 0 0-4 12.75c.6.45 1 1.13 1 1.88V17h6v-.37c0-.75.4-1.43 1-1.88A7 7 0 0 0 12 2z"></path>
+          </svg>
+          <span>AI Insights</span>
+        </a>
+        <a href="#" class="menu-item" data-view="referrals">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M16 21v-1a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v1"></path>
+            <circle cx="8.5" cy="7" r="4"></circle>
+            <line x1="20" y1="8" x2="20" y2="14"></line>
+            <line x1="23" y1="11" x2="17" y2="11"></line>
+          </svg>
+          <span>Referrals</span>
+        </a>
+      </nav>
+    </aside>
+    <main class="dashboard-content">
+      <section class="view-section active" id="overview-view">
+        <div class="dashboard-grid">
+          <!-- Welcome Header -->
+          <article class="welcome-header-card">
+            <div class="welcome-text">
+              <h1>Welcome, <span id="user-name">User</span></h1>
+            </div>
+            <button type="button" class="refresh-btn" id="refresh-dashboard">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M23 4v6h-6"></path>
+                <path d="M1 20v-6h6"></path>
+                <path d="M3.51 9a9 9 0 0 1 14.13-3.36L23 10"></path>
+                <path d="M20.49 15a9 9 0 0 1-14.13 3.36L1 14"></path>
+              </svg>
+              <span>Refresh</span>
+            </button>
+          </article>
+
+        <!-- First Div - 30vh height -->
+        <article class="card first-section-card">
+          <div class="section-content">
+            <canvas class="section-wave-canvas" id="section-wave-canvas" aria-hidden="true"></canvas>
+            <img src="img/black crane.png" alt="Black crane" class="section-corner-image">
+            <!-- Content for first section -->
+          </div>
+        </article>
+
+          <!-- Second Div - 40vh height -->
+          <article class="card second-section-card">
+            <div class="section-content">
+              <!-- Content for second section -->
+            </div>
+          </article>
+
+          <!-- Three Flex Div Boxes -->
+          <article class="card three-flex-card">
+            <div class="flex-row">
+              <div class="flex-box">Box 1</div>
+              <div class="flex-box">Box 2</div>
+              <div class="flex-box">Box 3</div>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="view-section" id="loans-view">
+        <div class="dashboard-grid">
+          <article class="card loans-summary-card">
+            <div class="section-heading">
+              <div>
+                <h2>Active loans</h2>
+              </div>
+              <button type="button" class="text-button" id="view-all-loans">View all</button>
+            </div>
+            <div class="loans-list" id="loans-list"></div>
+          </article>
+
+          <article class="card loans-detail-card">
+            <div class="section-heading">
+              <div>
+                <h2>Loan portfolio</h2>
+              </div>
+              <div class="loan-status-pills">
+                <button type="button" class="status-pill active" data-status="all">All</button>
+                <button type="button" class="status-pill" data-status="active">Active</button>
+                <button type="button" class="status-pill" data-status="overdue">Overdue</button>
+                <button type="button" class="status-pill" data-status="completed">Completed</button>
+              </div>
+            </div>
+            <div class="loans-detail-list" id="loans-detail-list"></div>
+          </article>
+        </div>
+      </section>
+
+      <section class="view-section" id="repay-view">
+        <div class="dashboard-grid">
+          <article class="card repayment-methods-card">
+            <div class="section-heading">
+              <div>
+                <h2>Repayment methods</h2>
+              </div>
+            </div>
+            <div class="payment-methods">
+              <button type="button" class="payment-method active">
+                <div class="method-logo">M</div>
+                <span>MTN Mobile Money</span>
+              </button>
+              <button type="button" class="payment-method">
+                <div class="method-logo">A</div>
+                <span>Airtel Money</span>
+              </button>
+              <button type="button" class="payment-method">
+                <div class="method-logo">B</div>
+                <span>Bank Transfer</span>
+              </button>
+              <button type="button" class="payment-method">
+                <div class="method-logo">C</div>
+                <span>Bank Card</span>
+              </button>
+            </div>
+          </article>
+
+          <article class="card payment-form-card">
+            <div class="section-heading">
+              <div>
+                <h2>Make a payment</h2>
+              </div>
+              <button type="button" class="text-button" id="view-loan-options">Review loans</button>
+            </div>
+            <div class="payment-form">
+              <div class="form-group">
+                <label for="loan-select">Loan</label>
+                <select id="loan-select">
+                  <option>Loan L2024001</option>
+                  <option>Loan L2024002</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Payment type</label>
+                <div class="payment-type-options">
+                  <label class="radio-option">
+                    <input type="radio" name="payment-type" value="full" checked>
+                    <span>Full installment</span>
+                  </label>
+                  <label class="radio-option">
+                    <input type="radio" name="payment-type" value="partial">
+                    <span>Partial payment</span>
+                  </label>
+                </div>
+              </div>
+              <div class="form-group" id="partial-amount-group" style="display: none;">
+                <label for="partial-amount">Partial amount</label>
+                <input type="number" id="partial-amount" placeholder="Enter amount">
+              </div>
+              <div class="payment-summary">
+                <div class="summary-row">
+                  <span>Installment due</span>
+                  <strong>UGX 420,000</strong>
+                </div>
+                <div class="summary-row">
+                  <span>Service fee</span>
+                  <strong>UGX 0</strong>
+                </div>
+                <div class="summary-row total">
+                  <span>Total today</span>
+                  <strong>UGX 420,000</strong>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <article class="card early-repayment-card">
+            <div class="section-heading">
+              <div>
+                <h2>Early repayment</h2>
+              </div>
+            </div>
+            <div class="early-repay-details">
+              <div class="detail-row">
+                <span>Outstanding principal</span>
+                <strong>UGX 1,185,000</strong>
+              </div>
+              <div class="detail-row">
+                <span>Early payoff benefit</span>
+                <strong>UGX 30,000</strong>
+              </div>
+              <div class="detail-row highlight">
+                <span>Total payoff today</span>
+                <strong>UGX 1,155,000</strong>
+              </div>
+            </div>
+            <button type="button" class="button button-primary full-width" id="early-repay-btn">Repay early</button>
+          </article>
+
+          <article class="card autodebit-setup-card">
+            <div class="section-heading">
+              <div>
+                <h2>Auto-debit setup</h2>
+              </div>
+            </div>
+            <div class="autodebit-form">
+              <div class="form-group">
+                <label for="autodebit-day">Debit day</label>
+                <select id="autodebit-day">
+                  <option>2 days before due date</option>
+                  <option>1 day before due date</option>
+                  <option>On due date</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="autodebit-account">Source account</label>
+                <select id="autodebit-account">
+                  <option>MTN Mobile Money</option>
+                  <option>Airtel Money</option>
+                  <option>Bank account</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="checkbox-label">
+                  <input type="checkbox" id="autodebit-agree">
+                  <span>I allow automatic deductions on the selected schedule.</span>
+                </label>
+                <button type="button" class="button button-secondary" id="setup-autodebit">Enable auto-debit</button>
+              </div>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="view-section" id="score-view">
+        <div class="dashboard-grid">
+          <article class="card score-detail-card">
+            <div class="section-heading">
+              <div>
+                <h2>Credit score</h2>
+              </div>
+            </div>
+            <div class="score-visual">
+              <div class="score-circle">
+                <svg width="200" height="200" viewBox="0 0 200 200" aria-hidden="true">
+                  <circle class="score-bg" cx="100" cy="100" r="88" fill="none" stroke-width="14"></circle>
+                  <circle class="score-fill" cx="100" cy="100" r="88" fill="none" stroke-width="14" stroke-dasharray="553" stroke-dashoffset="70"></circle>
+                </svg>
+                <div class="score-center">
+                  <strong class="big-score" id="credit-score-display">742</strong>
+                  <span class="score-grade">Strong standing</span>
+                </div>
+              </div>
+            </div>
+            <div class="score-breakdown">
+              <h3>Score drivers</h3>
+              <div class="breakdown-item">
+                <div class="breakdown-header">
+                  <span>Repayment consistency</span>
+                  <span class="breakdown-value">88%</span>
+                </div>
+                <div class="breakdown-bar"><div class="breakdown-fill" style="width: 88%;"></div></div>
+              </div>
+              <div class="breakdown-item">
+                <div class="breakdown-header">
+                  <span>Debt utilization</span>
+                  <span class="breakdown-value">64%</span>
+                </div>
+                <div class="breakdown-bar"><div class="breakdown-fill" style="width: 64%;"></div></div>
+              </div>
+              <div class="breakdown-item">
+                <div class="breakdown-header">
+                  <span>History depth</span>
+                  <span class="breakdown-value">76%</span>
+                </div>
+                <div class="breakdown-bar"><div class="breakdown-fill" style="width: 76%;"></div></div>
+              </div>
+            </div>
+          </article>
+
+          <article class="card score-tips-card">
+            <div class="section-heading">
+              <div>
+                <h2>How to improve</h2>
+              </div>
+            </div>
+            <div class="tips-list">
+              <div class="tip-item">
+                <div class="tip-number">1</div>
+                <div class="tip-content">
+                  <h4>Repay before the deadline</h4>
+                  <p>Even one early payment can strengthen your recent repayment streak.</p>
+                </div>
+              </div>
+              <div class="tip-item">
+                <div class="tip-number">2</div>
+                <div class="tip-content">
+                  <h4>Keep balances lighter</h4>
+                  <p>Reducing the amount left outstanding improves utilization signals.</p>
+                </div>
+              </div>
+              <div class="tip-item">
+                <div class="tip-number">3</div>
+                <div class="tip-content">
+                  <h4>Use one trusted repayment route</h4>
+                  <p>Stable device and payment behavior lowers servicing risk.</p>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <article class="card score-history-card">
+            <div class="section-heading">
+              <div>
+                <h2>Score history</h2>
+              </div>
+            </div>
+            <div class="chart-container">
+              <canvas id="score-history-chart"></canvas>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="view-section" id="insights-view">
+        <div class="dashboard-grid">
+          <article class="card ai-recommendations-card">
+            <div class="section-heading">
+              <div>
+                <h2>Recommended next offers</h2>
+              </div>
+            </div>
+            <div class="recommendations-list">
+              <div class="recommendation-card featured">
+                <span class="rec-badge">Best fit</span>
+                <div class="rec-header">
+                  <h3>Growth Boost</h3>
+                  <span class="rec-amount">UGX 5,000,000</span>
+                </div>
+                <div class="rec-details">
+                  <div class="rec-detail"><span>Rate</span><strong>1.2% monthly</strong></div>
+                  <div class="rec-detail"><span>Term</span><strong>12 months</strong></div>
+                  <div class="rec-detail"><span>Payout</span><strong>14 minutes</strong></div>
+                </div>
+              </div>
+              <div class="recommendation-card">
+                <div class="rec-header">
+                  <h3>Fast Flex</h3>
+                  <span class="rec-amount">UGX 3,200,000</span>
+                </div>
+                <div class="rec-details">
+                  <div class="rec-detail"><span>Rate</span><strong>1.5% monthly</strong></div>
+                  <div class="rec-detail"><span>Term</span><strong>6 months</strong></div>
+                  <div class="rec-detail"><span>Payout</span><strong>11 minutes</strong></div>
+                </div>
+              </div>
+              <div class="recommendation-card">
+                <div class="rec-header">
+                  <h3>Premium Lift</h3>
+                  <span class="rec-amount">UGX 7,800,000</span>
+                </div>
+                <div class="rec-details">
+                  <div class="rec-detail"><span>Rate</span><strong>1.1% monthly</strong></div>
+                  <div class="rec-detail"><span>Term</span><strong>18 months</strong></div>
+                  <div class="rec-detail"><span>Payout</span><strong>18 minutes</strong></div>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <article class="card spending-analysis-card">
+            <div class="section-heading">
+              <div>
+                <h2>Spending mix</h2>
+              </div>
+            </div>
+            <div class="chart-container">
+              <canvas id="spending-chart"></canvas>
+            </div>
+            <div class="spending-summary">
+              <div class="spending-item">
+                <span class="spending-dot" style="background: #0d8b63;"></span>
+                <span>Inventory</span>
+                <strong class="spending-value">65%</strong>
+              </div>
+              <div class="spending-item">
+                <span class="spending-dot" style="background: #e6b84e;"></span>
+                <span>School fees</span>
+                <strong class="spending-value">25%</strong>
+              </div>
+              <div class="spending-item">
+                <span class="spending-dot" style="background: #2a5968;"></span>
+                <span>Emergency cash</span>
+                <strong class="spending-value">10%</strong>
+              </div>
+            </div>
+          </article>
+
+          <article class="card risk-analysis-card">
+            <div class="section-heading">
+              <div>
+                <h2>Risk review</h2>
+              </div>
+            </div>
+            <div class="risk-meter">
+              <div class="risk-label">Overall account risk</div>
+              <div class="risk-bar"><div class="risk-fill low"></div></div>
+              <div class="risk-value">Low risk</div>
+            </div>
+            <div class="risk-factors">
+              <div class="risk-factor">
+                <span class="factor-icon positive">+</span>
+                <span>Clean recent repayment history</span>
+              </div>
+              <div class="risk-factor">
+                <span class="factor-icon positive">+</span>
+                <span>Stable borrower activity over multiple cycles</span>
+              </div>
+              <div class="risk-factor">
+                <span class="factor-icon positive">+</span>
+                <span>Low overdue exposure this quarter</span>
+              </div>
+              <div class="risk-factor">
+                <span class="factor-icon positive">+</span>
+                <span>Strong response to reminders and prompts</span>
+              </div>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="view-section" id="referrals-view">
+        <div class="dashboard-grid">
+          <article class="card referral-hero-card">
+            <div class="section-heading">
+              <div>
+                <h2>Referral center</h2>
+              </div>
+            </div>
+            <div class="referral-code-display">
+              <span class="code-label">Your referral code</span>
+              <strong class="code-value" id="referral-code">SWIFTLEND-JD42</strong>
+              <button type="button" class="copy-btn" id="copy-referral-code">Copy</button>
+            </div>
+            <div class="referral-link-display">
+              <label class="link-label" for="referral-link">Shareable link</label>
+              <input id="referral-link" type="text" value="https://swiftlend.app/invite/SWIFTLEND-JD42" readonly>
+            </div>
+          </article>
+
+          <article class="card referral-earnings-card">
+            <div class="section-heading">
+              <div>
+                <h2>Earnings trend</h2>
+              </div>
+            </div>
+            <div class="chart-container">
+              <canvas id="earnings-chart"></canvas>
+            </div>
+          </article>
+
+          <article class="card recent-referrals-card">
+            <div class="section-heading">
+              <div>
+                <h2>Recent referrals</h2>
+              </div>
+            </div>
+            <div class="table-container">
+              <table class="referrals-table">
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Date</th>
+                    <th>Level</th>
+                    <th>Earned</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Sarah K.</td>
+                    <td>Apr 15, 2024</td>
+                    <td>Level 1</td>
+                    <td>UGX 50,000</td>
+                    <td><span class="status-badge paid">Paid</span></td>
+                  </tr>
+                  <tr>
+                    <td>Mike R.</td>
+                    <td>Apr 10, 2024</td>
+                    <td>Level 1</td>
+                    <td>UGX 50,000</td>
+                    <td><span class="status-badge paid">Paid</span></td>
+                  </tr>
+                  <tr>
+                    <td>Jane D.</td>
+                    <td>Apr 5, 2024</td>
+                    <td>Level 2</td>
+                    <td>UGX 25,000</td>
+                    <td><span class="status-badge pending">Pending</span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </article>
+        </div>
+      </section>
+    </main>
+
+    <!-- Fixed Footer -->
+    <footer class="footer-card">
+      <div class="footer-grid">
+        <button type="button" class="footer-box mobile-menu-btn" id="mobile-menu-toggle" aria-label="Open navigation menu">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M3 10.5 12 3l9 7.5"></path>
+            <path d="M5 9.5V21h14V9.5"></path>
+          </svg>
+        </button>
+        <div class="footer-box" aria-label="Money">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <rect x="2" y="6" width="20" height="12" rx="2"></rect>
+            <circle cx="12" cy="12" r="2.5"></circle>
+            <path d="M6 12h.01M18 12h.01"></path>
+          </svg>
+        </div>
+        <div class="footer-box" aria-label="Chat">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"></path>
+          </svg>
+        </div>
+        <div class="footer-box" aria-label="Profile">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <circle cx="12" cy="8" r="4"></circle>
+            <path d="M4 21a8 8 0 0 1 16 0"></path>
+          </svg>
+        </div>
+      </div>
+    </footer>
+
+    <!-- Notification Panel (Slide-out) -->
+    <div class="notification-panel" id="notification-panel">
+      <div class="panel-header">
+        <h3>Notifications</h3>
+        <button type="button" class="close-btn" id="close-notifications">&times;</button>
+      </div>
+      <div class="panel-content">
+        <div class="notification-item unread">
+          <div class="notification-icon success">&#10003;</div>
+          <div class="notification-content">
+            <p class="notification-title">Payment Received</p>
+            <p class="notification-text">Your payment of UGX 250,000 has been processed.</p>
+            <span class="notification-time">2 hours ago</span>
+          </div>
+        </div>
+        <div class="notification-item unread">
+          <div class="notification-icon warning">!</div>
+          <div class="notification-content">
+            <p class="notification-title">Due Date Reminder</p>
+            <p class="notification-text">Your loan payment is due in 5 days.</p>
+            <span class="notification-time">Yesterday</span>
+          </div>
+        </div>
+        <div class="notification-item unread">
+          <div class="notification-icon info">i</div>
+          <div class="notification-content">
+            <p class="notification-title">Credit Score Updated</p>
+            <p class="notification-text">Your credit score has increased by 15 points.</p>
+            <span class="notification-time">3 days ago</span>
+          </div>
+        </div>
+        <div class="notification-item">
+          <div class="notification-icon success">&#10003;</div>
+          <div class="notification-content">
+            <p class="notification-title">Loan Approved</p>
+            <p class="notification-text">Your loan application for UGX 1,200,000 has been approved.</p>
+            <span class="notification-time">1 week ago</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal" id="payment-modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Confirm Payment</h3>
+          <button type="button" class="close-btn" id="close-payment-modal">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="payment-confirmation">
+            <div class="confirm-amount">
+              <span class="amount-label">Amount to Pay</span>
+              <span class="amount-value" id="confirm-amount">UGX 1,200,000</span>
+            </div>
+            <div class="confirm-method">
+              <span class="method-label">Payment Method</span>
+              <span class="method-value" id="confirm-method">MTN Mobile Money</span>
+            </div>
+            <p class="payment-instructions">You will receive a prompt on your mobile money to confirm the payment.</p>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="button button-secondary" id="cancel-payment">Cancel</button>
+          <button type="button" class="button button-primary" id="confirm-payment-btn">Confirm Payment</button>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="dashboard.js"></script>
+</body>
+</html>
