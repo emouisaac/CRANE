@@ -152,6 +152,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // Initialize Dashboard
 function initializeDashboard() {
   updateWelcomeHeader();
+  updateLoanBalance();
   updateHeroStats();
   initializeMarketingDashboard();
   populateLoansList();
@@ -258,6 +259,14 @@ function updateWelcomeHeader() {
   }
 }
 
+// Update Loan Balance Display
+function updateLoanBalance() {
+  const balanceElement = document.getElementById('loan-balance-amount');
+  if (balanceElement && dashboardState.user.remainingBalance) {
+    balanceElement.textContent = currencyFormatter.format(dashboardState.user.remainingBalance);
+  }
+}
+
 // Update Hero Stats
 function updateHeroStats() {
   const { user } = dashboardState;
@@ -269,91 +278,145 @@ function updateHeroStats() {
 // Initialize Marketing Dashboard
 function initializeMarketingDashboard() {
   updateMarketingPulse();
-  renderOfferStack();
-  syncMarketingOffer();
-  syncMarketingTicker();
+  updateActiveOffer();
+  updateMarketingTicker();
+  renderOfferCountdown();
+  setupMarketingRotation();
 }
 
-// Update Marketing Pulse
+// Update Marketing Pulse (live stats)
 function updateMarketingPulse() {
   const { pulse } = dashboardState.marketing;
-  setText('pulse-approved', pulse.approvedToday);
-  setText('pulse-average-ticket', pulse.averageTicket);
-  setText('pulse-same-day', pulse.sameDay);
-  setText('pulse-rating', pulse.rating);
-  setText('marketing-approval-rate', pulse.approvalRate);
-  setText('marketing-payout-speed', pulse.payoutSpeed);
-  setText('marketing-repeat-borrowers', pulse.repeatBorrowers);
+  setText('stat-approved', pulse.approvedToday);
+  setText('stat-approval', pulse.approvalRate);
+  setText('stat-repeat', pulse.repeatBorrowers);
 }
 
-// Sync Marketing Offer
-function syncMarketingOffer() {
+// Update Active Offer Display
+function updateActiveOffer() {
   const offer = dashboardState.marketing.offers[marketingOfferIndex];
   if (!offer) return;
 
-  setText('live-offer-amount', currencyFormatter.format(offer.amount));
-  setText('live-offer-rate', offer.rate);
-  setText('live-offer-term', offer.term);
-  setText('live-offer-installment', currencyFormatter.format(offer.installment));
-  setText('live-offer-payout', offer.payout);
-  setText('live-offer-message', offer.message);
-  setText('offer-footnote', `Offer refreshes in ${marketingRefreshCountdown}s`);
-
-  const meterBar = document.getElementById('offer-meter-bar');
-  if (meterBar) {
-    meterBar.style.width = `${offer.progress}%`;
-  }
+  document.getElementById('offer-title').textContent = offer.title;
+  document.getElementById('offer-amount').textContent = currencyFormatter.format(offer.amount);
+  document.getElementById('offer-rate').textContent = offer.rate;
+  document.getElementById('offer-installment').textContent = currencyFormatter.format(offer.installment);
+  document.getElementById('offer-payout').textContent = offer.payout + ' ⚡';
+  document.getElementById('offer-message').textContent = offer.message;
 }
 
-// Render Offer Stack
-function renderOfferStack() {
-  const offerStack = document.getElementById('offer-stack');
-  if (!offerStack) return;
-
-  offerStack.innerHTML = dashboardState.marketing.offers.map((offer, index) => `
-    <article class="offer-tile ${index === marketingOfferIndex ? 'featured' : ''}">
-      <div class="offer-tile-top">
-        <div>
-          <span class="offer-tile-title">${offer.title}</span>
-          <strong class="offer-tile-amount">${currencyFormatter.format(offer.amount)}</strong>
-        </div>
-        <span class="offer-tile-rate">${offer.rate}</span>
-      </div>
-      <p>${offer.blurb}</p>
-      <div class="offer-tile-meta">
-        <span>Term <strong>${offer.term}</strong></span>
-        <span>Monthly <strong>${currencyFormatter.format(offer.installment)}</strong></span>
-      </div>
-    </article>
-  `).join('');
-}
-
-// Sync Marketing Ticker
-function syncMarketingTicker() {
-  const ticker = document.getElementById('marketing-ticker');
-  if (!ticker) return;
-
-  ticker.textContent = dashboardState.marketing.tickerMessages[marketingTickerIndex];
-}
-
-// Advance Marketing Offer
 function advanceMarketingOffer() {
   marketingOfferIndex = (marketingOfferIndex + 1) % dashboardState.marketing.offers.length;
   marketingRefreshCountdown = 12;
-  syncMarketingOffer();
-  renderOfferStack();
+  updateActiveOffer();
+  renderOfferCountdown();
+  animateOfferChange();
 }
 
-// Advance Marketing Ticker
+function updateMarketingTicker() {
+  const tickerContent = document.getElementById('ticker-content');
+  const message = dashboardState.marketing.tickerMessages[marketingTickerIndex];
+  if (!tickerContent || !message) return;
+
+  tickerContent.innerHTML = `<span class="ticker-item">${message}</span>`;
+  restartTickerAnimation(tickerContent);
+}
+
 function advanceMarketingTicker() {
   marketingTickerIndex = (marketingTickerIndex + 1) % dashboardState.marketing.tickerMessages.length;
-  syncMarketingTicker();
+  updateMarketingTicker();
+}
+
+function restartTickerAnimation(tickerContent) {
+  tickerContent.style.animation = 'none';
+  setTimeout(() => {
+    tickerContent.style.animation = 'scroll-left 20s linear infinite';
+  }, 10);
+}
+
+// Setup Marketing Rotation
+function setupMarketingRotation() {
+  // Rotate offers every 12 seconds to match the refresh countdown.
+  setInterval(() => {
+    advanceMarketingOffer();
+  }, 12000);
+
+  // Rotate ticker messages
+  setInterval(() => {
+    advanceMarketingTicker();
+  }, 12000);
+
+  // Animate live stats
+  animateLiveStats();
+}
+
+// Animate offer change
+function animateOfferChange() {
+  const offerCard = document.getElementById('active-offer');
+  if (offerCard) {
+    offerCard.style.animation = 'none';
+    setTimeout(() => {
+      offerCard.style.animation = 'float-up 0.6s ease-out';
+    }, 10);
+  }
+}
+
+// Animate live stats with counter effect
+function animateLiveStats() {
+  const { pulse } = dashboardState.marketing;
+  
+  // Parse stat values
+  const approvedNum = parseInt(pulse.approvedToday);
+  const approvalNum = parseInt(pulse.approvalRate);
+  const repeatNum = parseInt(pulse.repeatBorrowers);
+
+  // Animate approved stat
+  animateCounter('stat-approved', 0, approvedNum, 1200);
+  
+  // Animate approval stat
+  animateCounter('stat-approval', 0, approvalNum, 1200, '%');
+  
+  // Animate repeat stat
+  animateCounter('stat-repeat', 0, repeatNum, 1200, '%');
+
+  // Repeat animation every 15 seconds
+  setInterval(() => {
+    animateCounter('stat-approved', 0, approvedNum, 1200);
+    animateCounter('stat-approval', 0, approvalNum, 1200, '%');
+    animateCounter('stat-repeat', 0, repeatNum, 1200, '%');
+  }, 15000);
+}
+
+// Counter animation function
+function animateCounter(elementId, start, end, duration, suffix = '') {
+  const element = document.getElementById(elementId);
+  if (!element) return;
+
+  const range = end - start;
+  const increment = range / (duration / 16);
+  let current = start;
+
+  const animate = () => {
+    current += increment;
+    if (current < end) {
+      element.textContent = Math.floor(current) + suffix;
+      requestAnimationFrame(animate);
+    } else {
+      element.textContent = end + suffix;
+    }
+  };
+
+  animate();
+}
+
+function renderOfferCountdown() {
+  setText('offer-footnote', `Offer refreshes in ${marketingRefreshCountdown}s`);
 }
 
 // Update Offer Countdown
 function updateOfferCountdown() {
   marketingRefreshCountdown = marketingRefreshCountdown > 1 ? marketingRefreshCountdown - 1 : 1;
-  setText('offer-footnote', `Offer refreshes in ${marketingRefreshCountdown}s`);
+  renderOfferCountdown();
 }
 
 // Populate Loans List
@@ -754,6 +817,22 @@ function updateCountdown() {
 
 // Setup Event Listeners
 function setupEventListeners() {
+  // Home footer button
+  document.getElementById('home-nav-btn')?.addEventListener('click', () => {
+    switchView('overview');
+  });
+
+  // Header brand/logo button
+  document.getElementById('header-brand-btn')?.addEventListener('click', () => {
+    switchView('overview');
+  });
+
+  // Apply Now button
+  document.getElementById('apply-offer-btn')?.addEventListener('click', () => {
+    const offer = dashboardState.marketing.offers[marketingOfferIndex];
+    alert(`You selected: ${offer.title}\nAmount: ${currencyFormatter.format(offer.amount)}\nLet's proceed with your application!`);
+  });
+
   // Navigation
   document.querySelectorAll('.nav-link').forEach(link => {
     link.addEventListener('click', handleNavigation);
@@ -1088,14 +1167,6 @@ function startRealTimeUpdates() {
   setInterval(() => {
     updateCountdown();
   }, 60000);
-
-  setInterval(() => {
-    advanceMarketingOffer();
-  }, 12000);
-
-  setInterval(() => {
-    advanceMarketingTicker();
-  }, 10000);
 
   setInterval(() => {
     updateOfferCountdown();

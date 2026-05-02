@@ -134,6 +134,15 @@
   font-weight: 700;
   font-size: 1.25rem;
   color: var(--dashboard-primary);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  transition: opacity 0.2s ease;
+}
+
+.header-brand:hover {
+  opacity: 0.8;
 }
 
 .logo-icon {
