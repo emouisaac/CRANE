@@ -26,7 +26,7 @@
   z-index: 1;
   width: min(calc(100% - 2rem), 1400px);
   margin: 0 auto;
-  padding: 1rem 1rem 5rem;
+  padding: 1rem;
 }
 
 /* Sidebar Overlay */
@@ -303,6 +303,14 @@ body.mobile-menu-open {
   border: 1px solid var(--dashboard-border);
   min-width: 0;
   overflow: hidden;
+}
+
+.dashboard-content .card.three-flex-card {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+  overflow: visible;
 }
 
 .dashboard-content .first-section-card {
@@ -2849,7 +2857,7 @@ body.mobile-menu-open {
   
   .app-shell {
     width: min(calc(100% - 1rem), 1400px);
-    padding: 0.75rem 0.5rem 4rem;
+    padding: 0.75rem 0.5rem 0.75rem;
   }
 
   .dashboard-header {
