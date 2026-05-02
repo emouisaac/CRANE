@@ -27,11 +27,13 @@
 
 html {
   scroll-behavior: smooth;
+  overscroll-behavior-y: none;
 }
 
 body {
   margin: 0;
   min-height: 100vh;
+  overscroll-behavior-y: none;
   background:
     radial-gradient(circle at top left, rgba(13, 139, 99, 0.16), transparent 30%),
     linear-gradient(180deg, #f9fcf9 0%, #eef4ef 48%, #f6f9f5 100%);
@@ -574,6 +576,19 @@ select {
   color: var(--text);
   min-width: 0;
   text-align: center;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.flex-box:hover {
+  transform: translateY(-2px);
+  border-color: rgba(13, 139, 99, 0.22);
+  box-shadow: 0 10px 24px rgba(17, 34, 24, 0.08);
+}
+
+.flex-box:focus-visible {
+  outline: 2px solid rgba(13, 139, 99, 0.28);
+  outline-offset: 2px;
 }
 
 .flex-box-icon {

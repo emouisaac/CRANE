@@ -872,11 +872,14 @@ function setupEventListeners() {
   // Sidebar menu items
   document.querySelectorAll('.menu-item').forEach(item => {
     item.addEventListener('click', (e) => {
-      e.preventDefault();
       const view = item.dataset.view;
-      if (view) {
-        switchView(view);
+      if (!view) {
+        closeMobileMenu();
+        return;
       }
+
+      e.preventDefault();
+      switchView(view);
       closeMobileMenu();
     });
   });
@@ -934,51 +937,21 @@ function setupEventListeners() {
   document.querySelectorAll('.action-btn').forEach(btn => {
     btn.addEventListener('click', handleQuickAction);
   });
+
+  // Overview quick boxes
+  document.querySelectorAll('[data-quick-box]').forEach(box => {
+    box.addEventListener('click', handleQuickBoxClick);
+  });
   
   // Loan items click
   document.getElementById('loans-list')?.addEventListener('click', handleLoanItemClick);
-  
-  // Add down swipe detection for manual refresh
-  setupSwipeDetection();
-}
-
-// Setup Swipe Detection for Manual Refresh
-function setupSwipeDetection() {
-  let startY = 0;
-  let startX = 0;
-  const minSwipeDistance = 100;
-  
-  document.addEventListener('touchstart', (e) => {
-    startY = e.touches[0].clientY;
-    startX = e.touches[0].clientX;
-  }, { passive: true });
-  
-  document.addEventListener('touchend', (e) => {
-    if (!startY || !startX) return;
-    
-    const endY = e.changedTouches[0].clientY;
-    const endX = e.changedTouches[0].clientX;
-    const diffY = startY - endY;
-    const diffX = Math.abs(startX - endX);
-    
-    // Check if it's a downward swipe (positive diffY means swipe up, negative means swipe down)
-    // and horizontal movement is minimal
-    if (diffY < -minSwipeDistance && diffX < minSwipeDistance) {
-      handleRefreshDashboard();
-    }
-    
-    // Reset
-    startY = 0;
-    startX = 0;
-  }, { passive: true });
 }
 
 function handleNavigation(event) {
-  event.preventDefault();
-
   const viewName = event.currentTarget?.dataset.view;
   if (!viewName) return;
 
+  event.preventDefault();
   switchView(viewName);
 }
 
@@ -1222,6 +1195,22 @@ function handleQuickAction(e) {
       alert('Top-up feature coming soon!');
       break;
     case 'early':
+      switchView('repay');
+      break;
+  }
+}
+
+function handleQuickBoxClick(e) {
+  const quickBox = e.currentTarget.dataset.quickBox;
+
+  switch (quickBox) {
+    case 'active':
+      switchToLoansView('active');
+      break;
+    case 'overdue':
+      switchToLoansView('overdue');
+      break;
+    case 'repay':
       switchView('repay');
       break;
   }
