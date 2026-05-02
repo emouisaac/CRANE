@@ -112,21 +112,38 @@
         }
       },
       admin: {
-        applications: [
-          { id: 'APP-24051', user: 'John Doe', amount: 1200000, status: 'review', score: 742, requestedAt: '10 min ago' },
-          { id: 'APP-24052', user: 'Jane Smith', amount: 840000, status: 'review', score: 684, requestedAt: '32 min ago' },
-          { id: 'APP-24053', user: 'Sarah K.', amount: 1600000, status: 'approved', score: 755, requestedAt: '1 hr ago' }
+        adminUsers: [
+          { id: 'ADM-001', name: 'Sarah Johnson', email: 'sarah.johnson@crane.com', role: 'super_admin', status: 'active', createdAt: '2024-01-15', lastLogin: '2 hours ago' },
+          { id: 'ADM-002', name: 'Michael Chen', email: 'michael.chen@crane.com', role: 'loan_officer', status: 'active', createdAt: '2024-02-01', lastLogin: '1 day ago' },
+          { id: 'ADM-003', name: 'Emma Wilson', email: 'emma.wilson@crane.com', role: 'risk_analyst', status: 'inactive', createdAt: '2024-03-10', lastLogin: '5 days ago' }
+        ],
+        loanApplications: [
+          { id: 'APP-24051', borrower: 'John Doe', phone: '+256701234567', amount: 1200000, term: 6, purpose: 'Business inventory', status: 'pending', score: 742, requestedAt: '2024-05-02T09:30:00Z', documents: ['id_doc', 'income_proof', 'selfie'] },
+          { id: 'APP-24052', borrower: 'Jane Smith', phone: '+256702345678', amount: 840000, term: 4, purpose: 'School fees', status: 'pending', score: 684, requestedAt: '2024-05-02T08:45:00Z', documents: ['id_doc', 'selfie'] },
+          { id: 'APP-24053', borrower: 'Sarah K.', phone: '+256703456789', amount: 1600000, term: 12, purpose: 'Store expansion', status: 'approved', score: 755, requestedAt: '2024-05-02T08:00:00Z', documents: ['id_doc', 'income_proof', 'selfie', 'bank_statement'] },
+          { id: 'APP-24054', borrower: 'Robert Mwale', phone: '+256704567890', amount: 500000, term: 3, purpose: 'Emergency expenses', status: 'rejected', score: 612, requestedAt: '2024-05-01T15:20:00Z', rejectReason: 'Low credit score', documents: ['id_doc'] }
         ],
         riskAlerts: [
-          { id: 'RISK-1', severity: 'high', title: 'Device clustering', text: 'Two active loans now share one device fingerprint.', time: '2 hours ago' },
-          { id: 'RISK-2', severity: 'medium', title: 'Late pattern', text: 'One borrower has shifted from on-time to repeated late repayment.', time: '5 hours ago' },
-          { id: 'RISK-3', severity: 'medium', title: 'Referral spike', text: 'Referral activity rose sharply from a single source this morning.', time: 'Today' }
+          { id: 'RISK-1', severity: 'high', title: 'Device clustering', text: 'Two active loans now share one device fingerprint.', time: '2 hours ago', status: 'open' },
+          { id: 'RISK-2', severity: 'medium', title: 'Late pattern', text: 'One borrower has shifted from on-time to repeated late repayment.', time: '5 hours ago', status: 'investigating' },
+          { id: 'RISK-3', severity: 'medium', title: 'Referral spike', text: 'Referral activity rose sharply from a single source this morning.', time: 'Today', status: 'open' },
+          { id: 'RISK-4', severity: 'high', title: 'Fraud flag', text: 'Multiple loan applications from same location within minutes.', time: '1 hour ago', status: 'open' }
         ],
         auditLogs: [
-          { id: 'AUD-1', time: '10:45 AM', actor: 'Admin User', action: 'Approved loan L2024001', details: 'Promoted queue loan to active book.' },
+          { id: 'AUD-1', time: '10:45 AM', actor: 'Sarah Johnson', action: 'Approved loan APP-24053', details: 'Promoted queue loan to active book.' },
           { id: 'AUD-2', time: '10:30 AM', actor: 'System', action: 'Flagged L2024002 overdue', details: 'Due date passed with remaining balance outstanding.' },
-          { id: 'AUD-3', time: '10:10 AM', actor: 'Admin User', action: 'Synced referral ledger', details: 'Referral payouts and balances refreshed.' }
-        ]
+          { id: 'AUD-3', time: '10:10 AM', actor: 'Michael Chen', action: 'Synced referral ledger', details: 'Referral payouts and balances refreshed.' },
+          { id: 'AUD-4', time: '09:55 AM', actor: 'System', action: 'Created admin user', details: 'New loan officer account: emma.wilson@crane.com' },
+          { id: 'AUD-5', time: '09:20 AM', actor: 'Sarah Johnson', action: 'Updated system settings', details: 'Changed default interest rate from 1.5% to 1.4%' }
+        ],
+        settings: {
+          defaultInterestRate: 1.5,
+          maxLoanAmount: 10000000,
+          minLoanAmount: 100000,
+          autoApprovalThreshold: 750,
+          maxConcurrentLoans: 5,
+          paymentGracePeriod: 3
+        }
       }
     };
   }

@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Crane Admin Panel - Master Control</title>
+  <meta name="description" content="Comprehensive admin panel for loan approvals, account management, and system administration">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="dashboard.css">
+  <link rel="stylesheet" href="admin-panel.css">
+</head>
+<body>
+  <div class="page-glow page-glow-left"></div>
+  <div class="page-glow page-glow-right"></div>
+
+  <div class="app-shell">
+    <header class="dashboard-header admin-header">
+      <button type="button" class="admin-menu-toggle" id="admin-panel-menu-toggle" aria-label="Open navigation menu" aria-expanded="false">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="4" y1="6" x2="20" y2="6"></line>
+          <line x1="4" y1="12" x2="20" y2="12"></line>
+          <line x1="4" y1="18" x2="20" y2="18"></line>
+        </svg>
+      </button>
+      <button type="button" class="header-brand" id="admin-panel-home-btn" aria-label="Admin Home">
+        <div class="logo-icon">⚙️</div>
+        <span>Crane Master Admin</span>
+      </button>
+      <nav class="header-nav">
+        <a href="#" class="nav-link active" data-view="dashboard">Dashboard</a>
+        <a href="#" class="nav-link" data-view="loans">Loan Approvals</a>
+        <a href="#" class="nav-link" data-view="admins">Admin Accounts</a>
+        <a href="#" class="nav-link" data-view="risks">Risk Management</a>
+        <a href="#" class="nav-link" data-view="settings">Settings</a>
+        <a href="#" class="nav-link" data-view="audit">Audit Logs</a>
+        <a href="index.html" class="nav-link admin-back-link">Back to App</a>
+      </nav>
+      <div class="header-actions">
+        <button type="button" class="icon-btn" id="admin-panel-sync-btn" aria-label="Sync Data">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M23 4v6h-6"></path>
+            <path d="M1 20v-6h6"></path>
+            <path d="M3.51 9a9 9 0 0 1 14.13-3.36L23 10"></path>
+            <path d="M20.49 15a9 9 0 0 1-14.13 3.36L1 14"></path>
+          </svg>
+        </button>
+        <button type="button" class="icon-btn" id="admin-panel-alerts-btn" aria-label="Alerts">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+            <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+          </svg>
+          <span class="notification-badge" id="alert-count">4</span>
+        </button>
+      </div>
+    </header>
+
+    <div class="admin-nav-overlay" id="admin-panel-nav-overlay"></div>
+
+    <main class="admin-content">
+      <!-- Dashboard View -->
+      <section class="admin-view active" id="dashboard-view">
+        <div class="admin-grid">
+          <!-- Key Metrics -->
+          <div class="metric-card">
+            <div class="metric-label">Pending Approvals</div>
+            <div class="metric-value" id="pending-count">2</div>
+            <div class="metric-subtext">2 applications awaiting review</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Active Loans</div>
+            <div class="metric-value" id="active-loans">28</div>
+            <div class="metric-subtext">UGX 145M outstanding</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Risk Alerts</div>
+            <div class="metric-value alert" id="risk-count">4</div>
+            <div class="metric-subtext">3 high priority</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Admin Users</div>
+            <div class="metric-value" id="admin-count">3</div>
+            <div class="metric-subtext">2 active, 1 inactive</div>
+          </div>
+
+          <!-- Quick Actions -->
+          <article class="card" style="grid-column: span 2;">
+            <h3>Quick Actions</h3>
+            <div class="action-buttons">
+              <button class="btn btn-primary" id="view-pending-loans">Review Pending Loans</button>
+              <button class="btn btn-secondary" id="create-admin-btn">Create Admin Account</button>
+              <button class="btn btn-secondary" id="view-alerts-btn">View Risk Alerts</button>
+              <button class="btn btn-secondary" id="export-report-btn">Export Report</button>
+            </div>
+          </article>
+
+          <!-- Recent Activities -->
+          <article class="card" style="grid-column: span 2;">
+            <h3>Recent Activities</h3>
+            <div id="recent-activities" class="activities-list"></div>
+          </article>
+
+          <!-- System Status -->
+          <article class="card">
+            <h3>System Status</h3>
+            <div class="status-items">
+              <div class="status-item">
+                <span class="status-label">Database</span>
+                <span class="status-dot active"></span>Online
+              </div>
+              <div class="status-item">
+                <span class="status-label">API Server</span>
+                <span class="status-dot active"></span>Running
+              </div>
+              <div class="status-item">
+                <span class="status-label">WebSocket</span>
+                <span class="status-dot active"></span>Connected
+              </div>
+              <div class="status-item">
+                <span class="status-label">Backup</span>
+                <span class="status-dot active"></span>Synced
+              </div>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <!-- Loan Approvals View -->
+      <section class="admin-view" id="loans-view">
+        <div class="admin-grid">
+          <article class="card full-width">
+            <h2>Loan Application Management</h2>
+            <div class="filter-controls">
+              <select id="loan-status-filter">
+                <option value="all">All Applications</option>
+                <option value="pending">Pending</option>
+                <option value="approved">Approved</option>
+                <option value="rejected">Rejected</option>
+              </select>
+              <input type="text" id="loan-search" placeholder="Search by borrower name or ID...">
+            </div>
+            <div id="loans-table" class="admin-table"></div>
+          </article>
+
+          <!-- Loan Detail Modal -->
+          <article class="card full-width" id="loan-detail-card" style="display: none;">
+            <button class="close-btn" id="close-loan-detail">✕</button>
+            <h3>Loan Application Details</h3>
+            <div id="loan-detail-content"></div>
+            <div class="modal-actions">
+              <button class="btn btn-success" id="approve-loan-btn">Approve Loan</button>
+              <button class="btn btn-danger" id="reject-loan-btn">Reject Loan</button>
+              <button class="btn btn-secondary" id="request-more-docs-btn">Request More Documents</button>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <!-- Admin Accounts View -->
+      <section class="admin-view" id="admins-view">
+        <div class="admin-grid">
+          <article class="card full-width">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <h2>Admin Account Management</h2>
+              <button class="btn btn-primary" id="new-admin-btn">Create New Admin</button>
+            </div>
+            <div id="admins-table" class="admin-table"></div>
+          </article>
+
+          <!-- Create Admin Modal -->
+          <article class="card full-width" id="create-admin-card" style="display: none;">
+            <button class="close-btn" id="close-create-admin">✕</button>
+            <h3>Create New Admin User</h3>
+            <form id="create-admin-form" class="admin-form">
+              <div class="form-group">
+                <label for="admin-name">Full Name *</label>
+                <input type="text" id="admin-name" required>
+              </div>
+              <div class="form-group">
+                <label for="admin-email">Email Address *</label>
+                <input type="email" id="admin-email" required>
+              </div>
+              <div class="form-group">
+                <label for="admin-role">Role *</label>
+                <select id="admin-role" required>
+                  <option value="super_admin">Super Admin</option>
+                  <option value="loan_officer">Loan Officer</option>
+                  <option value="risk_analyst">Risk Analyst</option>
+                  <option value="auditor">Auditor</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="admin-password">Temporary Password *</label>
+                <input type="password" id="admin-password" required>
+              </div>
+              <div class="form-actions">
+                <button type="submit" class="btn btn-primary">Create Admin</button>
+                <button type="button" class="btn btn-secondary" onclick="document.getElementById('create-admin-card').style.display='none'">Cancel</button>
+              </div>
+            </form>
+          </article>
+
+          <!-- Edit Admin Modal -->
+          <article class="card full-width" id="edit-admin-card" style="display: none;">
+            <button class="close-btn" id="close-edit-admin">✕</button>
+            <h3>Edit Admin User</h3>
+            <form id="edit-admin-form" class="admin-form">
+              <div class="form-group">
+                <label for="edit-admin-name">Full Name</label>
+                <input type="text" id="edit-admin-name" readonly>
+              </div>
+              <div class="form-group">
+                <label for="edit-admin-email">Email Address</label>
+                <input type="email" id="edit-admin-email" readonly>
+              </div>
+              <div class="form-group">
+                <label for="edit-admin-role">Role</label>
+                <select id="edit-admin-role">
+                  <option value="super_admin">Super Admin</option>
+                  <option value="loan_officer">Loan Officer</option>
+                  <option value="risk_analyst">Risk Analyst</option>
+                  <option value="auditor">Auditor</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="edit-admin-status">Status</label>
+                <select id="edit-admin-status">
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                  <option value="suspended">Suspended</option>
+                </select>
+              </div>
+              <div class="form-actions">
+                <button type="submit" class="btn btn-primary">Save Changes</button>
+                <button type="button" class="btn btn-danger" id="delete-admin-btn">Delete Admin</button>
+                <button type="button" class="btn btn-secondary" onclick="document.getElementById('edit-admin-card').style.display='none'">Cancel</button>
+              </div>
+            </form>
+          </article>
+        </div>
+      </section>
+
+      <!-- Risk Management View -->
+      <section class="admin-view" id="risks-view">
+        <div class="admin-grid">
+          <article class="card full-width">
+            <h2>Risk Management & Alerts</h2>
+            <div class="filter-controls">
+              <select id="risk-severity-filter">
+                <option value="all">All Severity Levels</option>
+                <option value="high">High</option>
+                <option value="medium">Medium</option>
+                <option value="low">Low</option>
+              </select>
+              <select id="risk-status-filter">
+                <option value="all">All Statuses</option>
+                <option value="open">Open</option>
+                <option value="investigating">Investigating</option>
+                <option value="resolved">Resolved</option>
+              </select>
+            </div>
+            <div id="risks-table" class="admin-table"></div>
+          </article>
+
+          <!-- Risk Detail Modal -->
+          <article class="card full-width" id="risk-detail-card" style="display: none;">
+            <button class="close-btn" id="close-risk-detail">✕</button>
+            <h3>Risk Alert Details</h3>
+            <div id="risk-detail-content"></div>
+            <div class="modal-actions">
+              <button class="btn btn-secondary" id="investigate-btn">Mark as Investigating</button>
+              <button class="btn btn-success" id="resolve-btn">Mark as Resolved</button>
+              <button class="btn btn-warning" id="flag-btn">Flag for Review</button>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <!-- Settings View -->
+      <section class="admin-view" id="settings-view">
+        <div class="admin-grid">
+          <article class="card">
+            <h3>System Configuration</h3>
+            <form id="settings-form" class="admin-form">
+              <div class="form-group">
+                <label for="default-rate">Default Interest Rate (%)</label>
+                <input type="number" id="default-rate" step="0.1" min="0" max="10">
+              </div>
+              <div class="form-group">
+                <label for="max-loan">Maximum Loan Amount (UGX)</label>
+                <input type="number" id="max-loan" min="100000">
+              </div>
+              <div class="form-group">
+                <label for="min-loan">Minimum Loan Amount (UGX)</label>
+                <input type="number" id="min-loan" min="10000">
+              </div>
+              <div class="form-group">
+                <label for="auto-approval">Auto-Approval Threshold (Score)</label>
+                <input type="number" id="auto-approval" min="0" max="1000">
+              </div>
+              <div class="form-group">
+                <label for="grace-period">Payment Grace Period (days)</label>
+                <input type="number" id="grace-period" min="0" max="30">
+              </div>
+              <button type="submit" class="btn btn-primary">Save Settings</button>
+            </form>
+          </article>
+
+          <article class="card">
+            <h3>Security & Access</h3>
+            <div class="settings-options">
+              <button class="btn btn-secondary">Reset Master Password</button>
+              <button class="btn btn-secondary">Enable Two-Factor Auth</button>
+              <button class="btn btn-secondary">View Login History</button>
+              <button class="btn btn-secondary">Manage API Keys</button>
+            </div>
+          </article>
+
+          <article class="card">
+            <h3>Data Management</h3>
+            <div class="settings-options">
+              <button class="btn btn-secondary">Backup Database</button>
+              <button class="btn btn-secondary">Export All Data</button>
+              <button class="btn btn-secondary">System Health Check</button>
+              <button class="btn btn-secondary">Clear Cache</button>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <!-- Audit Logs View -->
+      <section class="admin-view" id="audit-view">
+        <div class="admin-grid">
+          <article class="card full-width">
+            <h2>Audit Logs & Activity History</h2>
+            <div class="filter-controls">
+              <input type="text" id="audit-search" placeholder="Search by actor, action, or details...">
+              <select id="audit-date-filter">
+                <option value="all">All Time</option>
+                <option value="today">Today</option>
+                <option value="week">This Week</option>
+                <option value="month">This Month</option>
+              </select>
+            </div>
+            <div id="audit-table" class="admin-table"></div>
+          </article>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="shared-state.js"></script>
+  <script src="admin-panel.js"></script>
+</body>
+</html>
