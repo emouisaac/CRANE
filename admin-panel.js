@@ -39,6 +39,16 @@ function setupIdleDetection() {
 
 // Initialize Admin Panel
 document.addEventListener('DOMContentLoaded', () => {
+  // Check admin authentication first
+  const token = localStorage.getItem('accessToken');
+  const role = localStorage.getItem('userRole');
+
+  if (!token || role !== 'admin') {
+    // Redirect to admin login if not authenticated as admin
+    window.location.href = 'admin-login.html';
+    return;
+  }
+
   initializeSiteIntro();
   initializeAdminPanel();
   setupAdminEventListeners();
@@ -698,4 +708,17 @@ function setupAdminEventListeners() {
   document.getElementById('min-loan').value = state.admin.settings.minLoanAmount;
   document.getElementById('auto-approval').value = state.admin.settings.autoApprovalThreshold;
   document.getElementById('grace-period').value = state.admin.settings.paymentGracePeriod;
+
+  // Admin logout
+  document.getElementById('admin-panel-logout-btn')?.addEventListener('click', handleAdminLogout);
+}
+
+function handleAdminLogout() {
+  // Clear admin authentication
+  localStorage.removeItem('accessToken');
+  localStorage.removeItem('refreshToken');
+  localStorage.removeItem('userRole');
+
+  // Redirect to admin login
+  window.location.href = 'admin-login.html';
 }

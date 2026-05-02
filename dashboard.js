@@ -148,6 +148,8 @@ const SITE_INTRO_DURATION_MS = 2100;
 const INTRO_IDLE_TIME_MS = 10 * 60 * 1000; // 10 minutes
 let lastActivityTime = Date.now();
 let idleCheckInterval = null;
+const UNAUTH_IDLE_TIMEOUT_MS = 10 * 1000; // 10 seconds for testing
+let isAuthenticated = false;
 
 // Track user activity to detect idle
 function setupIdleDetection() {
@@ -163,8 +165,320 @@ function setupIdleDetection() {
   document.addEventListener('touchstart', updateActivity);
 }
 
+// Check for idle timeout and redirect to login if needed
+function checkIdleTimeout() {
+  if (isAuthenticated) {
+    // Clear interval if user becomes authenticated
+    if (idleCheckInterval) {
+      clearInterval(idleCheckInterval);
+      idleCheckInterval = null;
+    }
+    return;
+  }
+
+  const currentTime = Date.now();
+  const timeSinceLastActivity = currentTime - lastActivityTime;
+
+  if (timeSinceLastActivity >= UNAUTH_IDLE_TIMEOUT_MS) {
+    // Clear the interval to prevent multiple modals
+    if (idleCheckInterval) {
+      clearInterval(idleCheckInterval);
+      idleCheckInterval = null;
+    }
+    // Show login prompt
+    showLoginPrompt();
+  }
+}
+
+// Show login prompt modal
+function showLoginPrompt() {
+  const modal = document.getElementById('login-modal');
+  if (modal) {
+    modal.style.display = 'flex';
+    // Switch to login tab
+    document.querySelector('[data-tab="login"]').click();
+  } else {
+    // Fallback: redirect to login page
+    window.location.href = 'login.html';
+  }
+}
+
+// Initialize login modal functionality
+function initializeLoginModal() {
+  const loginModal = document.getElementById('login-modal');
+  const loginModalClose = document.getElementById('login-modal-close');
+  const loginForm = document.getElementById('login-form');
+  const registerForm = document.getElementById('register-form');
+  const switchToRegister = document.getElementById('switch-to-register');
+  const switchToLogin = document.getElementById('switch-to-login');
+
+  // Mobile login button
+  const mobileLoginBtn = document.getElementById('mobile-login-btn');
+  if (mobileLoginBtn) {
+    mobileLoginBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (loginModal) {
+        loginModal.style.display = 'flex';
+        // Reset to login form
+        loginForm.classList.add('active');
+        registerForm.classList.remove('active');
+        updateAuthHeader('login');
+      }
+    });
+  }
+
+  // Desktop login button
+  const desktopLoginBtn = document.getElementById('desktop-login-btn');
+  if (desktopLoginBtn) {
+    desktopLoginBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (loginModal) {
+        loginModal.style.display = 'flex';
+        // Reset to login form
+        loginForm.classList.add('active');
+        registerForm.classList.remove('active');
+        updateAuthHeader('login');
+      }
+    });
+  }
+
+  if (loginModalClose) {
+    loginModalClose.addEventListener('click', () => {
+      if (loginModal) {
+        loginModal.style.display = 'none';
+      }
+    });
+  }
+
+  // Close modal when clicking outside
+  if (loginModal) {
+    loginModal.addEventListener('click', (e) => {
+      if (e.target === loginModal) {
+        loginModal.style.display = 'none';
+      }
+    });
+  }
+
+  // Switch to register form
+  if (switchToRegister) {
+    switchToRegister.addEventListener('click', (e) => {
+      e.preventDefault();
+      loginForm.classList.remove('active');
+      registerForm.classList.add('active');
+      updateAuthHeader('register');
+    });
+  }
+
+  // Switch to login form
+  if (switchToLogin) {
+    switchToLogin.addEventListener('click', (e) => {
+      e.preventDefault();
+      registerForm.classList.remove('active');
+      loginForm.classList.add('active');
+      updateAuthHeader('login');
+    });
+  }
+
+  // Login form submission
+  if (loginForm) {
+    loginForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const countryCode = document.getElementById('login-country').value;
+      const phoneNumber = document.getElementById('login-phone').value;
+      const pin = document.getElementById('login-pin').value;
+      
+      // Clear previous errors
+      clearFormErrors();
+      
+      // Basic validation
+      if (!phoneNumber || phoneNumber.length < 9) {
+        showFormError('login-phone-error', 'Please enter a valid phone number');
+        return;
+      }
+      
+      if (!pin || pin.length !== 6) {
+        showFormError('login-pin-error', 'Please enter a valid 6-digit PIN');
+        return;
+      }
+      
+      // Show loading state
+      setButtonLoading('login-submit-btn', true);
+      
+      try {
+        const response = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ phone: phoneNumber, pin }),
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+          localStorage.setItem('accessToken', data.token);
+          localStorage.setItem('user', JSON.stringify(data.user));
+          isAuthenticated = true;
+          
+          // Close modal and reload page
+          if (loginModal) {
+            loginModal.style.display = 'none';
+          }
+          window.location.reload();
+        } else {
+          showFormError('login-pin-error', data.message || 'Login failed');
+        }
+      } catch (error) {
+        console.error('Login error:', error);
+        showFormError('login-pin-error', 'Login failed. Please try again.');
+      } finally {
+        setButtonLoading('login-submit-btn', false);
+      }
+    });
+  }
+
+  // Register form submission
+  if (registerForm) {
+    registerForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const countryCode = document.getElementById('register-country').value;
+      const phoneNumber = document.getElementById('register-phone').value;
+      const email = document.getElementById('register-email').value;
+      const pin = document.getElementById('register-pin').value;
+      const confirmPin = document.getElementById('register-pin-confirm').value;
+      
+      // Clear previous errors
+      clearFormErrors();
+      
+      // Validation
+      if (!phoneNumber || phoneNumber.length < 9) {
+        showFormError('register-phone-error', 'Please enter a valid phone number');
+        return;
+      }
+      
+      if (email && !isValidEmail(email)) {
+        showFormError('register-email-error', 'Please enter a valid email address');
+        return;
+      }
+      
+      if (!pin || pin.length !== 6) {
+        showFormError('register-pin-error', 'Please enter a valid 6-digit PIN');
+        return;
+      }
+      
+      if (pin !== confirmPin) {
+        showFormError('register-pin-confirm-error', 'PINs do not match');
+        return;
+      }
+      
+      // Show loading state
+      setButtonLoading('register-submit-btn', true);
+      
+      try {
+        const response = await fetch('/api/auth/register', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ phone: phoneNumber, email: email || undefined, pin }),
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+          alert('Registration successful! Please sign in.');
+          // Switch to login form
+          registerForm.classList.remove('active');
+          loginForm.classList.add('active');
+          updateAuthHeader('login');
+        } else {
+          showFormError('register-pin-confirm-error', data.message || 'Registration failed');
+        }
+      } catch (error) {
+        console.error('Registration error:', error);
+        showFormError('register-pin-confirm-error', 'Registration failed. Please try again.');
+      } finally {
+        setButtonLoading('register-submit-btn', false);
+      }
+    });
+  }
+}
+
+// Update auth header based on current form
+function updateAuthHeader(mode) {
+  const authTitle = document.querySelector('.auth-title');
+  const authSubtitle = document.querySelector('.auth-subtitle');
+  
+  if (mode === 'register') {
+    if (authTitle) authTitle.textContent = 'Create Account';
+    if (authSubtitle) authSubtitle.textContent = 'Join Crane and access loan services';
+  } else {
+    if (authTitle) authTitle.textContent = 'Welcome Back';
+    if (authSubtitle) authSubtitle.textContent = 'Sign in to access your loan dashboard';
+  }
+}
+
+// Form validation helpers
+function clearFormErrors() {
+  document.querySelectorAll('.form-error').forEach(error => {
+    error.textContent = '';
+    error.style.display = 'none';
+  });
+}
+
+function showFormError(errorId, message) {
+  const errorElement = document.getElementById(errorId);
+  if (errorElement) {
+    errorElement.textContent = message;
+    errorElement.style.display = 'block';
+  }
+}
+
+function setButtonLoading(buttonId, loading) {
+  const button = document.getElementById(buttonId);
+  if (!button) return;
+  
+  const btnText = button.querySelector('.btn-text');
+  const spinner = button.querySelector('.btn-spinner');
+  
+  if (loading) {
+    button.disabled = true;
+    if (btnText) btnText.style.opacity = '0';
+    if (spinner) spinner.style.display = 'block';
+  } else {
+    button.disabled = false;
+    if (btnText) btnText.style.opacity = '1';
+    if (spinner) spinner.style.display = 'none';
+  }
+}
+
+function isValidEmail(email) {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
+}
+
 // Initialize Dashboard
 document.addEventListener('DOMContentLoaded', () => {
+  // Check authentication
+  const token = localStorage.getItem('accessToken');
+  isAuthenticated = !!token;
+
+  if (!isAuthenticated) {
+    // For unauthenticated users, start idle timeout check
+    idleCheckInterval = setInterval(checkIdleTimeout, 5000); // Check every 5 seconds
+  }
+
+  // Initialize last activity time
+  const storedActivityTime = localStorage.getItem('lastActivityTime');
+  if (storedActivityTime) {
+    lastActivityTime = parseInt(storedActivityTime);
+  } else {
+    lastActivityTime = Date.now();
+    localStorage.setItem('lastActivityTime', lastActivityTime.toString());
+  }
+
   initializeSiteIntro();
   hydrateDashboardFromSharedState();
   initializeDashboard();
@@ -179,6 +493,16 @@ document.addEventListener('DOMContentLoaded', () => {
       initializeDashboard();
     }
   });
+
+  // Cleanup on page unload
+  window.addEventListener('beforeunload', () => {
+    if (idleCheckInterval) {
+      clearInterval(idleCheckInterval);
+    }
+  });
+
+  // Initialize login modal functionality
+  initializeLoginModal();
 });
 
 function initializeSiteIntro() {
@@ -939,6 +1263,9 @@ function updateCountdown() {
 
 // Setup Event Listeners
 function setupEventListeners() {
+  // Logout button
+  document.getElementById('logout-btn')?.addEventListener('click', handleLogout);
+
   // Home footer button
   document.getElementById('home-nav-btn')?.addEventListener('click', () => {
     switchView('overview');
@@ -1072,9 +1399,19 @@ function setupEventListeners() {
   document.querySelectorAll('[data-quick-box]').forEach(box => {
     box.addEventListener('click', handleQuickBoxClick);
   });
-  
+
   // Loan items click
   document.getElementById('loans-list')?.addEventListener('click', handleLoanItemClick);
+}
+
+function handleLogout() {
+  // Clear authentication tokens
+  localStorage.removeItem('accessToken');
+  localStorage.removeItem('refreshToken');
+  localStorage.removeItem('deviceId');
+
+  // Redirect to login page
+  window.location.href = 'login.html';
 }
 
 function handleNavigation(event) {

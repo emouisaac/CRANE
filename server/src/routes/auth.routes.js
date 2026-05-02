@@ -42,12 +42,56 @@ router.post("/register/verify-otp", (req, res) => {
   });
 });
 
+router.post("/register", (req, res) => {
+  const { phone, email, pin, deviceId } = req.body;
+
+  // Validate PIN
+  if (!pin || pin.length !== 6 || !/^\d{6}$/.test(pin)) {
+    return res.status(400).json({
+      error: "PIN must be 6 digits",
+      code: "PIN_INVALID",
+    });
+  }
+
+  // Validate email if provided
+  if (email && email.trim() !== '') {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({
+        error: "Please enter a valid email address",
+        code: "EMAIL_INVALID",
+      });
+    }
+  }
+
+  const accessToken = jwt.sign(
+    { sub: "user_demo_001", phone, email, deviceId, scope: ["borrower"] },
+    config.jwtSecret,
+    { expiresIn: config.jwtExpiry }
+  );
+
+  return res.json({
+    accessToken,
+    refreshToken: "refresh_demo_token",
+    onboardingState: "kyc_pending",
+    deviceBound: true,
+  });
+});
+
 router.post("/login", (req, res) => {
   const { phone, pin, password, deviceId } = req.body;
 
   if (!phone || (!pin && !password)) {
     return res.status(400).json({
       error: "Phone and PIN/password are required",
+    });
+  }
+
+  // Validate PIN if provided
+  if (pin && (pin.length !== 6 || !/^\d{6}$/.test(pin))) {
+    return res.status(400).json({
+      error: "PIN must be 6 digits",
+      code: "PIN_INVALID",
     });
   }
 
@@ -61,6 +105,38 @@ router.post("/login", (req, res) => {
     accessToken,
     refreshToken: "refresh_demo_token",
     biometricAvailable: true,
+    deviceBound: true,
+  });
+});
+
+router.post("/admin/login", (req, res) => {
+  const { password, deviceId } = req.body;
+
+  // Unique admin password - should be changed in production
+  const ADMIN_PASSWORD = config.adminPassword;
+
+  if (!password || password !== ADMIN_PASSWORD) {
+    return res.status(401).json({
+      error: "Invalid admin credentials",
+      code: "ADMIN_AUTH_FAILED",
+    });
+  }
+
+  const accessToken = jwt.sign(
+    {
+      sub: "admin_demo_001",
+      role: "admin",
+      deviceId,
+      scope: ["admin", "borrower"]
+    },
+    config.jwtSecret,
+    { expiresIn: config.jwtExpiry }
+  );
+
+  return res.json({
+    accessToken,
+    refreshToken: "admin_refresh_demo_token",
+    role: "admin",
     deviceBound: true,
   });
 });

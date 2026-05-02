@@ -34,6 +34,16 @@ function setupIdleDetection() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  // Check admin authentication first
+  const token = localStorage.getItem('accessToken');
+  const role = localStorage.getItem('userRole');
+
+  if (!token || role !== 'admin') {
+    // Redirect to admin login if not authenticated as admin
+    window.location.href = 'admin-login.html';
+    return;
+  }
+
   initializeSiteIntro();
   initializeAdminConsole();
   setupIdleDetection();
@@ -186,6 +196,19 @@ function setupAdminEventListeners() {
       }
     }
   });
+
+  // Admin logout
+  document.getElementById('admin-logout-btn')?.addEventListener('click', handleAdminLogout);
+}
+
+function handleAdminLogout() {
+  // Clear admin authentication
+  localStorage.removeItem('accessToken');
+  localStorage.removeItem('refreshToken');
+  localStorage.removeItem('userRole');
+
+  // Redirect to admin login
+  window.location.href = 'admin-login.html';
 }
 
 function handleAdminNavigation(event) {

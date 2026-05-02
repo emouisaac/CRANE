@@ -33,7 +33,8 @@
         <a href="#" class="nav-link" data-view="score">Credit Score</a>
         <a href="#" class="nav-link" data-view="insights">AI Insights</a>
         <a href="#" class="nav-link" data-view="referrals">Referrals</a>
-        <a href="admin-panel.html" class="nav-link" style="color: var(--danger);" title="Admin Panel">⚙️ Admin</a>
+        <a href="#" class="nav-link" id="desktop-login-btn">Login</a>
+
       </nav>
       <div class="header-actions">
         <button type="button" class="mobile-search-btn" id="mobile-search-toggle">
@@ -110,7 +111,7 @@
           </svg>
           <span>Referrals</span>
         </a>
-        <a href="admin.html" class="menu-item">
+        <a href="#" class="menu-item" id="mobile-login-btn">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path>
             <path d="M10 17l5-5-5-5"></path>
@@ -791,6 +792,147 @@
           <button type="button" class="button button-primary" id="confirm-payment-btn">Confirm Payment</button>
 
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Login Modal -->
+  <div id="login-modal" class="modal-overlay">
+    <div class="modal-container auth-modal-container">
+      <div class="auth-header">
+        <div class="auth-logo">
+          <img src="img/black crane.png" alt="Crane" class="auth-logo-img">
+          <span class="auth-logo-text">Crane</span>
+        </div>
+        <h1 class="auth-title">Welcome Back</h1>
+        <p class="auth-subtitle">Sign in to access your loan dashboard</p>
+        <button type="button" class="modal-close" id="login-modal-close">&times;</button>
+      </div>
+
+      <div class="auth-form-container">
+        <!-- Login Form -->
+        <form id="login-form" class="auth-form active">
+          <div class="form-group">
+            <label for="login-phone" class="form-label">Phone Number</label>
+            <div class="phone-input-group">
+              <select id="login-country" class="country-select">
+                <option value="UG">🇺🇬 +256</option>
+                <option value="KE">🇰🇪 +254</option>
+                <option value="TZ">🇹🇿 +255</option>
+                <option value="NG">🇳🇬 +234</option>
+              </select>
+              <input
+                type="tel"
+                id="login-phone"
+                class="form-input phone-input"
+                placeholder="7XX XXX XXX"
+                required
+              >
+            </div>
+            <div id="login-phone-error" class="form-error"></div>
+          </div>
+
+          <div class="form-group">
+            <label for="login-pin" class="form-label">PIN</label>
+            <input
+              type="password"
+              id="login-pin"
+              class="form-input"
+              placeholder="Enter your 6-digit PIN"
+              maxlength="6"
+              required
+            >
+            <div id="login-pin-error" class="form-error"></div>
+          </div>
+
+          <button type="submit" class="btn btn-primary auth-submit-btn" id="login-submit-btn">
+            <span class="btn-text">Sign In</span>
+            <div class="btn-spinner" id="login-spinner"></div>
+          </button>
+
+          <div class="auth-links">
+            <button type="button" class="auth-link" id="forgot-pin-link">Forgot PIN?</button>
+            <span class="auth-separator">•</span>
+            <button type="button" class="auth-link" id="switch-to-register">Create Account</button>
+          </div>
+        </form>
+
+        <!-- Registration Form -->
+        <form id="register-form" class="auth-form">
+          <div class="form-group">
+            <label for="register-phone" class="form-label">Phone Number</label>
+            <div class="phone-input-group">
+              <select id="register-country" class="country-select">
+                <option value="UG">🇺🇬 +256</option>
+                <option value="KE">🇰🇪 +254</option>
+                <option value="TZ">🇹🇿 +255</option>
+                <option value="NG">🇳🇬 +234</option>
+              </select>
+              <input
+                type="tel"
+                id="register-phone"
+                class="form-input phone-input"
+                placeholder="7XX XXX XXX"
+                required
+              >
+            </div>
+            <div id="register-phone-error" class="form-error"></div>
+          </div>
+
+          <div class="form-group">
+            <label for="register-email" class="form-label">Email Address <span class="optional">(Optional)</span></label>
+            <input
+              type="email"
+              id="register-email"
+              class="form-input"
+              placeholder="your.email@example.com"
+            >
+            <div id="register-email-error" class="form-error"></div>
+          </div>
+
+          <div class="form-group">
+            <label for="register-pin" class="form-label">Create 6-Digit PIN</label>
+            <input
+              type="password"
+              id="register-pin"
+              class="form-input"
+              placeholder="Enter 6-digit PIN"
+              maxlength="6"
+              required
+            >
+            <div id="register-pin-error" class="form-error"></div>
+          </div>
+
+          <div class="form-group">
+            <label for="register-pin-confirm" class="form-label">Confirm PIN</label>
+            <input
+              type="password"
+              id="register-pin-confirm"
+              class="form-input"
+              placeholder="Confirm your PIN"
+              maxlength="6"
+              required
+            >
+            <div id="register-pin-confirm-error" class="form-error"></div>
+          </div>
+
+          <button type="submit" class="btn btn-primary auth-submit-btn" id="register-submit-btn">
+            <span class="btn-text">Create Account</span>
+            <div class="btn-spinner" id="register-spinner"></div>
+          </button>
+
+          <div class="auth-links">
+            <button type="button" class="auth-link" id="switch-to-login">Back to Sign In</button>
+          </div>
+        </form>
+      </div>
+
+      <div class="auth-footer">
+        <p class="auth-footer-text">
+          By signing in, you agree to our
+          <a href="#" class="auth-footer-link">Terms of Service</a> and
+          <a href="#" class="auth-footer-link">Privacy Policy</a>
+        </p>
       </div>
     </div>
   </div>

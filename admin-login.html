@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Crane | Admin Login</title>
+  <meta name="description" content="Secure admin login for Crane management system">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    /* Admin login specific styles for better balance */
+    body {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+      background: var(--surface);
+      margin: 0;
+    }
+
+    .admin-auth-container {
+      width: 100%;
+      max-width: 480px; /* Slightly wider than regular auth container */
+      min-height: 500px; /* Ensure minimum height for balance */
+      background: var(--surface-strong);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .admin-auth-header {
+      text-align: center;
+      padding: 3rem 2rem 2rem; /* More padding for balance */
+      border-bottom: 1px solid var(--line);
+      flex-shrink: 0;
+    }
+
+    .admin-auth-form-container {
+      padding: 3rem 2rem; /* More padding for balance */
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .admin-auth-footer {
+      padding: 2rem;
+      text-align: center;
+      border-top: 1px solid var(--line);
+      flex-shrink: 0;
+    }
+
+    /* Mobile responsive for admin login */
+    @media (max-width: 480px) {
+      body {
+        padding: 0.5rem;
+      }
+
+      .admin-auth-container {
+        margin: 0;
+        min-height: auto;
+        max-width: none;
+      }
+
+      .admin-auth-header {
+        padding: 2rem 1.5rem 1.5rem;
+      }
+
+      .admin-auth-form-container {
+        padding: 2rem 1.5rem;
+      }
+
+      .admin-auth-footer {
+        padding: 1.5rem;
+      }
+    }
+
+    /* Larger screens balance */
+    @media (min-width: 768px) {
+      .admin-auth-container {
+        max-width: 520px;
+      }
+
+      .admin-auth-form-container {
+        padding: 4rem 3rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="admin-auth-container">
+    <div class="admin-auth-header">
+      <div class="auth-logo">
+        <img src="img/black crane.png" alt="Crane" class="auth-logo-img">
+        <span class="auth-logo-text">Crane</span>
+      </div>
+      <h1 class="auth-title">Admin Access</h1>
+      <p class="auth-subtitle">Enter master password to access admin console</p>
+    </div>
+
+    <div class="admin-auth-form-container">
+      <form id="admin-login-form" class="auth-form active">
+        <div class="form-group">
+          <label for="admin-password" class="form-label">Master Password</label>
+          <input
+            type="password"
+            id="admin-password"
+            class="form-input"
+            placeholder="Enter admin password"
+            required
+          >
+          <div id="admin-password-error" class="form-error"></div>
+        </div>
+
+        <button type="submit" class="btn btn-primary auth-submit-btn" id="admin-login-submit-btn">
+          <span class="btn-text">Access Admin Console</span>
+          <div class="btn-spinner" id="admin-login-spinner"></div>
+        </button>
+
+        <div class="auth-links">
+          <button type="button" class="auth-link" id="back-to-app">Back to App</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="admin-auth-footer">
+      <p class="auth-footer-text">
+        Admin access is restricted to authorized personnel only.
+      </p>
+    </div>
+  </div>
+
+  <script src="admin-auth.js"></script>
+</body>
+</html>
