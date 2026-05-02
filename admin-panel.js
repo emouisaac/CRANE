@@ -13,6 +13,9 @@ const adminPanelState = {
     riskStatus: 'all'
   }
 };
+const SITE_INTRO_DURATION_MS = 2100;
+const INTRO_IDLE_TIME_MS = 10 * 60 * 1000; // 10 minutes
+let lastActivityTime = Date.now();
 
 const currencyFormatter = new Intl.NumberFormat('en-UG', {
   style: 'currency',
@@ -20,12 +23,71 @@ const currencyFormatter = new Intl.NumberFormat('en-UG', {
   maximumFractionDigits: 0
 });
 
+// Track user activity to detect idle
+function setupIdleDetection() {
+  const updateActivity = () => {
+    lastActivityTime = Date.now();
+    localStorage.setItem('lastActivityTime', lastActivityTime.toString());
+  };
+
+  document.addEventListener('click', updateActivity);
+  document.addEventListener('keydown', updateActivity);
+  document.addEventListener('mousemove', updateActivity);
+  document.addEventListener('scroll', updateActivity);
+  document.addEventListener('touchstart', updateActivity);
+}
+
 // Initialize Admin Panel
 document.addEventListener('DOMContentLoaded', () => {
+  initializeSiteIntro();
   initializeAdminPanel();
   setupAdminEventListeners();
   renderDashboard();
+  setupIdleDetection();
 });
+
+function initializeSiteIntro() {
+  const intro = document.getElementById('site-intro');
+  if (!intro) {
+    document.body.classList.remove('intro-loading');
+    document.body.classList.add('intro-complete');
+    return;
+  }
+
+  // Check if intro should be shown
+  const lastIntroTime = localStorage.getItem('lastIntroTime');
+  const currentTime = Date.now();
+  const shouldShowIntro = !lastIntroTime || (currentTime - parseInt(lastIntroTime)) >= INTRO_IDLE_TIME_MS;
+
+  if (!shouldShowIntro) {
+    // Skip intro - remove immediately
+    document.body.classList.remove('intro-loading');
+    document.body.classList.add('intro-complete');
+    intro.remove();
+    return;
+  }
+
+  // Show intro and save the time
+  localStorage.setItem('lastIntroTime', currentTime.toString());
+  lastActivityTime = currentTime;
+  localStorage.setItem('lastActivityTime', currentTime.toString());
+
+  const finishIntro = () => {
+    intro.classList.add('is-hidden');
+    document.body.classList.remove('intro-loading', 'intro-playing');
+    document.body.classList.add('intro-complete');
+
+    window.setTimeout(() => {
+      intro.remove();
+    }, 600);
+  };
+
+  window.requestAnimationFrame(() => {
+    document.body.classList.add('intro-playing');
+  });
+
+  window.setTimeout(finishIntro, SITE_INTRO_DURATION_MS);
+}
 
 function initializeAdminPanel() {
   setupNavigation();

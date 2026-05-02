@@ -15,10 +15,72 @@ const adminUiState = {
 
 let adminWaveFrame = null;
 let adminLiveSyncInterval = null;
+const SITE_INTRO_DURATION_MS = 2100;
+const INTRO_IDLE_TIME_MS = 10 * 60 * 1000; // 10 minutes
+let lastActivityTime = Date.now();
+
+// Track user activity to detect idle
+function setupIdleDetection() {
+  const updateActivity = () => {
+    lastActivityTime = Date.now();
+    localStorage.setItem('lastActivityTime', lastActivityTime.toString());
+  };
+
+  document.addEventListener('click', updateActivity);
+  document.addEventListener('keydown', updateActivity);
+  document.addEventListener('mousemove', updateActivity);
+  document.addEventListener('scroll', updateActivity);
+  document.addEventListener('touchstart', updateActivity);
+}
 
 document.addEventListener('DOMContentLoaded', () => {
+  initializeSiteIntro();
   initializeAdminConsole();
+  setupIdleDetection();
 });
+
+function initializeSiteIntro() {
+  const intro = document.getElementById('site-intro');
+  if (!intro) {
+    document.body.classList.remove('intro-loading');
+    document.body.classList.add('intro-complete');
+    return;
+  }
+
+  // Check if intro should be shown
+  const lastIntroTime = localStorage.getItem('lastIntroTime');
+  const currentTime = Date.now();
+  const shouldShowIntro = !lastIntroTime || (currentTime - parseInt(lastIntroTime)) >= INTRO_IDLE_TIME_MS;
+
+  if (!shouldShowIntro) {
+    // Skip intro - remove immediately
+    document.body.classList.remove('intro-loading');
+    document.body.classList.add('intro-complete');
+    intro.remove();
+    return;
+  }
+
+  // Show intro and save the time
+  localStorage.setItem('lastIntroTime', currentTime.toString());
+  lastActivityTime = currentTime;
+  localStorage.setItem('lastActivityTime', currentTime.toString());
+
+  const finishIntro = () => {
+    intro.classList.add('is-hidden');
+    document.body.classList.remove('intro-loading', 'intro-playing');
+    document.body.classList.add('intro-complete');
+
+    window.setTimeout(() => {
+      intro.remove();
+    }, 600);
+  };
+
+  window.requestAnimationFrame(() => {
+    document.body.classList.add('intro-playing');
+  });
+
+  window.setTimeout(finishIntro, SITE_INTRO_DURATION_MS);
+}
 
 function initializeAdminConsole() {
   setupAdminEventListeners();
@@ -626,23 +688,44 @@ function initializeAdminWave() {
     const height = canvas.clientHeight;
     const time = timestamp * 0.0011;
     const spacing = Math.max(12, Math.min(18, width / 22));
+    const amplitudeX = Math.max(2.5, height * 0.018);
+    const amplitudeY = Math.max(2, height * 0.014);
 
     context.clearRect(0, 0, width, height);
     context.lineWidth = 0.8;
-    context.strokeStyle = 'rgba(255, 255, 255, 0.22)';
+    context.strokeStyle = 'rgba(255, 255, 255, 0.24)';
 
     for (let y = -spacing; y <= height + spacing; y += spacing) {
       context.beginPath();
       for (let x = 0; x <= width; x += 6) {
         const waveY =
           y +
-          Math.sin((x * 0.03) - (time * 1.8) + (y * 0.06)) * (height * 0.018) +
-          Math.cos((x * 0.012) + (time * 1.1)) * (height * 0.014);
+          Math.sin((x * 0.028) - (time * 1.8) + (y * 0.06)) * amplitudeX +
+          Math.cos((x * 0.012) + (time * 1.1)) * amplitudeY;
 
         if (x === 0) {
           context.moveTo(x, waveY);
         } else {
           context.lineTo(x, waveY);
+        }
+      }
+      context.stroke();
+    }
+
+    context.strokeStyle = 'rgba(210, 242, 255, 0.16)';
+
+    for (let x = -spacing; x <= width + spacing; x += spacing) {
+      context.beginPath();
+      for (let y = 0; y <= height; y += 6) {
+        const waveX =
+          x +
+          Math.sin((y * 0.03) - (time * 1.35) + (x * 0.045)) * amplitudeX * 0.75 +
+          Math.cos((y * 0.014) + (time * 0.95)) * amplitudeY;
+
+        if (y === 0) {
+          context.moveTo(waveX, y);
+        } else {
+          context.lineTo(waveX, y);
         }
       }
       context.stroke();

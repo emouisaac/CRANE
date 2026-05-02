@@ -144,14 +144,34 @@ let sectionWaveAnimationFrame = null;
 let sectionWaveResizeHandlerAttached = false;
 let mobileMenuIsOpen = false;
 let liveStatsInterval = null;
+const SITE_INTRO_DURATION_MS = 2100;
+const INTRO_IDLE_TIME_MS = 10 * 60 * 1000; // 10 minutes
+let lastActivityTime = Date.now();
+let idleCheckInterval = null;
+
+// Track user activity to detect idle
+function setupIdleDetection() {
+  const updateActivity = () => {
+    lastActivityTime = Date.now();
+    localStorage.setItem('lastActivityTime', lastActivityTime.toString());
+  };
+
+  document.addEventListener('click', updateActivity);
+  document.addEventListener('keydown', updateActivity);
+  document.addEventListener('mousemove', updateActivity);
+  document.addEventListener('scroll', updateActivity);
+  document.addEventListener('touchstart', updateActivity);
+}
 
 // Initialize Dashboard
 document.addEventListener('DOMContentLoaded', () => {
+  initializeSiteIntro();
   hydrateDashboardFromSharedState();
   initializeDashboard();
   initializeSectionWaveNet();
   setupEventListeners();
   startRealTimeUpdates();
+  setupIdleDetection();
 
   window.addEventListener('storage', (event) => {
     if (event.key === dashboardSharedStore?.STORAGE_KEY) {
@@ -160,6 +180,49 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 });
+
+function initializeSiteIntro() {
+  const intro = document.getElementById('site-intro');
+  if (!intro) {
+    document.body.classList.remove('intro-loading');
+    document.body.classList.add('intro-complete');
+    return;
+  }
+
+  // Check if intro should be shown
+  const lastIntroTime = localStorage.getItem('lastIntroTime');
+  const currentTime = Date.now();
+  const shouldShowIntro = !lastIntroTime || (currentTime - parseInt(lastIntroTime)) >= INTRO_IDLE_TIME_MS;
+
+  if (!shouldShowIntro) {
+    // Skip intro - remove immediately
+    document.body.classList.remove('intro-loading');
+    document.body.classList.add('intro-complete');
+    intro.remove();
+    return;
+  }
+
+  // Show intro and save the time
+  localStorage.setItem('lastIntroTime', currentTime.toString());
+  lastActivityTime = currentTime;
+  localStorage.setItem('lastActivityTime', currentTime.toString());
+
+  const finishIntro = () => {
+    intro.classList.add('is-hidden');
+    document.body.classList.remove('intro-loading', 'intro-playing');
+    document.body.classList.add('intro-complete');
+
+    window.setTimeout(() => {
+      intro.remove();
+    }, 600);
+  };
+
+  window.requestAnimationFrame(() => {
+    document.body.classList.add('intro-playing');
+  });
+
+  window.setTimeout(finishIntro, SITE_INTRO_DURATION_MS);
+}
 
 // Initialize Dashboard
 function initializeDashboard() {
@@ -281,7 +344,7 @@ function initializeSectionWaveNet() {
     const spacing = Math.max(12, Math.min(18, width / 22));
     const amplitudeX = Math.max(2.5, height * 0.018);
     const amplitudeY = Math.max(2, height * 0.014);
-    const lineColor = 'rgba(255, 255, 255, 0.24)';
+    const lineColor = 'rgba(255, 255, 255, 0.22)';
 
     context.lineWidth = 0.8;
     context.strokeStyle = lineColor;
@@ -298,25 +361,6 @@ function initializeSectionWaveNet() {
           context.moveTo(x, waveY);
         } else {
           context.lineTo(x, waveY);
-        }
-      }
-      context.stroke();
-    }
-
-    context.strokeStyle = 'rgba(210, 242, 255, 0.16)';
-
-    for (let x = -spacing; x <= width + spacing; x += spacing) {
-      context.beginPath();
-      for (let y = 0; y <= height; y += 6) {
-        const waveX =
-          x +
-          Math.sin((y * 0.03) - (time * 1.35) + (x * 0.045)) * amplitudeX * 0.75 +
-          Math.cos((y * 0.014) + (time * 0.95)) * amplitudeY;
-
-        if (y === 0) {
-          context.moveTo(waveX, y);
-        } else {
-          context.lineTo(waveX, y);
         }
       }
       context.stroke();
