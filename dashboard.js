@@ -321,13 +321,21 @@ function initializeLoginModal() {
           localStorage.setItem('user', JSON.stringify(data.user));
           isAuthenticated = true;
           
-          // Close modal and reload page
+          // Update login/logout button
+          updateAuthButton();
+          
+          // Close modal
           if (loginModal) {
             loginModal.style.display = 'none';
           }
-          window.location.reload();
+          
+          // Open chat
+          openChatBox();
+          
+          // Reload page to update UI
+          setTimeout(() => window.location.reload(), 500);
         } else {
-          showFormError('login-pin-error', data.message || 'Login failed');
+          showFormError('login-pin-error', data.error || 'Login failed');
         }
       } catch (error) {
         console.error('Login error:', error);
@@ -459,6 +467,192 @@ function isValidEmail(email) {
   return emailRegex.test(email);
 }
 
+// Update login/logout button based on authentication state
+function updateAuthButton() {
+  const mobileLoginBtn = document.getElementById('mobile-login-btn');
+  const desktopLoginBtn = document.getElementById('desktop-login-btn');
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  
+  if (isAuthenticated && user.phone) {
+    // Show logout button
+    if (mobileLoginBtn) {
+      mobileLoginBtn.innerHTML = `
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+          <polyline points="16 17 21 12 16 7"></polyline>
+          <line x1="21" y1="12" x2="9" y2="12"></line>
+        </svg>
+        <span>Logout</span>
+      `;
+      mobileLoginBtn.id = 'mobile-logout-btn';
+      mobileLoginBtn.removeEventListener('click', handleMobileLoginClick);
+      mobileLoginBtn.addEventListener('click', handleLogout);
+    }
+    
+    if (desktopLoginBtn) {
+      desktopLoginBtn.textContent = 'Logout';
+      desktopLoginBtn.id = 'desktop-logout-btn';
+      desktopLoginBtn.removeEventListener('click', handleDesktopLoginClick);
+      desktopLoginBtn.addEventListener('click', handleLogout);
+    }
+  } else {
+    // Show login button
+    if (mobileLoginBtn) {
+      mobileLoginBtn.innerHTML = `
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path>
+          <path d="M10 17l5-5-5-5"></path>
+          <path d="M15 12H3"></path>
+        </svg>
+        <span>Login</span>
+      `;
+      mobileLoginBtn.id = 'mobile-login-btn';
+      mobileLoginBtn.addEventListener('click', handleMobileLoginClick);
+    }
+    
+    if (desktopLoginBtn) {
+      desktopLoginBtn.textContent = 'Login';
+      desktopLoginBtn.id = 'desktop-login-btn';
+      desktopLoginBtn.addEventListener('click', handleDesktopLoginClick);
+    }
+  }
+}
+
+function handleMobileLoginClick(e) {
+  e.preventDefault();
+  const loginModal = document.getElementById('login-modal');
+  if (loginModal) {
+    loginModal.style.display = 'flex';
+    const loginForm = document.getElementById('login-form');
+    const registerForm = document.getElementById('register-form');
+    if (loginForm) loginForm.classList.add('active');
+    if (registerForm) registerForm.classList.remove('active');
+    updateAuthHeader('login');
+  }
+}
+
+function handleDesktopLoginClick(e) {
+  e.preventDefault();
+  const loginModal = document.getElementById('login-modal');
+  if (loginModal) {
+    loginModal.style.display = 'flex';
+    const loginForm = document.getElementById('login-form');
+    const registerForm = document.getElementById('register-form');
+    if (loginForm) loginForm.classList.add('active');
+    if (registerForm) registerForm.classList.remove('active');
+    updateAuthHeader('login');
+  }
+}
+
+// Handle logout
+function handleLogout(e) {
+  e.preventDefault();
+  localStorage.removeItem('accessToken');
+  localStorage.removeItem('user');
+  isAuthenticated = false;
+  updateAuthButton();
+  closeChatBox();
+  alert('You have been logged out');
+  window.location.reload();
+}
+
+// Open chat box
+function openChatBox() {
+  const chatContainer = document.getElementById('chat-container');
+  if (chatContainer) {
+    chatContainer.style.display = 'flex';
+  }
+}
+
+// Close chat box
+function closeChatBox() {
+  const chatContainer = document.getElementById('chat-container');
+  if (chatContainer) {
+    chatContainer.style.display = 'none';
+  }
+}
+
+// Initialize chat functionality
+function initializeChat() {
+  const chatCloseBtn = document.getElementById('chat-close-btn');
+  const chatSendBtn = document.getElementById('chat-send-btn');
+  const chatInput = document.getElementById('chat-input');
+  const chatFooterBtn = document.getElementById('footer-chat-btn');
+  
+  if (chatCloseBtn) {
+    chatCloseBtn.addEventListener('click', closeChatBox);
+  }
+  
+  if (chatSendBtn) {
+    chatSendBtn.addEventListener('click', sendChatMessage);
+  }
+  
+  if (chatInput) {
+    chatInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        sendChatMessage();
+      }
+    });
+  }
+  
+  if (chatFooterBtn) {
+    chatFooterBtn.addEventListener('click', () => {
+      if (isAuthenticated) {
+        openChatBox();
+      } else {
+        alert('Please login to access chat support');
+      }
+    });
+  }
+}
+
+// Send chat message
+function sendChatMessage() {
+  const chatInput = document.getElementById('chat-input');
+  const chatMessages = document.getElementById('chat-messages');
+  
+  if (!chatInput || !chatMessages) return;
+  
+  const message = chatInput.value.trim();
+  if (!message) return;
+  
+  // Add user message
+  const userMessageDiv = document.createElement('div');
+  userMessageDiv.className = 'chat-message user';
+  userMessageDiv.innerHTML = `<p>${escapeHtml(message)}</p>`;
+  chatMessages.appendChild(userMessageDiv);
+  
+  // Clear input
+  chatInput.value = '';
+  
+  // Auto-scroll to bottom
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+  
+  // Simulate admin response
+  setTimeout(() => {
+    const adminMessageDiv = document.createElement('div');
+    adminMessageDiv.className = 'chat-message admin';
+    const responses = [
+      'Thank you for your message. How can I help you further?',
+      'I understand. Let me assist you with that.',
+      "That's a great question. Our support team will review this shortly.",
+      'Thanks for contacting us. Is there anything else I can help with?',
+      "I'm here to help. Please let me know more details."
+    ];
+    const randomResponse = responses[Math.floor(Math.random() * responses.length)];
+    adminMessageDiv.innerHTML = `<p>${randomResponse}</p>`;
+    chatMessages.appendChild(adminMessageDiv);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+  }, 500);
+}
+
+// Escape HTML to prevent XSS
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
 // Initialize Dashboard
 document.addEventListener('DOMContentLoaded', () => {
   // Check authentication
@@ -501,8 +695,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
+  // Update auth button on load
+  updateAuthButton();
+
   // Initialize login modal functionality
   initializeLoginModal();
+  
+  // Initialize chat functionality
+  initializeChat();
 });
 
 function initializeSiteIntro() {

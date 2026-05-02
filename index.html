@@ -796,6 +796,83 @@
     </div>
   </div>
 
+  <!-- User Profile Panel (Slide-out) -->
+  <div class="profile-panel" id="profile-panel">
+    <div class="panel-header">
+      <h3>Profile</h3>
+      <button type="button" class="close-btn" id="close-profile">&times;</button>
+    </div>
+    <div class="panel-content">
+      <div class="profile-header">
+        <div class="profile-avatar">
+          <span id="profile-initials">U</span>
+        </div>
+        <div class="profile-info">
+          <h4 id="profile-name">User</h4>
+          <p id="profile-phone">+256 700 123456</p>
+        </div>
+      </div>
+
+      <div class="profile-section">
+        <h5>Account Information</h5>
+        <div class="profile-item">
+          <span class="label">Phone</span>
+          <span class="value" id="profile-phone-info">+256 700 123456</span>
+        </div>
+        <div class="profile-item">
+          <span class="label">Email</span>
+          <span class="value" id="profile-email">user@example.com</span>
+        </div>
+        <div class="profile-item">
+          <span class="label">Member Since</span>
+          <span class="value" id="profile-member-since">2024</span>
+        </div>
+      </div>
+
+      <div class="profile-section">
+        <h5>Account Settings</h5>
+        <button type="button" class="profile-menu-item" id="change-pin-btn">
+          <span>Change PIN</span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="9 18 15 12 9 6"></polyline>
+          </svg>
+        </button>
+        <button type="button" class="profile-menu-item" id="security-settings-btn">
+          <span>Security Settings</span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="9 18 15 12 9 6"></polyline>
+          </svg>
+        </button>
+        <button type="button" class="profile-menu-item" id="notification-prefs-btn">
+          <span>Notification Preferences</span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="9 18 15 12 9 6"></polyline>
+          </svg>
+        </button>
+      </div>
+
+      <div class="profile-section">
+        <h5>Support</h5>
+        <button type="button" class="profile-menu-item" id="help-btn">
+          <span>Help & Support</span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="9 18 15 12 9 6"></polyline>
+          </svg>
+        </button>
+        <button type="button" class="profile-menu-item" id="terms-btn">
+          <span>Terms & Conditions</span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="9 18 15 12 9 6"></polyline>
+          </svg>
+        </button>
+      </div>
+
+      <button type="button" class="btn btn-danger profile-logout-btn" id="profile-logout-btn">
+        Logout
+      </button>
+    </div>
+  </div>
+
   <!-- Login Modal -->
   <div id="login-modal" class="modal-overlay">
     <div class="modal-container auth-modal-container">
@@ -934,6 +1011,23 @@
           <a href="#" class="auth-footer-link">Privacy Policy</a>
         </p>
       </div>
+    </div>
+  </div>
+
+  <!-- Chat Box -->
+  <div class="chat-container" id="chat-container">
+    <div class="chat-header">
+      <h3>Support Chat</h3>
+      <button type="button" class="chat-close-btn" id="chat-close-btn">&times;</button>
+    </div>
+    <div class="chat-messages" id="chat-messages">
+      <div class="chat-message system">
+        <p>Welcome to Crane Support! How can we help you today?</p>
+      </div>
+    </div>
+    <div class="chat-input-area">
+      <input type="text" id="chat-input" class="chat-input" placeholder="Type your message...">
+      <button type="button" id="chat-send-btn" class="chat-send-btn">Send</button>
     </div>
   </div>
 
