@@ -69,6 +69,10 @@
   transform: translateX(0);
 }
 
+body.mobile-menu-open {
+  overflow: hidden;
+}
+
 .sidebar-header {
   display: flex;
   align-items: center;
@@ -2696,16 +2700,15 @@
   }
 
   .dashboard-sidebar {
-    display: block;
-    position: fixed;
-    left: -100%;
+    left: 0;
     z-index: 1000;
     width: min(280px, calc(100vw - 2rem));
-    transition: left 0.3s ease;
+    transform: translateX(calc(-100% - 1rem));
+    transition: transform 0.3s ease;
   }
 
   .dashboard-sidebar.active {
-    left: 0;
+    transform: translateX(0);
   }
   
   .page-header {

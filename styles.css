@@ -615,6 +615,22 @@ select {
   margin: 0 auto;
 }
 
+#mobile-menu-toggle {
+  display: none;
+}
+
+@media (min-width: 769px) {
+  .footer-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  #mobile-menu-toggle {
+    display: inline-flex;
+  }
+}
+
 /* Responsive */
 @media (max-width: 600px) {
   .welcome-header-card {

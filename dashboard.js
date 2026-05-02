@@ -140,6 +140,7 @@ let marketingTickerIndex = 0;
 let marketingRefreshCountdown = 12;
 let sectionWaveAnimationFrame = null;
 let sectionWaveResizeHandlerAttached = false;
+let mobileMenuIsOpen = false;
 
 // Initialize Dashboard
 document.addEventListener('DOMContentLoaded', () => {
@@ -280,7 +281,7 @@ function initializeMarketingDashboard() {
   updateMarketingPulse();
   updateActiveOffer();
   updateMarketingTicker();
-  renderOfferCountdown();
+  // Removed renderOfferCountdown since we don't have automatic refreshes
   setupMarketingRotation();
 }
 
@@ -307,9 +308,9 @@ function updateActiveOffer() {
 
 function advanceMarketingOffer() {
   marketingOfferIndex = (marketingOfferIndex + 1) % dashboardState.marketing.offers.length;
-  marketingRefreshCountdown = 12;
+  // Removed countdown reset since we don't have automatic refreshes
   updateActiveOffer();
-  renderOfferCountdown();
+  // Removed renderOfferCountdown call
   animateOfferChange();
 }
 
@@ -334,19 +335,10 @@ function restartTickerAnimation(tickerContent) {
   }, 10);
 }
 
-// Setup Marketing Rotation
+// Setup Marketing Rotation (removed automatic rotation)
 function setupMarketingRotation() {
-  // Rotate offers every 12 seconds to match the refresh countdown.
-  setInterval(() => {
-    advanceMarketingOffer();
-  }, 12000);
-
-  // Rotate ticker messages
-  setInterval(() => {
-    advanceMarketingTicker();
-  }, 12000);
-
-  // Animate live stats
+  // Removed automatic intervals - now only manual refresh
+  // Keep initial animation of live stats
   animateLiveStats();
 }
 
@@ -822,6 +814,21 @@ function setupEventListeners() {
     switchView('overview');
   });
 
+  // Footer money/loans button
+  document.getElementById('footer-money-btn')?.addEventListener('click', () => {
+    switchView('loans');
+  });
+
+  // Footer chat button
+  document.getElementById('footer-chat-btn')?.addEventListener('click', () => {
+    alert('Chat support feature would be implemented here.\n\nThis would open a chat interface for customer support, loan inquiries, or general assistance.');
+  });
+
+  // Footer profile button
+  document.getElementById('footer-profile-btn')?.addEventListener('click', () => {
+    alert('Profile settings would be implemented here.\n\nThis would show user profile, account settings, security options, and personal information management.');
+  });
+
   // Header brand/logo button
   document.getElementById('header-brand-btn')?.addEventListener('click', () => {
     switchView('overview');
@@ -846,6 +853,21 @@ function setupEventListeners() {
 
   // Sidebar overlay click to close
   document.getElementById('sidebar-overlay')?.addEventListener('click', closeMobileMenu);
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && mobileMenuIsOpen) {
+      closeMobileMenu();
+    }
+  });
+
+  window.addEventListener('resize', () => {
+    if (window.innerWidth > 768 && mobileMenuIsOpen) {
+      closeMobileMenu();
+    }
+  });
+
+  // Mobile search toggle
+  document.getElementById('mobile-search-toggle')?.addEventListener('click', toggleMobileSearch);
 
   // Sidebar menu items
   document.querySelectorAll('.menu-item').forEach(item => {
@@ -915,15 +937,49 @@ function setupEventListeners() {
   
   // Loan items click
   document.getElementById('loans-list')?.addEventListener('click', handleLoanItemClick);
+  
+  // Add down swipe detection for manual refresh
+  setupSwipeDetection();
 }
 
-// Handle Navigation
-function handleNavigation(e) {
-  e.preventDefault();
-  const view = e.currentTarget.dataset.view;
-  if (view) {
-    switchView(view);
-  }
+// Setup Swipe Detection for Manual Refresh
+function setupSwipeDetection() {
+  let startY = 0;
+  let startX = 0;
+  const minSwipeDistance = 100;
+  
+  document.addEventListener('touchstart', (e) => {
+    startY = e.touches[0].clientY;
+    startX = e.touches[0].clientX;
+  }, { passive: true });
+  
+  document.addEventListener('touchend', (e) => {
+    if (!startY || !startX) return;
+    
+    const endY = e.changedTouches[0].clientY;
+    const endX = e.changedTouches[0].clientX;
+    const diffY = startY - endY;
+    const diffX = Math.abs(startX - endX);
+    
+    // Check if it's a downward swipe (positive diffY means swipe up, negative means swipe down)
+    // and horizontal movement is minimal
+    if (diffY < -minSwipeDistance && diffX < minSwipeDistance) {
+      handleRefreshDashboard();
+    }
+    
+    // Reset
+    startY = 0;
+    startX = 0;
+  }, { passive: true });
+}
+
+function handleNavigation(event) {
+  event.preventDefault();
+
+  const viewName = event.currentTarget?.dataset.view;
+  if (!viewName) return;
+
+  switchView(viewName);
 }
 
 // Switch View
@@ -946,6 +1002,10 @@ function switchView(viewName) {
   document.querySelectorAll('.view-section').forEach(section => {
     section.classList.toggle('active', section.id === `${viewName}-view`);
   });
+
+  if (window.innerWidth <= 768 && mobileMenuIsOpen) {
+    closeMobileMenu();
+  }
 }
 
 // Handle Refresh Dashboard
@@ -967,6 +1027,11 @@ function handleRefreshDashboard() {
   
   // Reinitialize dashboard data
   initializeDashboard();
+  
+  // Manually refresh marketing content
+  advanceMarketingOffer();
+  advanceMarketingTicker();
+  animateLiveStats();
 }
 
 // Switch To Loans View
@@ -986,18 +1051,37 @@ function toggleNotificationPanel() {
 
 // Toggle Mobile Menu
 function toggleMobileMenu() {
-  const sidebar = document.querySelector('.dashboard-sidebar');
-  const overlay = document.getElementById('sidebar-overlay');
-  sidebar?.classList.toggle('active');
-  overlay?.classList.toggle('active');
+  setMobileMenuOpen(!mobileMenuIsOpen);
 }
 
 // Close Mobile Menu
 function closeMobileMenu() {
+  setMobileMenuOpen(false);
+}
+
+function setMobileMenuOpen(isOpen) {
   const sidebar = document.querySelector('.dashboard-sidebar');
   const overlay = document.getElementById('sidebar-overlay');
-  sidebar?.classList.remove('active');
-  overlay?.classList.remove('active');
+  const toggleButton = document.getElementById('mobile-menu-toggle');
+
+  mobileMenuIsOpen = isOpen;
+
+  sidebar?.classList.toggle('active', isOpen);
+  overlay?.classList.toggle('active', isOpen);
+  toggleButton?.classList.toggle('active', isOpen);
+  toggleButton?.setAttribute('aria-expanded', String(isOpen));
+  toggleButton?.setAttribute('aria-label', isOpen ? 'Close navigation menu' : 'Open navigation menu');
+  document.body.classList.toggle('mobile-menu-open', isOpen);
+}
+
+// Toggle Mobile Search
+function toggleMobileSearch() {
+  // For now, show a simple search alert
+  // In a full implementation, this would show/hide a search input
+  const searchTerm = prompt('Search loans, transactions, or insights:');
+  if (searchTerm && searchTerm.trim()) {
+    alert(`Searching for: "${searchTerm.trim()}"\n\nSearch functionality would be implemented here to find loans, transactions, or insights matching your query.`);
+  }
 }
 
 // Mark All Notifications Read
@@ -1168,9 +1252,7 @@ function startRealTimeUpdates() {
     updateCountdown();
   }, 60000);
 
-  setInterval(() => {
-    updateOfferCountdown();
-  }, 1000);
+  // Removed offer countdown update since we don't have automatic refreshes
 
   console.log('Dashboard live updates enabled');
 }
