@@ -1,601 +1,702 @@
-// SwiftLend Admin Panel JavaScript
-
-// Admin State
-const adminState = {
-  metrics: {
-    totalUsers: 12458,
-    activeLoans: 3247,
-    totalDisbursed: 4200000000,
-    defaultRate: 3.2
-  },
-  applications: [
-    { id: 1, user: 'John Doe', amount: 1200000, status: 'pending', score: 742 },
-    { id: 2, user: 'Jane Smith', amount: 800000, status: 'pending', score: 680 },
-    { id: 3, user: 'Mike Johnson', amount: 1500000, status: 'approved', score: 755 },
-    { id: 4, user: 'Sarah Williams', amount: 650000, status: 'rejected', score: 520 }
-  ],
-  riskAlerts: [
-    { id: 1, severity: 'high', title: 'Device Clustering', text: 'Multiple accounts from same device', time: '2 hours ago' },
-    { id: 2, severity: 'medium', title: 'Unusual Pattern', text: 'Suspicious application pattern detected', time: '5 hours ago' },
-    { id: 3, severity: 'medium', title: 'Repayment Anomaly', text: 'Multiple partial payments detected', time: '1 day ago' }
-  ],
-  users: [
-    { id: 'USR001', name: 'John Doe', phone: '+256 7XX XXX XXX', kyc: 'verified', score: 742, loans: 2, joined: 'Jan 2024' },
-    { id: 'USR002', name: 'Jane Smith', phone: '+256 7XX XXX XXX', kyc: 'verified', score: 680, loans: 1, joined: 'Feb 2024' },
-    { id: 'USR003', name: 'Mike Johnson', phone: '+256 7XX XXX XXX', kyc: 'pending', score: 0, loans: 0, joined: 'Mar 2024' },
-    { id: 'USR004', name: 'Sarah Williams', phone: '+256 7XX XXX XXX', kyc: 'rejected', score: 520, loans: 0, joined: 'Mar 2024' }
-  ],
-  loans: [
-    { id: 'L2024125', user: 'John Doe', amount: 1200000, interest: 1.5, term: 6, status: 'pending', aiDecision: 'approve', aiScore: 742 },
-    { id: 'L2024124', user: 'Jane Smith', amount: 800000, interest: 1.8, term: 4, status: 'approved', aiDecision: 'approve', aiScore: 680 },
-    { id: 'L2024123', user: 'Mike Johnson', amount: 1500000, interest: 1.2, term: 12, status: 'disbursed', aiDecision: 'approve', aiScore: 755 },
-    { id: 'L2024122', user: 'Sarah Williams', amount: 650000, interest: 2.0, term: 3, status: 'rejected', aiDecision: 'reject', aiScore: 520 }
-  ],
-  auditLogs: [
-    { timestamp: 'Apr 29, 2024 10:45 AM', admin: 'Admin User', action: 'approval', target: 'Loan L2024125', details: 'Manual override', ip: '41.210.145.XX' },
-    { timestamp: 'Apr 29, 2024 10:30 AM', admin: 'Admin User', action: 'kyc', target: 'User USR8847', details: 'KYC approved', ip: '41.210.145.XX' },
-    { timestamp: 'Apr 29, 2024 10:15 AM', admin: 'System', action: 'system', target: 'Loan L2024124', details: 'Auto approved', ip: 'System' }
-  ]
-};
-
-// Currency Formatter
-const currencyFormatter = new Intl.NumberFormat('en-UG', {
+const sharedStore = window.CraneSharedState;
+const adminCurrencyFormatter = new Intl.NumberFormat('en-UG', {
   style: 'currency',
   currency: 'UGX',
   maximumFractionDigits: 0
 });
 
-// Initialize Admin Panel
+const adminUiState = {
+  currentView: 'overview',
+  selectedLoanId: null,
+  loanFilter: 'all',
+  borrowerSearch: '',
+  adminNotificationsOpen: false
+};
+
+let adminWaveFrame = null;
+let adminLiveSyncInterval = null;
+
 document.addEventListener('DOMContentLoaded', () => {
-  initializeAdmin();
-  setupAdminEventListeners();
+  initializeAdminConsole();
 });
 
-// Initialize Admin
-function initializeAdmin() {
-  updateMetrics();
-  populateApplications();
-  populateRiskAlerts();
-  populateUsersTable();
-  populateLoansTable();
-  initializeAdminCharts();
-}
+function initializeAdminConsole() {
+  setupAdminEventListeners();
+  initializeAdminWave();
+  refreshAdminConsole();
 
-// Update Metrics
-function updateMetrics() {
-  const { metrics } = adminState;
-  document.getElementById('total-users').textContent = metrics.totalUsers.toLocaleString();
-  document.getElementById('active-loans').textContent = metrics.activeLoans.toLocaleString();
-  document.getElementById('total-disbursed').textContent = 'UGX ' + (metrics.totalDisbursed / 1000000000).toFixed(1) + 'B';
-  document.getElementById('default-rate').textContent = metrics.defaultRate + '%';
-}
-
-// Populate Applications
-function populateApplications() {
-  const list = document.getElementById('applications-list');
-  if (!list) return;
-  
-  list.innerHTML = adminState.applications.slice(0, 5).map(app => `
-    <div class="application-item">
-      <div class="app-info">
-        <span class="app-user">${app.user}</span>
-        <span class="app-amount">${currencyFormatter.format(app.amount)}</span>
-      </div>
-      <div class="app-status">
-        <span class="status-badge ${app.status}">${app.status}</span>
-      </div>
-    </div>
-  `).join('');
-}
-
-// Populate Risk Alerts
-function populateRiskAlerts() {
-  const list = document.getElementById('risk-alerts-list');
-  if (!list) return;
-  
-  list.innerHTML = adminState.riskAlerts.map(alert => `
-    <div class="alert-item ${alert.severity}">
-      <div class="alert-icon ${alert.severity === 'high' ? 'danger' : 'warning'}">!</div>
-      <div class="alert-content">
-        <p class="alert-title">${alert.title}</p>
-        <p class="alert-text">${alert.text}</p>
-      </div>
-    </div>
-  `).join('');
-}
-
-// Populate Users Table
-function populateUsersTable() {
-  const tbody = document.getElementById('users-table-body');
-  if (!tbody) return;
-  
-  tbody.innerHTML = adminState.users.map(user => `
-    <tr>
-      <td><input type="checkbox"></td>
-      <td>
-        <div class="user-cell">
-          <span class="user-name">${user.name}</span>
-          <span class="user-id">${user.id}</span>
-        </div>
-      </td>
-      <td>${user.phone}</td>
-      <td><span class="status-badge ${user.kyc}">${user.kyc}</span></td>
-      <td>${user.score > 0 ? user.score : '-'}</td>
-      <td>${user.loans}</td>
-      <td>${user.joined}</td>
-      <td>
-        <button class="text-button" onclick="viewUser('${user.id}')">View</button>
-      </td>
-    </tr>
-  `).join('');
-}
-
-// Populate Loans Table
-function populateLoansTable() {
-  const tbody = document.getElementById('loans-table-body');
-  if (!tbody) return;
-  
-  tbody.innerHTML = adminState.loans.map(loan => `
-    <tr>
-      <td>${loan.id}</td>
-      <td>${loan.user}</td>
-      <td>${currencyFormatter.format(loan.amount)}</td>
-      <td>${loan.interest}%</td>
-      <td>${loan.term} mo</td>
-      <td><span class="status-badge ${loan.status}">${loan.status}</span></td>
-      <td>
-        <div class="ai-decision">
-          <span class="decision-badge ${loan.aiDecision}">${loan.aiDecision}</span>
-          <span>${loan.aiScore}</span>
-        </div>
-      </td>
-      <td>
-        <button class="text-button" onclick="openLoanAction('${loan.id}')">Action</button>
-      </td>
-    </tr>
-  `).join('');
-}
-
-// Initialize Admin Charts
-function initializeAdminCharts() {
-  initializeRevenueChart();
-  initializeUserDistChart();
-  initializeModelPerformanceChart();
-  initializeRepaymentChart();
-  initializeRevenueBreakdownChart();
-}
-
-// Revenue Chart
-function initializeRevenueChart() {
-  const canvas = document.getElementById('revenue-chart');
-  if (!canvas) return;
-  
-  const ctx = canvas.getContext('2d');
-  canvas.width = 500;
-  canvas.height = 200;
-  
-  ctx.fillStyle = '#f5f7f8';
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-  
-  const data = [
-    { month: 'Jan', revenue: 45000000 },
-    { month: 'Feb', revenue: 52000000 },
-    { month: 'Mar', revenue: 61000000 },
-    { month: 'Apr', revenue: 55000000 }
-  ];
-  
-  const maxRevenue = 70000000;
-  const barWidth = 80;
-  const gap = 30;
-  const startX = 40;
-  const chartHeight = 150;
-  
-  data.forEach((item, index) => {
-    const barHeight = (item.revenue / maxRevenue) * chartHeight;
-    const x = startX + index * (barWidth + gap);
-    const y = 170 - barHeight;
-    
-    const gradient = ctx.createLinearGradient(x, y, x, 170);
-    gradient.addColorStop(0, '#0d8b63');
-    gradient.addColorStop(1, '#18aa79');
-    
-    ctx.fillStyle = gradient;
-    ctx.beginPath();
-    ctx.roundRect(x, y, barWidth, barHeight, 8);
-    ctx.fill();
-    
-    ctx.fillStyle = '#5f7165';
-    ctx.font = '12px Manrope';
-    ctx.textAlign = 'center';
-    ctx.fillText(item.month, x + barWidth / 2, 190);
+  window.addEventListener('storage', (event) => {
+    if (event.key === sharedStore?.STORAGE_KEY) {
+      refreshAdminConsole();
+    }
   });
 }
 
-// User Distribution Chart
-function initializeUserDistChart() {
-  const canvas = document.getElementById('user-dist-chart');
-  if (!canvas) return;
-  
-  const ctx = canvas.getContext('2d');
-  canvas.width = 200;
-  canvas.height = 150;
-  
-  const centerX = 100;
-  const centerY = 75;
-  const radius = 60;
-  
-  const data = [
-    { value: 68, color: '#0d8b63' },
-    { value: 22, color: '#e6b84e' },
-    { value: 10, color: '#dc3f3f' }
-  ];
-  
-  let startAngle = -Math.PI / 2;
-  
-  data.forEach(item => {
-    const sliceAngle = (item.value / 100) * Math.PI * 2;
-    
-    ctx.beginPath();
-    ctx.moveTo(centerX, centerY);
-    ctx.arc(centerX, centerY, radius, startAngle, startAngle + sliceAngle);
-    ctx.closePath();
-    ctx.fillStyle = item.color;
-    ctx.fill();
-    
-    startAngle += sliceAngle;
-  });
-  
-  // Center hole
-  ctx.beginPath();
-  ctx.arc(centerX, centerY, 30, 0, Math.PI * 2);
-  ctx.fillStyle = '#f5f7f8';
-  ctx.fill();
+function getSharedState() {
+  return sharedStore.read();
 }
 
-// Model Performance Chart
-function initializeModelPerformanceChart() {
-  const canvas = document.getElementById('model-performance-chart');
-  if (!canvas) return;
-  
-  const ctx = canvas.getContext('2d');
-  canvas.width = 300;
-  canvas.height = 150;
-  
-  ctx.fillStyle = '#f5f7f8';
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-  
-  const data = [
-    { week: 'W1', accuracy: 91 },
-    { week: 'W2', accuracy: 92 },
-    { week: 'W3', accuracy: 93 },
-    { week: 'W4', accuracy: 94 }
-  ];
-  
-  const maxVal = 100;
-  const barWidth = 50;
-  const gap = 20;
-  const startX = 30;
-  const chartHeight = 100;
-  
-  data.forEach((item, index) => {
-    const barHeight = (item.accuracy / maxVal) * chartHeight;
-    const x = startX + index * (barWidth + gap);
-    const y = 130 - barHeight;
-    
-    ctx.fillStyle = '#0d8b63';
-    ctx.beginPath();
-    ctx.roundRect(x, y, barWidth, barHeight, 6);
-    ctx.fill();
-  });
+function updateSharedState(updater) {
+  sharedStore.update(updater);
+  refreshAdminConsole();
 }
 
-// Repayment Chart
-function initializeRepaymentChart() {
-  const canvas = document.getElementById('repayment-chart');
-  if (!canvas) return;
-  
-  const ctx = canvas.getContext('2d');
-  canvas.width = 350;
-  canvas.height = 180;
-  
-  ctx.fillStyle = '#f5f7f8';
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-  
-  const data = [
-    { month: 'Jan', onTime: 70, late: 20, default: 10 },
-    { month: 'Feb', onTime: 72, late: 18, default: 10 },
-    { month: 'Mar', onTime: 75, late: 15, default: 10 },
-    { month: 'Apr', onTime: 72, late: 18, default: 10 }
-  ];
-  
-  const barWidth = 60;
-  const gap = 25;
-  const startX = 30;
-  const chartHeight = 120;
-  
-  data.forEach((item, index) => {
-    const x = startX + index * (barWidth + gap);
-    
-    // Stacked bar
-    const onTimeHeight = (item.onTime / 100) * chartHeight;
-    const lateHeight = (item.late / 100) * chartHeight;
-    const defaultHeight = (item.default / 100) * chartHeight;
-    
-    // Default (bottom)
-    ctx.fillStyle = '#dc3f3f';
-    ctx.fillRect(x, 140 - defaultHeight, barWidth, defaultHeight);
-    
-    // Late
-    ctx.fillStyle = '#e6b84e';
-    ctx.fillRect(x, 140 - defaultHeight - lateHeight, barWidth, lateHeight);
-    
-    // On-time (top)
-    ctx.fillStyle = '#167a52';
-    ctx.fillRect(x, 140 - defaultHeight - lateHeight - onTimeHeight, barWidth, onTimeHeight);
-  });
+function refreshAdminConsole() {
+  const state = getSharedState();
+  renderOverview(state);
+  renderApplications(state);
+  renderBorrowers(state);
+  renderLoans(state);
+  renderCollections(state);
+  renderReferrals(state);
+  renderAudit(state);
+  renderNotifications(state);
+  ensureSelectedLoan(state);
 }
 
-// Revenue Breakdown Chart
-function initializeRevenueBreakdownChart() {
-  const canvas = document.getElementById('revenue-breakdown-chart');
-  if (!canvas) return;
-  
-  const ctx = canvas.getContext('2d');
-  canvas.width = 200;
-  canvas.height = 200;
-  
-  const centerX = 100;
-  const centerY = 100;
-  const radius = 80;
-  
-  const data = [
-    { value: 65, color: '#0d8b63' },
-    { value: 12, color: '#e6b84e' },
-    { value: 6, color: '#2a5968' },
-    { value: 4, color: '#dc3f3f' },
-    { value: 13, color: '#5f7165' }
-  ];
-  
-  let startAngle = -Math.PI / 2;
-  
-  data.forEach(item => {
-    const sliceAngle = (item.value / 100) * Math.PI * 2;
-    
-    ctx.beginPath();
-    ctx.moveTo(centerX, centerY);
-    ctx.arc(centerX, centerY, radius, startAngle, startAngle + sliceAngle);
-    ctx.closePath();
-    ctx.fillStyle = item.color;
-    ctx.fill();
-    
-    startAngle += sliceAngle;
-  });
-  
-  // Center hole
-  ctx.beginPath();
-  ctx.arc(centerX, centerY, 45, 0, Math.PI * 2);
-  ctx.fillStyle = '#ffffff';
-  ctx.fill();
-}
-
-// Setup Event Listeners
 function setupAdminEventListeners() {
-  // Navigation
-  document.querySelectorAll('.nav-link').forEach(link => {
+  document.getElementById('admin-home-btn')?.addEventListener('click', () => switchAdminView('overview'));
+  document.getElementById('admin-open-loans-btn')?.addEventListener('click', () => switchAdminView('loans'));
+  document.getElementById('admin-view-borrowers-btn')?.addEventListener('click', () => switchAdminView('borrowers'));
+  document.getElementById('admin-refresh-btn')?.addEventListener('click', handleAdminSync);
+  document.getElementById('admin-sync-btn')?.addEventListener('click', handleAdminSync);
+  document.getElementById('admin-back-app')?.addEventListener('click', () => {
+    window.location.href = 'index.html';
+  });
+
+  document.querySelectorAll('.nav-link[data-view]').forEach((link) => {
     link.addEventListener('click', handleAdminNavigation);
   });
-  
-  // Mobile menu toggle
-  document.querySelectorAll('.menu-toggle, .mobile-menu-btn').forEach(btn => {
-    btn.addEventListener('click', toggleMobileSidebar);
+
+  document.querySelectorAll('.menu-item[data-view]').forEach((link) => {
+    link.addEventListener('click', handleAdminNavigation);
   });
-  
-  // Sidebar overlay click to close
-  document.getElementById('sidebar-overlay')?.addEventListener('click', closeMobileSidebar);
-  
-  // Sidebar menu items
-  document.querySelectorAll('.menu-item').forEach(item => {
-    item.addEventListener('click', (e) => {
-      e.preventDefault();
-      const view = item.dataset.view;
-      handleAdminNavigation({ target: { dataset: { view: view } } });
-      closeMobileSidebar();
+
+  document.getElementById('admin-mobile-menu-toggle')?.addEventListener('click', toggleAdminSidebar);
+  document.getElementById('admin-footer-menu')?.addEventListener('click', toggleAdminSidebar);
+  document.getElementById('admin-sidebar-overlay')?.addEventListener('click', closeAdminSidebar);
+
+  document.querySelectorAll('[data-footer-view]').forEach((button) => {
+    button.addEventListener('click', () => switchAdminView(button.dataset.footerView));
+  });
+
+  document.querySelectorAll('[data-admin-box]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const intent = button.dataset.adminBox;
+      if (intent === 'review') {
+        switchAdminView('overview');
+        document.getElementById('admin-applications-list')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+      if (intent === 'overdue') {
+        adminUiState.loanFilter = 'overdue';
+        switchAdminView('loans');
+        refreshAdminConsole();
+      }
+      if (intent === 'repayments') {
+        switchAdminView('collections');
+      }
     });
   });
-  
-  // Notification button
-  document.getElementById('admin-notification-btn')?.addEventListener('click', toggleAdminNotificationPanel);
-  document.getElementById('close-admin-notifications')?.addEventListener('click', toggleAdminNotificationPanel);
-  
-  // User modal
-  document.getElementById('close-user-modal')?.addEventListener('click', closeUserModal);
-  document.getElementById('approve-user')?.addEventListener('click', approveUser);
-  document.getElementById('blacklist-user')?.addEventListener('click', blacklistUser);
-  
-  // Loan modal
+
+  document.getElementById('admin-loan-filter')?.addEventListener('change', (event) => {
+    adminUiState.loanFilter = event.target.value;
+    renderLoans(getSharedState());
+  });
+
+  document.getElementById('borrower-search')?.addEventListener('input', (event) => {
+    adminUiState.borrowerSearch = event.target.value.trim().toLowerCase();
+    renderBorrowers(getSharedState());
+  });
+
+  document.getElementById('admin-notification-btn')?.addEventListener('click', toggleAdminNotifications);
+  document.getElementById('close-admin-notifications')?.addEventListener('click', toggleAdminNotifications);
+
   document.getElementById('close-loan-modal')?.addEventListener('click', closeLoanModal);
   document.getElementById('cancel-loan-action')?.addEventListener('click', closeLoanModal);
   document.getElementById('confirm-loan-action')?.addEventListener('click', confirmLoanAction);
-  
-  // Chart period buttons
-  document.querySelectorAll('.period-btn').forEach(btn => {
-    btn.addEventListener('click', handleAdminPeriodChange);
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') {
+      closeAdminSidebar();
+      closeLoanModal();
+      if (adminUiState.adminNotificationsOpen) {
+        toggleAdminNotifications();
+      }
+    }
   });
-  
-  // Scoring config
-  document.getElementById('save-scoring-config')?.addEventListener('click', saveScoringConfig);
-  
-  // Commission config
-  document.getElementById('save-commission')?.addEventListener('click', saveCommission);
-  
-  // KYC filter
-  document.getElementById('kyc-filter')?.addEventListener('change', filterUsers);
-  
-  // Loan status filter
-  document.getElementById('loan-status-filter')?.addEventListener('change', filterLoans);
-  
-  // Global search
-  document.getElementById('global-search')?.addEventListener('input', handleGlobalSearch);
-  
-  // Select all users
-  document.getElementById('select-all-users')?.addEventListener('change', toggleSelectAllUsers);
-  
-  // Bulk approve
-  document.getElementById('bulk-approve')?.addEventListener('click', bulkApproveUsers);
 }
 
-// Handle Admin Navigation
-function handleAdminNavigation(e) {
-  e.preventDefault();
-  const view = e.target.dataset.view;
-  if (view) {
-    switchAdminView(view);
-  }
+function handleAdminNavigation(event) {
+  const view = event.currentTarget.dataset.view;
+  if (!view) return;
+
+  event.preventDefault();
+  switchAdminView(view);
+  closeAdminSidebar();
 }
 
-// Switch Admin View
 function switchAdminView(viewName) {
-  // Update nav links
-  document.querySelectorAll('.nav-link').forEach(link => {
-    link.classList.toggle('active', link.dataset.view === viewName);
+  adminUiState.currentView = viewName;
+
+  document.querySelectorAll('.nav-link[data-view]').forEach((link) => {
+    const isActive = link.dataset.view === viewName;
+    link.classList.toggle('active', isActive);
+    link.setAttribute('aria-current', isActive ? 'page' : 'false');
   });
-  
-  // Update view sections
-  document.querySelectorAll('.view-section').forEach(section => {
+
+  document.querySelectorAll('.menu-item[data-view]').forEach((link) => {
+    const isActive = link.dataset.view === viewName;
+    link.classList.toggle('active', isActive);
+    link.setAttribute('aria-current', isActive ? 'page' : 'false');
+  });
+
+  document.querySelectorAll('.view-section').forEach((section) => {
     section.classList.toggle('active', section.id === `${viewName}-view`);
   });
 }
 
-// Toggle Admin Notification Panel
-function toggleAdminNotificationPanel() {
-  const panel = document.getElementById('admin-notification-panel');
-  panel.classList.toggle('open');
+function toggleAdminSidebar() {
+  document.getElementById('admin-sidebar')?.classList.toggle('active');
+  document.getElementById('admin-sidebar-overlay')?.classList.toggle('active');
+  document.body.classList.toggle('mobile-menu-open');
 }
 
-// Toggle Mobile Sidebar
-function toggleMobileSidebar() {
-  const sidebar = document.querySelector('.admin-sidebar');
-  const overlay = document.getElementById('sidebar-overlay');
-  sidebar.classList.toggle('active');
-  overlay.classList.toggle('active');
+function closeAdminSidebar() {
+  document.getElementById('admin-sidebar')?.classList.remove('active');
+  document.getElementById('admin-sidebar-overlay')?.classList.remove('active');
+  document.body.classList.remove('mobile-menu-open');
 }
 
-// Close Mobile Sidebar
-function closeMobileSidebar() {
-  const sidebar = document.querySelector('.admin-sidebar');
-  const overlay = document.getElementById('sidebar-overlay');
-  sidebar.classList.remove('active');
-  overlay.classList.remove('active');
+function toggleAdminNotifications() {
+  adminUiState.adminNotificationsOpen = !adminUiState.adminNotificationsOpen;
+  document.getElementById('admin-notification-panel')?.classList.toggle('open', adminUiState.adminNotificationsOpen);
 }
 
-// View User
-function viewUser(userId) {
-  console.log('Viewing user:', userId);
-  document.getElementById('user-detail-modal').classList.add('open');
+function renderOverview(state) {
+  const activeLoans = state.loans.filter((loan) => loan.status === 'active');
+  const overdueLoans = state.loans.filter((loan) => loan.status === 'overdue');
+  const completedLoans = state.loans.filter((loan) => loan.status === 'completed');
+  const unreadNotifications = state.notifications.filter((item) => item.unread);
+  const inReview = state.admin.applications.filter((item) => item.status === 'review');
+
+  setText('admin-outstanding-book', adminCurrencyFormatter.format(state.user.remainingBalance));
+  setText('admin-focus-title', activeLoans.length ? `${activeLoans[0].borrowerName.split(' ')[0]} Portfolio` : 'Portfolio Review');
+  setText('admin-focus-amount', adminCurrencyFormatter.format(state.user.remainingBalance));
+  setText('admin-focus-active', String(activeLoans.length));
+  setText('admin-focus-overdue', String(overdueLoans.length));
+  setText('admin-focus-completed', String(completedLoans.length));
+  setText('admin-focus-message', overdueLoans.length
+    ? `${overdueLoans.length} overdue loan${overdueLoans.length > 1 ? 's are' : ' is'} synced back to the borrower dashboard.`
+    : 'Shared borrower state is healthy and ready for the next release window.');
+  setText('admin-stat-review', String(inReview.length));
+  setText('admin-stat-risk', String(state.admin.riskAlerts.length));
+  setText('admin-stat-alerts', String(unreadNotifications.length));
+  setText('admin-alert-count', String(Math.max(1, unreadNotifications.length)));
+
+  const tickerContent = document.getElementById('admin-ticker-content');
+  if (tickerContent) {
+    tickerContent.innerHTML = `
+      <span class="ticker-item">Shared book: ${adminCurrencyFormatter.format(state.user.remainingBalance)} outstanding.</span>
+      <span class="ticker-item">${overdueLoans.length} overdue loan${overdueLoans.length === 1 ? '' : 's'} currently need action.</span>
+      <span class="ticker-item">${state.referrals.length} referral records are available in the ledger.</span>
+    `;
+  }
+
+  if (adminLiveSyncInterval) {
+    clearInterval(adminLiveSyncInterval);
+  }
+
+  adminLiveSyncInterval = window.setInterval(() => {
+    const unread = getSharedState().notifications.filter((item) => item.unread).length;
+    setText('admin-stat-alerts', String(unread));
+  }, 15000);
 }
 
-// Close User Modal
-function closeUserModal() {
-  document.getElementById('user-detail-modal').classList.remove('open');
+function renderApplications(state) {
+  const host = document.getElementById('admin-applications-list');
+  if (!host) return;
+
+  if (!state.admin.applications.length) {
+    host.innerHTML = createEmptyState('No review items', 'New borrower and loan review requests will appear here.');
+    return;
+  }
+
+  host.innerHTML = state.admin.applications.map((application) => `
+    <div class="admin-row-card">
+      <div class="admin-row-header">
+        <div>
+          <div class="admin-row-title">${application.user}</div>
+          <div class="admin-row-subtitle">${application.id}</div>
+        </div>
+        <span class="admin-chip ${application.status}">${labelize(application.status)}</span>
+      </div>
+      <div class="admin-row-meta">
+        <span>${adminCurrencyFormatter.format(application.amount)}</span>
+        <span>Score ${application.score}</span>
+        <span>${application.requestedAt}</span>
+      </div>
+      <div class="admin-row-actions">
+        <button type="button" class="admin-action-btn" data-application-id="${application.id}" data-application-action="approve">Promote to active</button>
+        <button type="button" class="admin-secondary-btn" data-application-id="${application.id}" data-application-action="review">Keep in review</button>
+      </div>
+    </div>
+  `).join('');
+
+  host.querySelectorAll('[data-application-action]').forEach((button) => {
+    button.addEventListener('click', () => handleApplicationAction(button.dataset.applicationId, button.dataset.applicationAction));
+  });
 }
 
-// Approve User
-function approveUser() {
-  alert('User approved successfully!');
-  closeUserModal();
+function renderBorrowers(state) {
+  const host = document.getElementById('admin-borrowers-list');
+  const snapshotHost = document.getElementById('admin-borrower-pulse');
+  if (!host || !snapshotHost) return;
+
+  const loans = state.loans;
+  const borrowerMap = new Map();
+
+  loans.forEach((loan) => {
+    const existing = borrowerMap.get(loan.borrowerName) || {
+      name: loan.borrowerName,
+      count: 0,
+      active: 0,
+      overdue: 0,
+      completed: 0,
+      remaining: 0
+    };
+
+    existing.count += 1;
+    existing.remaining += loan.remaining;
+    existing[loan.status] += 1;
+    borrowerMap.set(loan.borrowerName, existing);
+  });
+
+  let borrowers = Array.from(borrowerMap.values());
+
+  if (adminUiState.borrowerSearch) {
+    borrowers = borrowers.filter((borrower) =>
+      borrower.name.toLowerCase().includes(adminUiState.borrowerSearch) ||
+      state.loans.some((loan) => loan.borrowerName === borrower.name && loan.id.toLowerCase().includes(adminUiState.borrowerSearch))
+    );
+  }
+
+  if (!borrowers.length) {
+    host.innerHTML = createEmptyState('No matching borrowers', 'Try a different name or loan search.');
+  } else {
+    host.innerHTML = borrowers.map((borrower) => `
+      <div class="admin-row-card">
+        <div class="admin-row-header">
+          <div>
+            <div class="admin-row-title">${borrower.name}</div>
+            <div class="admin-row-subtitle">${borrower.count} loan record${borrower.count === 1 ? '' : 's'}</div>
+          </div>
+          <span class="admin-chip ${borrower.overdue ? 'overdue' : 'active'}">${borrower.overdue ? 'Attention' : 'Healthy'}</span>
+        </div>
+        <div class="admin-row-meta">
+          <span>${adminCurrencyFormatter.format(borrower.remaining)} outstanding</span>
+          <span>${borrower.active} active</span>
+          <span>${borrower.overdue} overdue</span>
+          <span>${borrower.completed} completed</span>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  snapshotHost.innerHTML = borrowers.slice(0, 3).map((borrower) => `
+    <div class="admin-row-card">
+      <div class="admin-row-title">${borrower.name}</div>
+      <div class="admin-row-meta">
+        <span>${adminCurrencyFormatter.format(borrower.remaining)} outstanding</span>
+        <span>${borrower.active} active</span>
+        <span>${borrower.overdue} overdue</span>
+      </div>
+    </div>
+  `).join('') || createEmptyState('No borrowers', 'Borrower health cards will appear here.');
 }
 
-// Blacklist User
-function blacklistUser() {
-  if (confirm('Are you sure you want to blacklist this user?')) {
-    alert('User has been blacklisted.');
-    closeUserModal();
+function renderLoans(state) {
+  const host = document.getElementById('admin-loans-list');
+  if (!host) return;
+
+  let loans = [...state.loans];
+  if (adminUiState.loanFilter !== 'all') {
+    loans = loans.filter((loan) => loan.status === adminUiState.loanFilter);
+  }
+
+  if (!loans.length) {
+    host.innerHTML = createEmptyState('No loans in this view', 'Adjust the filter to see more book activity.');
+    return;
+  }
+
+  host.innerHTML = loans.map((loan) => `
+    <div class="admin-row-card ${loan.id === adminUiState.selectedLoanId ? 'selected' : ''}" data-loan-card="${loan.id}">
+      <div class="admin-row-header">
+        <div>
+          <div class="admin-row-title">${loan.id}</div>
+          <div class="admin-row-subtitle">${loan.borrowerName}</div>
+        </div>
+        <span class="admin-chip ${loan.status}">${labelize(loan.status)}</span>
+      </div>
+      <div class="admin-row-meta">
+        <span>${adminCurrencyFormatter.format(loan.amount)} booked</span>
+        <span>${adminCurrencyFormatter.format(loan.remaining)} remaining</span>
+        <span>${loan.interest}% monthly</span>
+        <span>${loan.term} month term</span>
+      </div>
+      <div class="admin-row-actions">
+        <button type="button" class="admin-action-btn" data-loan-action-open="${loan.id}">Open action</button>
+      </div>
+    </div>
+  `).join('');
+
+  host.querySelectorAll('[data-loan-action-open]').forEach((button) => {
+    button.addEventListener('click', () => openLoanModal(button.dataset.loanActionOpen));
+  });
+}
+
+function renderCollections(state) {
+  const summaryHost = document.getElementById('admin-collections-summary');
+  const listHost = document.getElementById('admin-collections-list');
+  if (!summaryHost || !listHost) return;
+
+  const overdueLoans = state.loans.filter((loan) => loan.status === 'overdue');
+  const activeLoans = state.loans.filter((loan) => loan.status === 'active');
+  const completedLoans = state.loans.filter((loan) => loan.status === 'completed');
+
+  summaryHost.innerHTML = `
+    <div class="admin-summary-card">
+      <span>Overdue Balance</span>
+      <strong>${adminCurrencyFormatter.format(overdueLoans.reduce((sum, loan) => sum + loan.remaining, 0))}</strong>
+    </div>
+    <div class="admin-summary-card">
+      <span>Active Collections</span>
+      <strong>${activeLoans.length}</strong>
+    </div>
+    <div class="admin-summary-card">
+      <span>Recovered / Completed</span>
+      <strong>${completedLoans.length}</strong>
+    </div>
+  `;
+
+  if (!overdueLoans.length) {
+    listHost.innerHTML = createEmptyState('No overdue loans', 'Collections look clear right now.');
+    return;
+  }
+
+  listHost.innerHTML = overdueLoans.map((loan) => `
+    <div class="admin-row-card">
+      <div class="admin-row-header">
+        <div>
+          <div class="admin-row-title">${loan.borrowerName}</div>
+          <div class="admin-row-subtitle">${loan.id}</div>
+        </div>
+        <span class="admin-chip overdue">Overdue</span>
+      </div>
+      <div class="admin-row-meta">
+        <span>${adminCurrencyFormatter.format(loan.remaining)} due</span>
+        <span>${loan.dueDate ? formatDateRelative(loan.dueDate) : 'Due date unavailable'}</span>
+      </div>
+      <div class="admin-row-actions">
+        <button type="button" class="admin-action-btn" data-collection-complete="${loan.id}">Mark repaid</button>
+        <button type="button" class="admin-secondary-btn" data-collection-active="${loan.id}">Return to active</button>
+      </div>
+    </div>
+  `).join('');
+
+  listHost.querySelectorAll('[data-collection-complete]').forEach((button) => {
+    button.addEventListener('click', () => applyLoanStatus(button.dataset.collectionComplete, 'completed', 'Collections marked the loan as repaid.'));
+  });
+
+  listHost.querySelectorAll('[data-collection-active]').forEach((button) => {
+    button.addEventListener('click', () => applyLoanStatus(button.dataset.collectionActive, 'active', 'Collections returned the loan to active monitoring.'));
+  });
+}
+
+function renderReferrals(state) {
+  const host = document.getElementById('admin-referrals-list');
+  if (!host) return;
+
+  if (!state.referrals.length) {
+    host.innerHTML = createEmptyState('No referrals', 'Shared referral activity will show up here.');
+    return;
+  }
+
+  host.innerHTML = state.referrals.map((referral) => `
+    <div class="admin-row-card">
+      <div class="admin-row-header">
+        <div>
+          <div class="admin-row-title">${referral.name}</div>
+          <div class="admin-row-subtitle">${referral.date}</div>
+        </div>
+        <span class="admin-chip ${referral.status === 'paid' ? 'active' : 'review'}">${labelize(referral.status)}</span>
+      </div>
+      <div class="admin-row-meta">
+        <span>Level ${referral.level}</span>
+        <span>${adminCurrencyFormatter.format(referral.earned)}</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+function renderAudit(state) {
+  const host = document.getElementById('admin-audit-list');
+  const riskHost = document.getElementById('admin-risk-alerts-list');
+  if (!host || !riskHost) return;
+
+  host.innerHTML = state.admin.auditLogs.map((log) => `
+    <div class="admin-row-card">
+      <div class="admin-row-header">
+        <div>
+          <div class="admin-row-title">${log.action}</div>
+          <div class="admin-row-subtitle">${log.actor} · ${log.time}</div>
+        </div>
+      </div>
+      <div class="admin-audit-detail">${log.details}</div>
+    </div>
+  `).join('');
+
+  riskHost.innerHTML = state.admin.riskAlerts.map((alert) => `
+    <div class="admin-row-card">
+      <div class="admin-row-header">
+        <div>
+          <div class="admin-row-title">${alert.title}</div>
+          <div class="admin-row-subtitle">${alert.time}</div>
+        </div>
+        <span class="admin-chip ${alert.severity}">${labelize(alert.severity)}</span>
+      </div>
+      <div class="admin-row-text">${alert.text}</div>
+    </div>
+  `).join('');
+}
+
+function renderNotifications(state) {
+  const host = document.getElementById('admin-notifications-list');
+  if (!host) return;
+
+  host.innerHTML = state.notifications.map((notification) => `
+    <div class="notification-item ${notification.unread ? 'unread' : ''}">
+      <div class="notification-icon ${mapNotificationTone(notification.type)}">${notification.type === 'success' ? '+' : notification.type === 'warning' ? '!' : 'i'}</div>
+      <div class="notification-content">
+        <p class="notification-title">${notification.title}</p>
+        <p class="notification-text">${notification.text}</p>
+        <span class="notification-time">${notification.time}</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+function handleApplicationAction(applicationId, action) {
+  updateSharedState((state) => {
+    const application = state.admin.applications.find((item) => item.id === applicationId);
+    if (!application) return state;
+
+    application.status = action === 'approve' ? 'active' : 'review';
+
+    if (action === 'approve') {
+      state.notifications.unshift({
+        id: Date.now(),
+        type: 'success',
+        title: 'Admin Review Complete',
+        text: `${application.user}'s queued application was promoted to the active book.`,
+        time: 'Just now',
+        unread: true
+      });
+
+      state.admin.auditLogs.unshift({
+        id: `AUD-${Date.now()}`,
+        time: formatTimeStamp(),
+        actor: 'Admin User',
+        action: `Reviewed ${application.id}`,
+        details: `Moved ${application.user} from review into the active book.`
+      });
+    }
+
+    return state;
+  });
+}
+
+function ensureSelectedLoan(state) {
+  if (!state.loans.some((loan) => loan.id === adminUiState.selectedLoanId)) {
+    adminUiState.selectedLoanId = state.loans[0]?.id || null;
   }
 }
 
-// Open Loan Action
-function openLoanAction(loanId) {
-  document.getElementById('action-loan-id').textContent = loanId;
-  document.getElementById('loan-action-modal').classList.add('open');
+function openLoanModal(loanId) {
+  const state = getSharedState();
+  const loan = state.loans.find((item) => item.id === loanId);
+  if (!loan) return;
+
+  adminUiState.selectedLoanId = loanId;
+  setText('action-loan-id', loan.id);
+  setText('action-loan-borrower', loan.borrowerName);
+  setText('action-loan-status', labelize(loan.status));
+  document.getElementById('loan-action-select').value = loan.status;
+  document.getElementById('loan-action-notes').value = '';
+  document.getElementById('loan-action-modal')?.classList.add('open');
+  renderLoans(state);
 }
 
-// Close Loan Modal
 function closeLoanModal() {
-  document.getElementById('loan-action-modal').classList.remove('open');
+  document.getElementById('loan-action-modal')?.classList.remove('open');
 }
 
-// Confirm Loan Action
 function confirmLoanAction() {
-  const action = document.getElementById('loan-action-select').value;
-  const notes = document.getElementById('loan-action-notes').value;
-  
-  console.log('Loan action:', action, 'Notes:', notes);
-  alert(`Loan ${action} successfully!`);
+  const loanId = adminUiState.selectedLoanId;
+  const nextStatus = document.getElementById('loan-action-select')?.value;
+  const notes = document.getElementById('loan-action-notes')?.value.trim() || 'Admin updated the borrower record.';
+
+  if (!loanId || !nextStatus) return;
+  applyLoanStatus(loanId, nextStatus, notes);
   closeLoanModal();
 }
 
-// Handle Admin Period Change
-function handleAdminPeriodChange(e) {
-  const period = e.target.dataset.period;
-  
-  // Update active button
-  document.querySelectorAll('.period-btn').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.period === period);
-  });
-  
-  console.log('Updating chart for period:', period);
-}
+function applyLoanStatus(loanId, nextStatus, notes) {
+  updateSharedState((state) => {
+    const loan = state.loans.find((item) => item.id === loanId);
+    if (!loan) return state;
 
-// Save Scoring Config
-function saveScoringConfig() {
-  alert('Scoring configuration saved successfully!');
-}
+    loan.status = nextStatus;
+    if (nextStatus === 'completed') {
+      loan.remaining = 0;
+      loan.paidInstallments = loan.term;
+    }
+    if (nextStatus === 'active' && loan.remaining === 0) {
+      loan.remaining = Math.round(loan.amount * 0.15);
+      loan.paidInstallments = Math.max(loan.term - 1, 1);
+    }
 
-// Save Commission
-function saveCommission() {
-  alert('Commission configuration saved successfully!');
-}
+    state.notifications.unshift({
+      id: Date.now(),
+      type: nextStatus === 'completed' ? 'success' : nextStatus === 'overdue' ? 'warning' : 'info',
+      title: `Loan ${labelize(nextStatus)}`,
+      text: `${loan.id} for ${loan.borrowerName} is now ${labelize(nextStatus).toLowerCase()}.`,
+      time: 'Just now',
+      unread: true
+    });
 
-// Filter Users
-function filterUsers() {
-  const filter = document.getElementById('kyc-filter').value;
-  console.log('Filtering users by:', filter);
-}
+    state.admin.auditLogs.unshift({
+      id: `AUD-${Date.now()}`,
+      time: formatTimeStamp(),
+      actor: 'Admin User',
+      action: `${loan.id} → ${labelize(nextStatus)}`,
+      details: notes
+    });
 
-// Filter Loans
-function filterLoans() {
-  const filter = document.getElementById('loan-status-filter').value;
-  console.log('Filtering loans by:', filter);
-}
-
-// Handle Global Search
-function handleGlobalSearch(e) {
-  const query = e.target.value.toLowerCase();
-  console.log('Global search:', query);
-}
-
-// Toggle Select All Users
-function toggleSelectAllUsers(e) {
-  const checked = e.target.checked;
-  document.querySelectorAll('#users-table-body input[type="checkbox"]').forEach(cb => {
-    cb.checked = checked;
+    return state;
   });
 }
 
-// Bulk Approve Users
-function bulkApproveUsers() {
-  const selected = document.querySelectorAll('#users-table-body input[type="checkbox"]:checked');
-  if (selected.length === 0) {
-    alert('Please select users to approve.');
-    return;
+function handleAdminSync() {
+  refreshAdminConsole();
+  updateSharedState((state) => {
+    state.admin.auditLogs.unshift({
+      id: `AUD-${Date.now()}`,
+      time: formatTimeStamp(),
+      actor: 'Admin User',
+      action: 'Manual sync',
+      details: 'Admin console refreshed shared borrower and loan state.'
+    });
+    return state;
+  });
+}
+
+function initializeAdminWave() {
+  const canvas = document.getElementById('admin-wave-canvas');
+  const container = canvas?.closest('.admin-balance-card');
+  if (!canvas || !container) return;
+
+  const context = canvas.getContext('2d');
+  if (!context) return;
+
+  const resizeCanvas = () => {
+    const rect = container.getBoundingClientRect();
+    const pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = Math.max(1, Math.floor(rect.width * pixelRatio));
+    canvas.height = Math.max(1, Math.floor(rect.height * pixelRatio));
+    canvas.style.width = `${Math.max(1, Math.floor(rect.width))}px`;
+    canvas.style.height = `${Math.max(1, Math.floor(rect.height))}px`;
+    context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+  };
+
+  resizeCanvas();
+  window.addEventListener('resize', resizeCanvas);
+
+  const draw = (timestamp) => {
+    const width = canvas.clientWidth;
+    const height = canvas.clientHeight;
+    const time = timestamp * 0.0011;
+    const spacing = Math.max(12, Math.min(18, width / 22));
+
+    context.clearRect(0, 0, width, height);
+    context.lineWidth = 0.8;
+    context.strokeStyle = 'rgba(255, 255, 255, 0.22)';
+
+    for (let y = -spacing; y <= height + spacing; y += spacing) {
+      context.beginPath();
+      for (let x = 0; x <= width; x += 6) {
+        const waveY =
+          y +
+          Math.sin((x * 0.03) - (time * 1.8) + (y * 0.06)) * (height * 0.018) +
+          Math.cos((x * 0.012) + (time * 1.1)) * (height * 0.014);
+
+        if (x === 0) {
+          context.moveTo(x, waveY);
+        } else {
+          context.lineTo(x, waveY);
+        }
+      }
+      context.stroke();
+    }
+
+    adminWaveFrame = requestAnimationFrame(draw);
+  };
+
+  if (adminWaveFrame) {
+    cancelAnimationFrame(adminWaveFrame);
   }
-  
-  if (confirm(`Approve ${selected.length} selected users?`)) {
-    alert(`${selected.length} users approved successfully!`);
+  adminWaveFrame = requestAnimationFrame(draw);
+}
+
+function createEmptyState(title, message) {
+  return `
+    <div class="admin-empty-state">
+      <h3>${title}</h3>
+      <p>${message}</p>
+    </div>
+  `;
+}
+
+function setText(id, value) {
+  const element = document.getElementById(id);
+  if (element) {
+    element.textContent = value;
   }
 }
 
-// Export for testing
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { adminState, initializeAdmin };
+function labelize(value) {
+  return String(value)
+    .replace(/([A-Z])/g, ' $1')
+    .replace(/[-_]/g, ' ')
+    .trim()
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function mapNotificationTone(type) {
+  if (type === 'success') return 'info';
+  if (type === 'warning') return 'warning';
+  return 'danger';
+}
+
+function formatTimeStamp() {
+  return new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+}
+
+function formatDateRelative(isoString) {
+  const time = new Date(isoString).getTime();
+  if (Number.isNaN(time)) return 'Date unavailable';
+
+  const diffDays = Math.ceil((time - Date.now()) / (1000 * 60 * 60 * 24));
+  if (diffDays < 0) return `${Math.abs(diffDays)} day${Math.abs(diffDays) === 1 ? '' : 's'} late`;
+  if (diffDays === 0) return 'Due today';
+  return `Due in ${diffDays} day${diffDays === 1 ? '' : 's'}`;
 }

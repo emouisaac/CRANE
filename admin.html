@@ -3,12 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SwiftLend | Admin Panel</title>
-  <meta name="description" content="Professional admin panel for quick loan application management">
+  <title>Crane | Admin Console</title>
+  <meta name="description" content="Crane operations console aligned with the borrower dashboard experience">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="dashboard.css">
   <link rel="stylesheet" href="admin.css">
 </head>
 <body>
@@ -16,79 +17,69 @@
   <div class="page-glow page-glow-right"></div>
 
   <div class="app-shell">
-    <!-- Admin Header -->
-    <header class="admin-header">
-      <button class="menu-toggle" id="mobile-menu-toggle">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <line x1="3" y1="12" x2="21" y2="12"></line>
-          <line x1="3" y1="6" x2="21" y2="6"></line>
-          <line x1="3" y1="18" x2="21" y2="18"></line>
-        </svg>
+    <header class="dashboard-header admin-header-shell">
+      <button type="button" class="header-brand" id="admin-home-btn" aria-label="Go to admin overview">
+        <div class="logo-icon"><img src="img/black crane.png" alt=""></div>
+        <span>Crane Admin</span>
       </button>
-      <div class="header-brand">
-        <div class="logo-icon">S</div>
-        <span>SwiftLend Admin</span>
-      </div>
       <nav class="header-nav">
-        <a href="#" class="nav-link active" data-view="dashboard">Dashboard</a>
-        <a href="#" class="nav-link" data-view="users">Users</a>
+        <a href="#" class="nav-link active" data-view="overview">Overview</a>
+        <a href="#" class="nav-link" data-view="borrowers">Borrowers</a>
         <a href="#" class="nav-link" data-view="loans">Loans</a>
-        <a href="#" class="nav-link" data-view="risk">Risk & Fraud</a>
-        <a href="#" class="nav-link" data-view="scoring">Scoring</a>
-        <a href="#" class="nav-link" data-view="financial">Financial</a>
+        <a href="#" class="nav-link" data-view="collections">Collections</a>
         <a href="#" class="nav-link" data-view="referrals">Referrals</a>
         <a href="#" class="nav-link" data-view="audit">Audit</a>
+        <a href="index.html" class="nav-link">Back to App</a>
       </nav>
       <div class="header-actions">
-        <button class="mobile-search-btn" id="mobile-search-toggle">
+        <button type="button" class="mobile-search-btn" id="admin-mobile-menu-toggle" aria-label="Open admin navigation">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="11" cy="11" r="8"></circle>
-            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            <line x1="4" y1="6" x2="20" y2="6"></line>
+            <line x1="4" y1="12" x2="20" y2="12"></line>
+            <line x1="4" y1="18" x2="20" y2="18"></line>
           </svg>
         </button>
-        <div class="search-box">
-          <input type="text" placeholder="Search users, loans..." id="global-search">
-        </div>
-        <button class="icon-btn" id="admin-notification-btn">
+        <button type="button" class="icon-btn" id="admin-sync-btn" aria-label="Sync shared data">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M23 4v6h-6"></path>
+            <path d="M1 20v-6h6"></path>
+            <path d="M3.51 9a9 9 0 0 1 14.13-3.36L23 10"></path>
+            <path d="M20.49 15a9 9 0 0 1-14.13 3.36L1 14"></path>
+          </svg>
+        </button>
+        <button type="button" class="icon-btn" id="admin-notification-btn" aria-label="Open admin alerts">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
             <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
           </svg>
-          <span class="notification-badge">5</span>
+          <span class="notification-badge" id="admin-alert-count">3</span>
         </button>
-        <div class="admin-avatar" id="admin-menu">
-          <span>AD</span>
-        </div>
       </div>
     </header>
 
-    <!-- Mobile Sidebar Overlay -->
-    <div class="sidebar-overlay" id="sidebar-overlay"></div>
-    
-    <!-- Admin Sidebar (for mobile) -->
-    <aside class="admin-sidebar">
+    <div class="sidebar-overlay" id="admin-sidebar-overlay"></div>
+
+    <aside class="dashboard-sidebar admin-sidebar" id="admin-sidebar">
       <div class="sidebar-header">
-        <div class="logo-icon">S</div>
-        <span>SwiftLend</span>
+        <div class="logo-icon"><img src="img/black crane.png" alt=""></div>
+        <span>Crane Admin</span>
       </div>
       <nav class="sidebar-menu">
-        <a href="#" class="menu-item active" data-view="dashboard">
+        <a href="#" class="menu-item active" data-view="overview">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <rect x="3" y="3" width="7" height="7"></rect>
             <rect x="14" y="3" width="7" height="7"></rect>
             <rect x="14" y="14" width="7" height="7"></rect>
             <rect x="3" y="14" width="7" height="7"></rect>
           </svg>
-          <span>Dashboard</span>
+          <span>Overview</span>
         </a>
-        <a href="#" class="menu-item" data-view="users">
+        <a href="#" class="menu-item" data-view="borrowers">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-            <circle cx="9" cy="7" r="4"></circle>
-            <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+            <path d="M16 21v-1a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v1"></path>
+            <circle cx="8.5" cy="7" r="4"></circle>
           </svg>
-          <span>Users</span>
+          <span>Borrowers</span>
         </a>
         <a href="#" class="menu-item" data-view="loans">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -97,26 +88,14 @@
           </svg>
           <span>Loans</span>
         </a>
-        <a href="#" class="menu-item" data-view="risk">
+        <a href="#" class="menu-item" data-view="collections">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
-            <line x1="12" y1="9" x2="12" y2="13"></line>
-            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+            <path d="M23 4v6h-6"></path>
+            <path d="M1 20v-6h6"></path>
+            <path d="M3.51 9a9 9 0 0 1 14.13-3.36L23 10"></path>
+            <path d="M20.49 15a9 9 0 0 1-14.13 3.36L1 14"></path>
           </svg>
-          <span>Risk & Fraud</span>
-        </a>
-        <a href="#" class="menu-item" data-view="scoring">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
-          </svg>
-          <span>Scoring</span>
-        </a>
-        <a href="#" class="menu-item" data-view="financial">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="12" y1="1" x2="12" y2="23"></line>
-            <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
-          </svg>
-          <span>Financial</span>
+          <span>Collections</span>
         </a>
         <a href="#" class="menu-item" data-view="referrals">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -133,888 +112,329 @@
             <polyline points="14 2 14 8 20 8"></polyline>
             <line x1="16" y1="13" x2="8" y2="13"></line>
             <line x1="16" y1="17" x2="8" y2="17"></line>
-            <polyline points="10 9 9 9 8 9"></polyline>
           </svg>
           <span>Audit</span>
+        </a>
+        <a href="index.html" class="menu-item">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path>
+            <path d="M10 17l5-5-5-5"></path>
+            <path d="M15 12H3"></path>
+          </svg>
+          <span>Back to App</span>
         </a>
       </nav>
     </aside>
 
-    <!-- Admin Dashboard Content -->
-    <main class="admin-content">
-      <!-- Overview Dashboard -->
-      <section class="view-section active" id="dashboard-view">
-        <div class="admin-grid">
-          <!-- Key Metrics -->
-          <article class="card metrics-card">
-            <div class="metric-row">
-              <div class="metric-item">
-                <span class="metric-label">Total Users</span>
-                <span class="metric-value" id="total-users">12,458</span>
-                <span class="metric-change positive">+12%</span>
-              </div>
-              <div class="metric-item">
-                <span class="metric-label">Active Loans</span>
-                <span class="metric-value" id="active-loans">3,247</span>
-                <span class="metric-change positive">+8%</span>
-              </div>
-              <div class="metric-item">
-                <span class="metric-label">Total Disbursed</span>
-                <span class="metric-value" id="total-disbursed">UGX 4.2B</span>
-                <span class="metric-change positive">+15%</span>
-              </div>
-              <div class="metric-item">
-                <span class="metric-label">Default Rate</span>
-                <span class="metric-value" id="default-rate">3.2%</span>
-                <span class="metric-change negative">+0.5%</span>
+    <main class="dashboard-content admin-console">
+      <section class="view-section active" id="overview-view">
+        <div class="dashboard-grid admin-grid">
+          <article class="welcome-header-card admin-overview-hero">
+            <div class="welcome-text">
+              <h1>Admin Console</h1>
+              <p>Same visual rhythm as the borrower dashboard, now wired to the same shared loan, repayment, and referral state.</p>
+            </div>
+            <button type="button" class="refresh-btn" id="admin-refresh-btn">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M23 4v6h-6"></path>
+                <path d="M1 20v-6h6"></path>
+                <path d="M3.51 9a9 9 0 0 1 14.13-3.36L23 10"></path>
+                <path d="M20.49 15a9 9 0 0 1-14.13 3.36L1 14"></path>
+              </svg>
+              <span>Sync Console</span>
+            </button>
+          </article>
+
+          <article class="card first-section-card admin-balance-card">
+            <div class="section-content">
+              <canvas class="section-wave-canvas" id="admin-wave-canvas" aria-hidden="true"></canvas>
+              <img src="img/black crane.png" alt="Crane icon" class="section-corner-image">
+              <div class="loan-balance-container">
+                <div class="loan-balance-label">Outstanding Book</div>
+                <div class="loan-balance-amount" id="admin-outstanding-book">UGX 0</div>
               </div>
             </div>
           </article>
 
-          <!-- Revenue Chart -->
-          <article class="card revenue-chart-card">
-            <div class="section-heading">
-              <h2>Revenue Overview</h2>
-              <div class="chart-period">
-                <button class="period-btn active" data-period="30">30D</button>
-                <button class="period-btn" data-period="90">90D</button>
-                <button class="period-btn" data-period="365">1Y</button>
-              </div>
-            </div>
-            <div class="chart-container">
-              <canvas id="revenue-chart"></canvas>
-            </div>
-            <div class="revenue-stats">
-              <div class="rev-stat">
-                <span class="rev-label">Interest Revenue</span>
-                <span class="rev-value" id="interest-revenue">UGX 156M</span>
-              </div>
-              <div class="rev-stat">
-                <span class="rev-label">Fee Revenue</span>
-                <span class="rev-value" id="fee-revenue">UGX 42M</span>
-              </div>
-              <div class="rev-stat">
-                <span class="rev-label">Penalty Revenue</span>
-                <span class="rev-value" id="penalty-revenue">UGX 8.5M</span>
-              </div>
-            </div>
-          </article>
-
-          <!-- Loan Applications -->
-          <article class="card applications-card">
-            <div class="section-heading">
-              <h2>Recent Applications</h2>
-              <button class="text-button" id="view-all-apps">View All</button>
-            </div>
-            <div class="applications-list" id="applications-list">
-              <!-- Populated by JS -->
-            </div>
-          </article>
-
-          <!-- Risk Alerts -->
-          <article class="card risk-alerts-card">
-            <div class="section-heading">
-              <h2>Risk Alerts</h2>
-              <span class="alert-count">3 High Priority</span>
-            </div>
-            <div class="alerts-list" id="risk-alerts-list">
-              <!-- Populated by JS -->
-            </div>
-          </article>
-
-          <!-- User Distribution -->
-          <article class="card user-dist-card">
-            <div class="section-heading">
-              <h2>User Distribution</h2>
-            </div>
-            <div class="distribution-chart">
-              <canvas id="user-dist-chart"></canvas>
-            </div>
-            <div class="dist-legend">
-              <div class="legend-item">
-                <span class="legend-dot" style="background: #0d8b63"></span>
-                <span>Verified</span>
-                <span class="legend-value">68%</span>
-              </div>
-              <div class="legend-item">
-                <span class="legend-dot" style="background: #e6b84e"></span>
-                <span>Pending</span>
-                <span class="legend-value">22%</span>
-              </div>
-              <div class="legend-item">
-                <span class="legend-dot" style="background: #dc3f3f"></span>
-                <span>Rejected</span>
-                <span class="legend-value">10%</span>
-              </div>
-            </div>
-          </article>
-
-          <!-- Top Performers -->
-          <article class="card top-performers-card">
-            <div class="section-heading">
-              <h2>Top Performing Regions</h2>
-            </div>
-            <div class="performers-list">
-              <div class="performer-item">
-                <span class="performer-rank">1</span>
-                <div class="performer-info">
-                  <span class="performer-name">Kampala</span>
-                  <span class="performer-detail">2,458 users • UGX 1.2B disbursed</span>
+          <article class="card second-section-card admin-operations-card">
+            <div class="section-content">
+              <div class="marketing-container">
+                <div class="marketing-ticker">
+                  <div class="ticker-content" id="admin-ticker-content"></div>
                 </div>
-              </div>
-              <div class="performer-item">
-                <span class="performer-rank">2</span>
-                <div class="performer-info">
-                  <span class="performer-name">Wakiso</span>
-                  <span class="performer-detail">1,847 users • UGX 890M disbursed</span>
+                <div class="offer-showcase">
+                  <div class="offer-card admin-focus-card">
+                    <div class="offer-header">
+                      <span class="offer-label">Operations Focus</span>
+                      <span class="pulse-badge">LIVE</span>
+                    </div>
+                    <h3 id="admin-focus-title">Portfolio Review</h3>
+                    <div class="offer-amount" id="admin-focus-amount">UGX 0</div>
+                    <div class="offer-details admin-focus-grid">
+                      <div class="detail-row">
+                        <span class="detail-label">Active</span>
+                        <span class="detail-value" id="admin-focus-active">0</span>
+                      </div>
+                      <div class="detail-row">
+                        <span class="detail-label">Overdue</span>
+                        <span class="detail-value" id="admin-focus-overdue">0</span>
+                      </div>
+                      <div class="detail-row">
+                        <span class="detail-label">Completed</span>
+                        <span class="detail-value" id="admin-focus-completed">0</span>
+                      </div>
+                    </div>
+                    <p class="offer-message" id="admin-focus-message">Shared borrower and operations state is ready.</p>
+                    <button type="button" class="btn-apply-now" id="admin-open-loans-btn">Open Loan Desk</button>
+                  </div>
                 </div>
-              </div>
-              <div class="performer-item">
-                <span class="performer-rank">3</span>
-                <div class="performer-info">
-                  <span class="performer-name">Mukono</span>
-                  <span class="performer-detail">1,203 users • UGX 580M disbursed</span>
-                </div>
-              </div>
-              <div class="performer-item">
-                <span class="performer-rank">4</span>
-                <div class="performer-info">
-                  <span class="performer-name">Jinja</span>
-                  <span class="performer-detail">987 users • UGX 420M disbursed</span>
+                <div class="live-stats">
+                  <div class="stat-item approved-stat">
+                    <div class="stat-number" id="admin-stat-review">0</div>
+                    <div class="stat-label">In Review</div>
+                  </div>
+                  <div class="stat-item approval-stat">
+                    <div class="stat-number" id="admin-stat-risk">0</div>
+                    <div class="stat-label">Risk Flags</div>
+                  </div>
+                  <div class="stat-item repeat-stat">
+                    <div class="stat-number" id="admin-stat-alerts">0</div>
+                    <div class="stat-label">Unread Alerts</div>
+                  </div>
                 </div>
               </div>
             </div>
+          </article>
+
+          <article class="card three-flex-card">
+            <div class="flex-row">
+              <button type="button" class="flex-box" data-admin-box="review" aria-label="Open review queue">
+                <div class="flex-box-icon" aria-hidden="true">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="9"></circle>
+                    <path d="m9 12 2 2 4-4"></path>
+                  </svg>
+                </div>
+                <span class="flex-box-label">Pending Review</span>
+              </button>
+              <button type="button" class="flex-box" data-admin-box="overdue" aria-label="Open overdue loans">
+                <div class="flex-box-icon" aria-hidden="true">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="9"></circle>
+                    <path d="M12 7v5l3 2"></path>
+                  </svg>
+                </div>
+                <span class="flex-box-label">Over Due</span>
+              </button>
+              <button type="button" class="flex-box" data-admin-box="repayments" aria-label="Open collections">
+                <div class="flex-box-icon" aria-hidden="true">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M23 4v6h-6"></path>
+                    <path d="M1 20v-6h6"></path>
+                    <path d="M3.51 9a9 9 0 0 1 14.13-3.36L23 10"></path>
+                    <path d="M20.49 15a9 9 0 0 1-14.13 3.36L1 14"></path>
+                  </svg>
+                </div>
+                <span class="flex-box-label">Repayments</span>
+              </button>
+            </div>
+          </article>
+
+          <article class="card admin-list-card admin-review-card">
+            <div class="section-heading">
+              <div>
+                <h2>Review Queue</h2>
+              </div>
+              <button type="button" class="text-button" id="admin-view-borrowers-btn">Borrowers</button>
+            </div>
+            <div class="admin-stack-list" id="admin-applications-list"></div>
+          </article>
+
+          <article class="card admin-list-card">
+            <div class="section-heading">
+              <div>
+                <h2>Shared Borrower Snapshot</h2>
+              </div>
+            </div>
+            <div class="admin-stack-list" id="admin-borrower-pulse"></div>
+          </article>
+
+          <article class="card admin-list-card">
+            <div class="section-heading">
+              <div>
+                <h2>Risk Alerts</h2>
+              </div>
+            </div>
+            <div class="admin-stack-list" id="admin-risk-alerts-list"></div>
           </article>
         </div>
       </section>
 
-      <!-- Users View -->
-      <section class="view-section" id="users-view">
-        <div class="admin-grid">
-          <article class="card users-management-card">
+      <section class="view-section" id="borrowers-view">
+        <div class="dashboard-grid admin-grid">
+          <article class="card admin-panel-card">
             <div class="section-heading">
-              <h2>User Management</h2>
-              <div class="filter-actions">
-                <select id="kyc-filter">
-                  <option value="all">All KYC Status</option>
-                  <option value="verified">Verified</option>
-                  <option value="pending">Pending</option>
-                  <option value="rejected">Rejected</option>
-                </select>
-                <button class="button button-secondary" id="bulk-approve">Bulk Approve</button>
+              <div>
+                <h2>Borrowers</h2>
               </div>
+              <input class="admin-search-input" id="borrower-search" type="text" placeholder="Search borrower or loan">
             </div>
-            <div class="users-table">
-              <table>
-                <thead>
-                  <tr>
-                    <th><input type="checkbox" id="select-all-users"></th>
-                    <th>User</th>
-                    <th>Phone</th>
-                    <th>KYC Status</th>
-                    <th>Credit Score</th>
-                    <th>Loans</th>
-                    <th>Joined</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody id="users-table-body">
-                  <!-- Populated by JS -->
-                </tbody>
-              </table>
-            </div>
-            <div class="pagination">
-              <button class="page-btn" disabled>Previous</button>
-              <span class="page-info">Page 1 of 25</span>
-              <button class="page-btn">Next</button>
-            </div>
+            <div class="admin-stack-list" id="admin-borrowers-list"></div>
           </article>
         </div>
       </section>
 
-      <!-- Loans View -->
       <section class="view-section" id="loans-view">
-        <div class="admin-grid">
-          <article class="card loans-management-card">
+        <div class="dashboard-grid admin-grid">
+          <article class="card admin-panel-card">
             <div class="section-heading">
-              <h2>Loan Management</h2>
-              <div class="filter-actions">
-                <select id="loan-status-filter">
-                  <option value="all">All Status</option>
-                  <option value="pending">Pending</option>
-                  <option value="approved">Approved</option>
-                  <option value="disbursed">Disbursed</option>
-                  <option value="repaid">Repaid</option>
-                  <option value="defaulted">Defaulted</option>
-                </select>
-                <button class="button button-primary" id="new-loan-btn">+ New Loan</button>
+              <div>
+                <h2>Loan Desk</h2>
               </div>
+              <select id="admin-loan-filter" class="admin-filter-select">
+                <option value="all">All Loans</option>
+                <option value="active">Active</option>
+                <option value="overdue">Overdue</option>
+                <option value="completed">Completed</option>
+              </select>
             </div>
-            <div class="loans-table">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Loan ID</th>
-                    <th>User</th>
-                    <th>Amount</th>
-                    <th>Interest</th>
-                    <th>Term</th>
-                    <th>Status</th>
-                    <th>AI Decision</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody id="loans-table-body">
-                  <!-- Populated by JS -->
-                </tbody>
-              </table>
-            </div>
+            <div class="admin-stack-list" id="admin-loans-list"></div>
           </article>
         </div>
       </section>
 
-      <!-- Risk & Fraud View -->
-      <section class="view-section" id="risk-view">
-        <div class="admin-grid">
-          <article class="card fraud-detection-card">
+      <section class="view-section" id="collections-view">
+        <div class="dashboard-grid admin-grid">
+          <article class="card admin-panel-card">
             <div class="section-heading">
-              <h2>Fraud Detection</h2>
-              <span class="tag tag-danger">4 Active Flags</span>
-            </div>
-            <div class="fraud-flags">
-              <div class="fraud-flag high">
-                <div class="flag-header">
-                  <span class="flag-severity high">HIGH</span>
-                  <span class="flag-time">2 hours ago</span>
-                </div>
-                <p class="flag-description">Multiple accounts registered from same device (Device ID: DEV-2024-8847)</p>
-                <div class="flag-users">
-                  <span>Affected: 3 users</span>
-                </div>
-                <div class="flag-actions">
-                  <button class="button button-secondary btn-sm">Review</button>
-                  <button class="button button-danger btn-sm">Block</button>
-                </div>
-              </div>
-              <div class="fraud-flag medium">
-                <div class="flag-header">
-                  <span class="flag-severity medium">MEDIUM</span>
-                  <span class="flag-time">5 hours ago</span>
-                </div>
-                <p class="flag-description">Unusual loan application pattern detected (IP: 41.210.145.XX)</p>
-                <div class="flag-users">
-                  <span>Affected: 1 user</span>
-                </div>
-                <div class="flag-actions">
-                  <button class="button button-secondary btn-sm">Review</button>
-                  <button class="button button-danger btn-sm">Block</button>
-                </div>
-              </div>
-              <div class="fraud-flag medium">
-                <div class="flag-header">
-                  <span class="flag-severity medium">MEDIUM</span>
-                  <span class="flag-time">1 day ago</span>
-                </div>
-                <p class="flag-description">Suspicious repayment behavior - multiple partial payments</p>
-                <div class="flag-users">
-                  <span>Affected: 1 user</span>
-                </div>
-                <div class="flag-actions">
-                  <button class="button button-secondary btn-sm">Review</button>
-                  <button class="button button-danger btn-sm">Block</button>
-                </div>
+              <div>
+                <h2>Collections</h2>
               </div>
             </div>
-          </article>
-
-          <article class="card blacklist-card">
-            <div class="section-heading">
-              <h2>Blacklist Management</h2>
-              <button class="button button-secondary" id="add-blacklist-btn">+ Add to Blacklist</button>
-            </div>
-            <div class="blacklist-table">
-              <table>
-                <thead>
-                  <tr>
-                    <th>User</th>
-                    <th>Reason</th>
-                    <th>Added</th>
-                    <th>Expires</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody id="blacklist-body">
-                  <tr>
-                    <td>John Doe</td>
-                    <td>Fraudulent activity</td>
-                    <td>Apr 15, 2024</td>
-                    <td>Permanent</td>
-                    <td><button class="text-button">Remove</button></td>
-                  </tr>
-                  <tr>
-                    <td>Jane Smith</td>
-                    <td>Defaulted loan</td>
-                    <td>Apr 10, 2024</td>
-                    <td>Apr 10, 2025</td>
-                    <td><button class="text-button">Remove</button></td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </article>
-
-          <article class="card device-tracking-card">
-            <div class="section-heading">
-              <h2>Device & IP Tracking</h2>
-            </div>
-            <div class="tracking-stats">
-              <div class="track-stat">
-                <span class="track-value">1,247</span>
-                <span class="track-label">Unique Devices</span>
-              </div>
-              <div class="track-stat">
-                <span class="track-value">892</span>
-                <span class="track-label">Unique IPs</span>
-              </div>
-              <div class="track-stat">
-                <span class="track-value">12</span>
-                <span class="track-label">Blocked Devices</span>
-              </div>
-            </div>
-            <div class="recent-devices">
-              <h3>Recent Device Registrations</h3>
-              <div class="device-item">
-                <span class="device-id">DEV-2024-9921</span>
-                <span class="device-info">iPhone 14 Pro • Kampala</span>
-                <span class="device-time">2 min ago</span>
-              </div>
-              <div class="device-item">
-                <span class="device-id">DEV-2024-9918</span>
-                <span class="device-info">Samsung S23 • Jinja</span>
-                <span class="device-time">15 min ago</span>
-              </div>
-            </div>
+            <div class="admin-collections-grid" id="admin-collections-summary"></div>
+            <div class="admin-stack-list" id="admin-collections-list"></div>
           </article>
         </div>
       </section>
 
-      <!-- Scoring View -->
-      <section class="view-section" id="scoring-view">
-        <div class="admin-grid">
-          <article class="card scoring-config-card">
-            <div class="section-heading">
-              <h2>Scoring Configuration</h2>
-            </div>
-            <div class="scoring-params">
-              <div class="param-group">
-                <h3>Weight Distribution</h3>
-                <div class="param-item">
-                  <label>Payment History</label>
-                  <input type="range" min="0" max="100" value="35">
-                  <span class="param-value">35%</span>
-                </div>
-                <div class="param-item">
-                  <label>Credit Utilization</label>
-                  <input type="range" min="0" max="100" value="25">
-                  <span class="param-value">25%</span>
-                </div>
-                <div class="param-item">
-                  <label>Account Age</label>
-                  <input type="range" min="0" max="100" value="15">
-                  <span class="param-value">15%</span>
-                </div>
-                <div class="param-item">
-                  <label>Credit Mix</label>
-                  <input type="range" min="0" max="100" value="10">
-                  <span class="param-value">10%</span>
-                </div>
-                <div class="param-item">
-                  <label>New Credit</label>
-                  <input type="range" min="0" max="100" value="15">
-                  <span class="param-value">15%</span>
-                </div>
-              </div>
-              <div class="param-group">
-                <h3>Risk Thresholds</h3>
-                <div class="param-item">
-                  <label>Minimum Score (Approve)</label>
-                  <input type="number" value="550">
-                </div>
-                <div class="param-item">
-                  <label>Maximum Score (Auto-Approve)</label>
-                  <input type="number" value="750">
-                </div>
-                <div class="param-item">
-                  <label>Review Threshold</label>
-                  <input type="number" value="650">
-                </div>
-              </div>
-            </div>
-            <button class="button button-primary" id="save-scoring-config">Save Configuration</button>
-          </article>
-
-          <article class="card model-performance-card">
-            <div class="section-heading">
-              <h2>Model Performance</h2>
-            </div>
-            <div class="performance-metrics">
-              <div class="perf-metric">
-                <span class="perf-value">94.2%</span>
-                <span class="perf-label">Accuracy</span>
-              </div>
-              <div class="perf-metric">
-                <span class="perf-value">91.8%</span>
-                <span class="perf-label">Precision</span>
-              </div>
-              <div class="perf-metric">
-                <span class="perf-value">89.5%</span>
-                <span class="perf-label">Recall</span>
-              </div>
-              <div class="perf-metric">
-                <span class="perf-value">0.72</span>
-                <span class="perf-label">AUC-ROC</span>
-              </div>
-            </div>
-            <div class="chart-container">
-              <canvas id="model-performance-chart"></canvas>
-            </div>
-          </article>
-        </div>
-      </section>
-
-      <!-- Financial View -->
-      <section class="view-section" id="financial-view">
-        <div class="admin-grid">
-          <article class="card financial-overview-card">
-            <div class="section-heading">
-              <h2>Financial Overview</h2>
-            </div>
-            <div class="financial-stats">
-              <div class="fin-stat">
-                <span class="fin-label">Total Disbursed</span>
-                <span class="fin-value">UGX 4,250,000,000</span>
-              </div>
-              <div class="fin-stat">
-                <span class="fin-label">Total Collected</span>
-                <span class="fin-value">UGX 3,180,000,000</span>
-              </div>
-              <div class="fin-stat">
-                <span class="fin-label">Outstanding</span>
-                <span class="fin-value">UGX 1,070,000,000</span>
-              </div>
-              <div class="fin-stat">
-                <span class="fin-label">Net Revenue</span>
-                <span class="fin-value">UGX 206,500,000</span>
-              </div>
-            </div>
-          </article>
-
-          <article class="card repayment-performance-card">
-            <div class="section-heading">
-              <h2>Repayment Performance</h2>
-            </div>
-            <div class="chart-container">
-              <canvas id="repayment-chart"></canvas>
-            </div>
-            <div class="performance-breakdown">
-              <div class="breakdown-item">
-                <span class="breakdown-label">On-time</span>
-                <div class="breakdown-bar"><div class="breakdown-fill success" style="width: 72%"></div></div>
-                <span class="breakdown-value">72%</span>
-              </div>
-              <div class="breakdown-item">
-                <span class="breakdown-label">Late</span>
-                <div class="breakdown-bar"><div class="breakdown-fill warning" style="width: 18%"></div></div>
-                <span class="breakdown-value">18%</span>
-              </div>
-              <div class="breakdown-item">
-                <span class="breakdown-label">Defaulted</span>
-                <div class="breakdown-bar"><div class="breakdown-fill danger" style="width: 10%"></div></div>
-                <span class="breakdown-value">10%</span>
-              </div>
-            </div>
-          </article>
-
-          <article class="card revenue-breakdown-card">
-            <div class="section-heading">
-              <h2>Revenue Breakdown</h2>
-            </div>
-            <div class="chart-container">
-              <canvas id="revenue-breakdown-chart"></canvas>
-            </div>
-            <div class="revenue-items">
-              <div class="revenue-item">
-                <span class="revenue-dot" style="background: #0d8b63"></span>
-                <span>Interest</span>
-                <span class="revenue-amount">UGX 156M</span>
-              </div>
-              <div class="revenue-item">
-                <span class="revenue-dot" style="background: #e6b84e"></span>
-                <span>Processing Fees</span>
-                <span class="revenue-amount">UGX 28M</span>
-              </div>
-              <div class="revenue-item">
-                <span class="revenue-dot" style="background: #2a5968"></span>
-                <span>Late Fees</span>
-                <span class="revenue-amount">UGX 14M</span>
-              </div>
-              <div class="revenue-item">
-                <span class="revenue-dot" style="background: #dc3f3f"></span>
-                <span>Penalty</span>
-                <span class="revenue-amount">UGX 8.5M</span>
-              </div>
-            </div>
-          </article>
-        </div>
-      </section>
-
-      <!-- Referrals View -->
       <section class="view-section" id="referrals-view">
-        <div class="admin-grid">
-          <article class="card affiliate-management-card">
+        <div class="dashboard-grid admin-grid">
+          <article class="card admin-panel-card">
             <div class="section-heading">
-              <h2>Affiliate Management</h2>
-            </div>
-            <div class="affiliate-stats">
-              <div class="aff-stat">
-                <span class="aff-value">1,247</span>
-                <span class="aff-label">Total Affiliates</span>
-              </div>
-              <div class="aff-stat">
-                <span class="aff-value">UGX 45M</span>
-                <span class="aff-label">Total Payouts</span>
-              </div>
-              <div class="aff-stat">
-                <span class="aff-value">UGX 12M</span>
-                <span class="aff-label">Pending</span>
+              <div>
+                <h2>Referral Ledger</h2>
               </div>
             </div>
-            <div class="affiliate-table">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Affiliate</th>
-                    <th>Referrals</th>
-                    <th>Earnings</th>
-                    <th>Level</th>
-                    <th>Status</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody id="affiliate-table-body">
-                  <tr>
-                    <td>Sarah K.</td>
-                    <td>12</td>
-                    <td>UGX 450,000</td>
-                    <td>Level 1</td>
-                    <td><span class="status-badge active">Active</span></td>
-                    <td><button class="text-button">View</button></td>
-                  </tr>
-                  <tr>
-                    <td>Mike R.</td>
-                    <td>8</td>
-                    <td>UGX 320,000</td>
-                    <td>Level 1</td>
-                    <td><span class="status-badge active">Active</span></td>
-                    <td><button class="text-button">View</button></td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </article>
-
-          <article class="card commission-config-card">
-            <div class="section-heading">
-              <h2>Commission Configuration</h2>
-            </div>
-            <div class="commission-levels">
-              <div class="commission-item">
-                <span class="comm-level">Level 1</span>
-                <input type="number" value="50000" placeholder="Amount">
-                <span class="comm-desc">Direct referral</span>
-              </div>
-              <div class="commission-item">
-                <span class="comm-level">Level 2</span>
-                <input type="number" value="25000" placeholder="Amount">
-                <span class="comm-desc">Second tier</span>
-              </div>
-              <div class="commission-item">
-                <span class="comm-level">Level 3</span>
-                <input type="number" value="15000" placeholder="Amount">
-                <span class="comm-desc">Third tier</span>
-              </div>
-              <div class="commission-item">
-                <span class="comm-level">Level 4</span>
-                <input type="number" value="10000" placeholder="Amount">
-                <span class="comm-desc">Fourth tier</span>
-              </div>
-              <div class="commission-item">
-                <span class="comm-level">Level 5</span>
-                <input type="number" value="5000" placeholder="Amount">
-                <span class="comm-desc">Fifth tier</span>
-              </div>
-            </div>
-            <button class="button button-primary" id="save-commission">Save Commission</button>
+            <div class="admin-stack-list" id="admin-referrals-list"></div>
           </article>
         </div>
       </section>
 
-      <!-- Audit View -->
       <section class="view-section" id="audit-view">
-        <div class="admin-grid">
-          <article class="card audit-log-card">
+        <div class="dashboard-grid admin-grid">
+          <article class="card admin-panel-card">
             <div class="section-heading">
-              <h2>Audit Logs</h2>
-              <div class="filter-actions">
-                <select id="audit-action-filter">
-                  <option value="all">All Actions</option>
-                  <option value="approval">Loan Approval</option>
-                  <option value="rejection">Loan Rejection</option>
-                  <option value="kyc">KYC Verification</option>
-                  <option value="user">User Management</option>
-                </select>
-                <input type="date" id="audit-date-filter">
+              <div>
+                <h2>Audit Trail</h2>
               </div>
             </div>
-            <div class="audit-table">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Timestamp</th>
-                    <th>Admin</th>
-                    <th>Action</th>
-                    <th>Target</th>
-                    <th>Details</th>
-                    <th>IP Address</th>
-                  </tr>
-                </thead>
-                <tbody id="audit-table-body">
-                  <tr>
-                    <td>Apr 29, 2024 10:45 AM</td>
-                    <td>Admin User</td>
-                    <td><span class="action-badge approval">Approved</span></td>
-                    <td>Loan L2024125</td>
-                    <td>Manual override - AI recommended reject</td>
-                    <td>41.210.145.XX</td>
-                  </tr>
-                  <tr>
-                    <td>Apr 29, 2024 10:30 AM</td>
-                    <td>Admin User</td>
-                    <td><span class="action-badge kyc">Verified</span></td>
-                    <td>User USR8847</td>
-                    <td>KYC documents approved</td>
-                    <td>41.210.145.XX</td>
-                  </tr>
-                  <tr>
-                    <td>Apr 29, 2024 10:15 AM</td>
-                    <td>System</td>
-                    <td><span class="action-badge system">Auto-approve</span></td>
-                    <td>Loan L2024124</td>
-                    <td>Score: 742 - Auto approved</td>
-                    <td>System</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-            <div class="pagination">
-              <button class="page-btn" disabled>Previous</button>
-              <span class="page-info">Page 1 of 100</span>
-              <button class="page-btn">Next</button>
-            </div>
-          </article>
-
-          <article class="card admin-activity-card">
-            <div class="section-heading">
-              <h2>Admin Activity</h2>
-            </div>
-            <div class="activity-summary">
-              <div class="activity-stat">
-                <span class="activity-value">156</span>
-                <span class="activity-label">Actions Today</span>
-              </div>
-              <div class="activity-stat">
-                <span class="activity-value">89%</span>
-                <span class="activity-label">Approval Rate</span>
-              </div>
-              <div class="activity-stat">
-                <span class="activity-value">2.3s</span>
-                <span class="activity-label">Avg Response</span>
-              </div>
-            </div>
-            <div class="recent-admin-actions">
-              <h3>Recent Admin Actions</h3>
-              <div class="admin-action-item">
-                <span class="action-time">10:45 AM</span>
-                <span class="action-desc">Approved loan L2024125</span>
-                <span class="action-admin">Admin User</span>
-              </div>
-              <div class="admin-action-item">
-                <span class="action-time">10:30 AM</span>
-                <span class="action-desc">Verified KYC for USR8847</span>
-                <span class="action-admin">Admin User</span>
-              </div>
-              <div class="admin-action-item">
-                <span class="action-time">10:15 AM</span>
-                <span class="action-desc">Updated scoring config</span>
-                <span class="action-admin">Admin User</span>
-              </div>
-            </div>
+            <div class="admin-stack-list" id="admin-audit-list"></div>
           </article>
         </div>
       </section>
     </main>
 
-    <!-- Admin Notification Panel -->
+    <footer class="footer-card admin-footer">
+      <div class="footer-grid">
+        <button type="button" class="footer-box" id="admin-footer-menu" aria-label="Toggle menu">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="4" y1="6" x2="20" y2="6"></line>
+            <line x1="4" y1="12" x2="20" y2="12"></line>
+            <line x1="4" y1="18" x2="20" y2="18"></line>
+          </svg>
+        </button>
+        <button type="button" class="footer-box" data-footer-view="borrowers" aria-label="Borrowers">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M16 21v-1a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v1"></path>
+            <circle cx="8.5" cy="7" r="4"></circle>
+          </svg>
+        </button>
+        <button type="button" class="footer-box home-nav-btn" data-footer-view="overview" aria-label="Overview">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 10.5 12 3l9 7.5"></path>
+            <path d="M5 9.5V21h14V9.5"></path>
+          </svg>
+        </button>
+        <button type="button" class="footer-box" data-footer-view="collections" aria-label="Collections">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M23 4v6h-6"></path>
+            <path d="M1 20v-6h6"></path>
+            <path d="M3.51 9a9 9 0 0 1 14.13-3.36L23 10"></path>
+            <path d="M20.49 15a9 9 0 0 1-14.13 3.36L1 14"></path>
+          </svg>
+        </button>
+        <button type="button" class="footer-box" id="admin-back-app" aria-label="Back to borrower app">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M15 18l-6-6 6-6"></path>
+            <path d="M21 12H9"></path>
+          </svg>
+        </button>
+      </div>
+    </footer>
+
     <div class="notification-panel" id="admin-notification-panel">
       <div class="panel-header">
         <h3>Admin Alerts</h3>
-        <button class="close-btn" id="close-admin-notifications">×</button>
+        <button type="button" class="close-btn" id="close-admin-notifications">&times;</button>
       </div>
-      <div class="panel-content">
-        <div class="notification-item unread">
-          <div class="notification-icon danger">!</div>
-          <div class="notification-content">
-            <p class="notification-title">High Risk Alert</p>
-            <p class="notification-text">Multiple accounts from same device detected.</p>
-            <span class="notification-time">2 hours ago</span>
-          </div>
-        </div>
-        <div class="notification-item unread">
-          <div class="notification-icon warning">!</div>
-          <div class="notification-content">
-            <p class="notification-title">Loan Default</p>
-            <p class="notification-text">User USR4521 has defaulted on loan L2024089.</p>
-            <span class="notification-time">5 hours ago</span>
-          </div>
-        </div>
-        <div class="notification-item unread">
-          <div class="notification-icon info">i</div>
-          <div class="notification-content">
-            <p class="notification-title">KYC Review Required</p>
-            <p class="notification-text">15 users pending manual KYC review.</p>
-            <span class="notification-time">1 day ago</span>
-          </div>
-        </div>
-      </div>
+      <div class="panel-content" id="admin-notifications-list"></div>
     </div>
 
-    <!-- User Detail Modal -->
-    <div class="modal" id="user-detail-modal">
-      <div class="modal-content modal-lg">
-        <div class="modal-header">
-          <h3>User Details</h3>
-          <button class="close-btn" id="close-user-modal">×</button>
-        </div>
-        <div class="modal-body">
-          <div class="user-detail-grid">
-            <div class="user-profile-section">
-              <div class="user-avatar-lg">JD</div>
-              <h2>John Doe</h2>
-              <p class="user-id">USR2024001</p>
-              <div class="user-status-badges">
-                <span class="status-badge verified">Verified</span>
-                <span class="status-badge gold">Gold Member</span>
-              </div>
-            </div>
-            <div class="user-info-section">
-              <div class="info-group">
-                <label>Phone</label>
-                <span>+256 7XX XXX XXX</span>
-              </div>
-              <div class="info-group">
-                <label>Email</label>
-                <span>john.doe@email.com</span>
-              </div>
-              <div class="info-group">
-                <label>Address</label>
-                <span>Kampala, Uganda</span>
-              </div>
-              <div class="info-group">
-                <label>Credit Score</label>
-                <span class="score-display">742</span>
-              </div>
-              <div class="info-group">
-                <label>Total Borrowed</label>
-                <span>UGX 2,500,000</span>
-              </div>
-              <div class="info-group">
-                <label>Active Loans</label>
-                <span>2</span>
-              </div>
-            </div>
-          </div>
-          <div class="user-documents">
-            <h3>Documents</h3>
-            <div class="document-item">
-              <span class="doc-name">National ID Front</span>
-              <button class="text-button">View</button>
-            </div>
-            <div class="document-item">
-              <span class="doc-name">National ID Back</span>
-              <button class="text-button">View</button>
-            </div>
-            <div class="document-item">
-              <span class="doc-name">Selfie Photo</span>
-              <button class="text-button">View</button>
-            </div>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button class="button button-secondary" id="blacklist-user">Blacklist</button>
-          <button class="button button-primary" id="approve-user">Approve</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Loan Action Modal -->
     <div class="modal" id="loan-action-modal">
       <div class="modal-content">
         <div class="modal-header">
           <h3>Loan Action</h3>
-          <button class="close-btn" id="close-loan-modal">×</button>
+          <button type="button" class="close-btn" id="close-loan-modal">&times;</button>
         </div>
         <div class="modal-body">
           <div class="loan-action-details">
             <div class="action-detail">
-              <span class="detail-label">Loan ID</span>
-              <span class="detail-value" id="action-loan-id">L2024125</span>
+              <span class="detail-label">Loan</span>
+              <span class="detail-value" id="action-loan-id">-</span>
             </div>
             <div class="action-detail">
-              <span class="detail-label">Amount</span>
-              <span class="detail-value">UGX 1,200,000</span>
+              <span class="detail-label">Borrower</span>
+              <span class="detail-value" id="action-loan-borrower">-</span>
             </div>
             <div class="action-detail">
-              <span class="detail-label">AI Score</span>
-              <span class="detail-value">742</span>
-            </div>
-            <div class="action-detail">
-              <span class="detail-label">AI Recommendation</span>
-              <span class="detail-value recommendation">Approve</span>
+              <span class="detail-label">Current Status</span>
+              <span class="detail-value" id="action-loan-status">-</span>
             </div>
           </div>
           <div class="action-form">
             <div class="form-group">
-              <label>Action</label>
+              <label for="loan-action-select">Action</label>
               <select id="loan-action-select">
-                <option value="approve">Approve</option>
-                <option value="reject">Reject</option>
-                <option value="review">Send to Review</option>
+                <option value="active">Set Active</option>
+                <option value="overdue">Flag Overdue</option>
+                <option value="completed">Mark Repaid</option>
               </select>
             </div>
             <div class="form-group">
-              <label>Notes</label>
-              <textarea id="loan-action-notes" placeholder="Add notes..."></textarea>
+              <label for="loan-action-notes">Notes</label>
+              <textarea id="loan-action-notes" placeholder="Add an audit note..."></textarea>
             </div>
           </div>
         </div>
         <div class="modal-footer">
-          <button class="button button-secondary" id="cancel-loan-action">Cancel</button>
-          <button class="button button-primary" id="confirm-loan-action">Confirm</button>
+          <button type="button" class="button button-secondary" id="cancel-loan-action">Cancel</button>
+          <button type="button" class="button button-primary" id="confirm-loan-action">Confirm</button>
         </div>
       </div>
     </div>
   </div>
 
+  <script src="shared-state.js"></script>
   <script src="admin.js"></script>
 </body>
 </html>

@@ -121,6 +121,8 @@ const dashboardState = {
   }
 };
 
+const dashboardSharedStore = window.CraneSharedState;
+
 // Currency Formatter
 const currencyFormatter = new Intl.NumberFormat('en-UG', {
   style: 'currency',
@@ -141,13 +143,22 @@ let marketingRefreshCountdown = 12;
 let sectionWaveAnimationFrame = null;
 let sectionWaveResizeHandlerAttached = false;
 let mobileMenuIsOpen = false;
+let liveStatsInterval = null;
 
 // Initialize Dashboard
 document.addEventListener('DOMContentLoaded', () => {
+  hydrateDashboardFromSharedState();
   initializeDashboard();
   initializeSectionWaveNet();
   setupEventListeners();
   startRealTimeUpdates();
+
+  window.addEventListener('storage', (event) => {
+    if (event.key === dashboardSharedStore?.STORAGE_KEY) {
+      hydrateDashboardFromSharedState();
+      initializeDashboard();
+    }
+  });
 });
 
 // Initialize Dashboard
@@ -161,6 +172,74 @@ function initializeDashboard() {
   populateLoanDetails('all');
   initializeCharts();
   updateCountdown();
+  syncDashboardToSharedState();
+}
+
+function hydrateDashboardFromSharedState() {
+  if (!dashboardSharedStore) return;
+
+  const sharedState = dashboardSharedStore.read();
+  if (!sharedState) return;
+
+  dashboardState.user = {
+    ...dashboardState.user,
+    ...sharedState.user,
+    nextDueDate: sharedState.user?.nextDueDate ? new Date(sharedState.user.nextDueDate) : dashboardState.user.nextDueDate
+  };
+
+  dashboardState.loans = (sharedState.loans || []).map((loan) => ({
+    ...loan,
+    dueDate: loan.dueDate ? new Date(loan.dueDate) : null
+  }));
+
+  dashboardState.notifications = Array.isArray(sharedState.notifications)
+    ? sharedState.notifications.map((notification) => ({ ...notification }))
+    : dashboardState.notifications;
+
+  dashboardState.referrals = Array.isArray(sharedState.referrals)
+    ? sharedState.referrals.map((referral) => ({ ...referral }))
+    : dashboardState.referrals;
+
+  if (sharedState.marketing) {
+    dashboardState.marketing = {
+      ...dashboardState.marketing,
+      ...sharedState.marketing,
+      pulse: {
+        ...dashboardState.marketing.pulse,
+        ...(sharedState.marketing.pulse || {})
+      }
+    };
+  }
+}
+
+function syncDashboardToSharedState() {
+  if (!dashboardSharedStore) return;
+
+  dashboardSharedStore.update((state) => ({
+    ...state,
+    user: {
+      ...state.user,
+      ...dashboardState.user,
+      nextDueDate: dashboardState.user.nextDueDate instanceof Date
+        ? dashboardState.user.nextDueDate.toISOString()
+        : dashboardState.user.nextDueDate
+    },
+    loans: dashboardState.loans.map((loan) => ({
+      ...loan,
+      borrowerName: loan.borrowerName || dashboardState.user.name,
+      dueDate: loan.dueDate instanceof Date ? loan.dueDate.toISOString() : loan.dueDate
+    })),
+    notifications: dashboardState.notifications.map((notification) => ({ ...notification })),
+    referrals: dashboardState.referrals.map((referral) => ({ ...referral })),
+    marketing: {
+      ...state.marketing,
+      ...dashboardState.marketing,
+      pulse: {
+        ...(state.marketing?.pulse || {}),
+        ...dashboardState.marketing.pulse
+      }
+    }
+  }));
 }
 
 function initializeSectionWaveNet() {
@@ -371,8 +450,12 @@ function animateLiveStats() {
   // Animate repeat stat
   animateCounter('stat-repeat', 0, repeatNum, 1200, '%');
 
+  if (liveStatsInterval) {
+    clearInterval(liveStatsInterval);
+  }
+
   // Repeat animation every 15 seconds
-  setInterval(() => {
+  liveStatsInterval = setInterval(() => {
     animateCounter('stat-approved', 0, approvedNum, 1200);
     animateCounter('stat-approval', 0, approvalNum, 1200, '%');
     animateCounter('stat-repeat', 0, repeatNum, 1200, '%');
@@ -437,6 +520,7 @@ function populateLoanDetails(status = 'all') {
 
   const loans = dashboardState.loans;
   const activeLoans = loans.filter(loan => loan.status === 'active');
+  const overdueLoans = loans.filter(loan => loan.status === 'overdue');
   const completedLoans = loans.filter(loan => loan.status === 'completed');
   const totalBorrowed = loans.reduce((sum, loan) => sum + loan.amount, 0);
   const remainingBalance = loans.reduce((sum, loan) => sum + loan.remaining, 0);
@@ -465,17 +549,19 @@ function populateLoanDetails(status = 'all') {
   }
 
   if (status === 'overdue') {
-    content += createLoanOverviewBanner(
-      'Total Borrowed Snapshot',
-      currencyFormatter.format(dashboardState.user.totalBorrowed),
-      'No overdue loan is on this sample profile, so this tab highlights your full borrowed position.',
-      [
-        { label: 'Remaining balance', value: currencyFormatter.format(dashboardState.user.remainingBalance) },
-        { label: 'Next due in', value: document.getElementById('next-due-countdown')?.textContent || '12d 5h' },
-        { label: 'Credit score', value: `${dashboardState.user.creditScore}` }
-      ],
-      'Healthy account'
-    );
+    content += overdueLoans.length
+      ? overdueLoans.map(createLoanDetailItem).join('')
+      : createLoanOverviewBanner(
+          'Total Borrowed Snapshot',
+          currencyFormatter.format(dashboardState.user.totalBorrowed),
+          'No overdue loan is on this profile right now, so this tab highlights your full borrowed position.',
+          [
+            { label: 'Remaining balance', value: currencyFormatter.format(dashboardState.user.remainingBalance) },
+            { label: 'Next due in', value: document.getElementById('next-due-countdown')?.textContent || '12d 5h' },
+            { label: 'Credit score', value: `${dashboardState.user.creditScore}` }
+          ],
+          'Healthy account'
+        );
   }
 
   if (status === 'completed') {
@@ -1005,6 +1091,7 @@ function handleRefreshDashboard() {
   advanceMarketingOffer();
   advanceMarketingTicker();
   animateLiveStats();
+  syncDashboardToSharedState();
 }
 
 // Switch To Loans View
@@ -1061,6 +1148,7 @@ function toggleMobileSearch() {
 function markAllNotificationsRead() {
   dashboardState.notifications.forEach(n => n.unread = false);
   populateNotifications();
+  syncDashboardToSharedState();
   
   // Update badge
   const badge = document.querySelector('.notification-badge');
@@ -1106,6 +1194,17 @@ function confirmPayment() {
     btn.textContent = 'Confirm Payment';
     btn.disabled = false;
     closePaymentModal();
+
+    const firstOutstandingLoan = dashboardState.loans.find((loan) => loan.remaining > 0);
+    if (firstOutstandingLoan) {
+      const paymentAmount = Math.min(firstOutstandingLoan.remaining, 420000);
+      firstOutstandingLoan.remaining = Math.max(0, firstOutstandingLoan.remaining - paymentAmount);
+      firstOutstandingLoan.status = firstOutstandingLoan.remaining === 0 ? 'completed' : 'active';
+      if (firstOutstandingLoan.status === 'completed') {
+        firstOutstandingLoan.paidInstallments = firstOutstandingLoan.term;
+      }
+      dashboardState.user.remainingBalance = dashboardState.loans.reduce((sum, loan) => sum + loan.remaining, 0);
+    }
     
     // Show success notification
     addNotification({
@@ -1233,6 +1332,7 @@ function addNotification(notification) {
     ...notification
   });
   populateNotifications();
+  syncDashboardToSharedState();
 }
 
 // Real-time Updates (WebSocket Simulation)
