@@ -2,6 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
 const morgan = require("morgan");
+const path = require("path");
 
 const apiRoutes = require("./routes");
 const { auditContext } = require("./middleware/auditContext");
@@ -16,7 +17,14 @@ function createApp() {
   app.use(morgan("dev"));
   app.use(auditContext);
 
+  // Serve static files from the root directory
+  app.use(express.static(path.join(__dirname, "../../")));
+
   app.get("/", (req, res) => {
+    res.sendFile(path.join(__dirname, "../../index.html"));
+  });
+
+  app.get("/api", (req, res) => {
     res.json({
       ok: true,
       message: "SwiftLend backend is running",

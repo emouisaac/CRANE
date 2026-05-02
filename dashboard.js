@@ -251,14 +251,10 @@ function initializeSectionWaveNet() {
 function updateWelcomeHeader() {
   const userNameElement = document.getElementById('user-name');
   if (userNameElement && dashboardState.user.name) {
-    userNameElement.textContent = dashboardState.user.name;
-    // Adjust font size based on name length to fit in one line
-    const nameLength = dashboardState.user.name.length;
-    let fontSize = 1.75; // base rem
-    if (nameLength > 10) {
-      fontSize = Math.max(1, 1.75 - (nameLength - 10) * 0.05);
-    }
-    userNameElement.style.fontSize = fontSize + 'rem';
+    // Show only the last name
+    const lastName = dashboardState.user.name.split(' ').pop();
+    userNameElement.textContent = lastName;
+    // Removed font size adjustment to keep consistent with "Welcome" text
   }
 }
 

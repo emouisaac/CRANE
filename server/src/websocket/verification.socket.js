@@ -3,6 +3,15 @@ const { WebSocketServer } = require("ws");
 function bindVerificationSocket(server) {
   const wss = new WebSocketServer({ server, path: "/ws/verification" });
 
+  wss.on("error", (err) => {
+    if (err.code === "EADDRINUSE") {
+      // Ignore, the HTTP server error handler will retry on a fresh port.
+      return;
+    }
+
+    console.error("WebSocket server error:", err);
+  });
+
   wss.on("connection", (socket) => {
     socket.send(
       JSON.stringify({
