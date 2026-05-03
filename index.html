@@ -546,8 +546,33 @@
                   <input type="date" id="applicant-dob" required>
                 </div>
                 <div class="form-group">
-                  <label for="applicant-address">Residential address</label>
-                  <input type="text" id="applicant-address" placeholder="Street, division, city" required>
+                  <label for="applicant-district">District</label>
+                  <select id="applicant-district" required>
+                    <option value="">Select district</option>
+                    <option value="kampala">Kampala</option>
+                    <option value="wakiso">Wakiso</option>
+                    <option value="mukono">Mukono</option>
+                    <option value="entebbe">Entebbe</option>
+                    <option value="masaka">Masaka</option>
+                    <option value="mbarara">Mbarara</option>
+                    <option value="fort_portal">Fort Portal</option>
+                    <option value="jinja">Jinja</option>
+                    <option value="soroti">Soroti</option>
+                    <option value="lira">Lira</option>
+                    <option value="gulu">Gulu</option>
+                    <option value="arua">Arua</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="applicant-subcounty">Subcounty / Division</label>
+                  <select id="applicant-subcounty" required>
+                    <option value="">Select subcounty</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="applicant-village">Zone / Village</label>
+                  <input type="text" id="applicant-village" placeholder="e.g. Nakasero, Kampala Hill" required>
                 </div>
                 <div class="form-group">
                   <label for="applicant-category">Applicant category</label>
@@ -636,6 +661,13 @@
               <div class="form-divider"></div>
 
               <div class="section-subheading">Document uploads</div>
+              <div class="camera-capture-note">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+                  <circle cx="12" cy="13" r="4"></circle>
+                </svg>
+                <span>📱 Tap any field to use your device camera for photo capture</span>
+              </div>
               <div class="document-grid">
                 <div class="form-group">
                   <label for="id-front">ID / passport front</label>
@@ -647,11 +679,11 @@
                 </div>
                 <div class="form-group">
                   <label for="income-proof">Income proof</label>
-                  <input type="file" id="income-proof" accept="image/*,.pdf" capture="environment" required>
+                  <input type="file" id="income-proof" accept="image/*" capture="environment" required>
                 </div>
                 <div class="form-group">
                   <label for="bank-statement">Bank statement</label>
-                  <input type="file" id="bank-statement" accept="image/*,.pdf" capture="environment">
+                  <input type="file" id="bank-statement" accept="image/*" capture="environment">
                 </div>
                 <div class="form-group">
                   <label for="selfie-photo">Live selfie / verification photo</label>
@@ -659,7 +691,7 @@
                 </div>
                 <div class="form-group">
                   <label for="additional-documents">Additional documents</label>
-                  <input type="file" id="additional-documents" accept="image/*,.pdf" capture="environment" multiple>
+                  <input type="file" id="additional-documents" accept="image/*" capture="environment" multiple>
                 </div>
               </div>
 

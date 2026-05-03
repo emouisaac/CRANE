@@ -1527,6 +1527,40 @@ function updateCountdown() {
   }
 }
 
+// Location data structure for hierarchical address selection
+const locationData = {
+  kampala: ['Central Division', 'Kawempe Division', 'Makindye Division', 'Nakawa Division'],
+  wakiso: ['Entebbe', 'Kira', 'Makindye', 'Nansana', 'Sebagalala'],
+  mukono: ['Mukono', 'Seeta', 'Tirinyi', 'Buwama', 'Kasaala'],
+  entebbe: ['Entebbe', 'Buwama', 'Kasenyi'],
+  masaka: ['Masaka', 'Rakai', 'Bukomansimbi'],
+  mbarara: ['Mbarara', 'Nyamityobora', 'Kazo'],
+  fort_portal: ['Fort Portal', 'Bundibugyo', 'Kabarole'],
+  jinja: ['Jinja', 'Bugembe', 'Budama'],
+  soroti: ['Soroti', 'Amuria'],
+  lira: ['Lira', 'Dokolo'],
+  gulu: ['Gulu', 'Nwoya', 'Omoro'],
+  arua: ['Arua', 'Maracha', 'Yumbe'],
+  other: ['Other location']
+};
+
+function updateApplicantSubcounties() {
+  const district = document.getElementById('applicant-district')?.value;
+  const subcountySelect = document.getElementById('applicant-subcounty');
+  if (!subcountySelect) return;
+  
+  subcountySelect.innerHTML = '<option value="">Select subcounty</option>';
+  
+  if (district && locationData[district]) {
+    locationData[district].forEach(subcounty => {
+      const option = document.createElement('option');
+      option.value = subcounty.toLowerCase().replace(/\s+/g, '_');
+      option.textContent = subcounty;
+      subcountySelect.appendChild(option);
+    });
+  }
+}
+
 // Setup Event Listeners
 function setupEventListeners() {
   // Home footer button
@@ -1637,6 +1671,11 @@ function setupEventListeners() {
 
   const loanRequestForm = document.getElementById('loan-request-form');
   loanRequestForm?.addEventListener('submit', handleLoanRequestSubmit);
+  
+  const applicantDistrictSelect = document.getElementById('applicant-district');
+  applicantDistrictSelect?.addEventListener('change', updateApplicantSubcounties);
+  updateApplicantSubcounties();
+  
   const applicantCategorySelect = document.getElementById('applicant-category');
   applicantCategorySelect?.addEventListener('change', updateLoanApplicantCategoryFields);
   updateLoanApplicantCategoryFields();
@@ -1694,7 +1733,9 @@ function handleLoanRequestSubmit(event) {
     'applicant-phone',
     'applicant-id-number',
     'applicant-dob',
-    'applicant-address',
+    'applicant-district',
+    'applicant-subcounty',
+    'applicant-village',
     'applicant-category',
     'loan-amount',
     'loan-term',
