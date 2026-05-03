@@ -212,36 +212,6 @@ function initializeLoginModal() {
   const switchToRegister = document.getElementById('switch-to-register');
   const switchToLogin = document.getElementById('switch-to-login');
 
-  // Mobile login button
-  const mobileLoginBtn = document.getElementById('mobile-login-btn');
-  if (mobileLoginBtn) {
-    mobileLoginBtn.addEventListener('click', (e) => {
-      e.preventDefault();
-      if (loginModal) {
-        loginModal.style.display = 'flex';
-        // Reset to login form
-        loginForm.classList.add('active');
-        registerForm.classList.remove('active');
-        updateAuthHeader('login');
-      }
-    });
-  }
-
-  // Desktop login button
-  const desktopLoginBtn = document.getElementById('desktop-login-btn');
-  if (desktopLoginBtn) {
-    desktopLoginBtn.addEventListener('click', (e) => {
-      e.preventDefault();
-      if (loginModal) {
-        loginModal.style.display = 'flex';
-        // Reset to login form
-        loginForm.classList.add('active');
-        registerForm.classList.remove('active');
-        updateAuthHeader('login');
-      }
-    });
-  }
-
   if (loginModalClose) {
     loginModalClose.addEventListener('click', () => {
       if (loginModal) {
@@ -328,9 +298,6 @@ function initializeLoginModal() {
           if (loginModal) {
             loginModal.style.display = 'none';
           }
-          
-          // Open chat
-          openChatBox();
           
           // Reload page to update UI
           setTimeout(() => window.location.reload(), 500);
@@ -484,16 +451,12 @@ function updateAuthButton() {
         </svg>
         <span>Logout</span>
       `;
-      mobileLoginBtn.id = 'mobile-logout-btn';
-      mobileLoginBtn.removeEventListener('click', handleMobileLoginClick);
-      mobileLoginBtn.addEventListener('click', handleLogout);
+      mobileLoginBtn.classList.add('logged-in');
     }
     
     if (desktopLoginBtn) {
       desktopLoginBtn.textContent = 'Logout';
-      desktopLoginBtn.id = 'desktop-logout-btn';
-      desktopLoginBtn.removeEventListener('click', handleDesktopLoginClick);
-      desktopLoginBtn.addEventListener('click', handleLogout);
+      desktopLoginBtn.classList.add('logged-in');
     }
   } else {
     // Show login button
@@ -506,14 +469,12 @@ function updateAuthButton() {
         </svg>
         <span>Login</span>
       `;
-      mobileLoginBtn.id = 'mobile-login-btn';
-      mobileLoginBtn.addEventListener('click', handleMobileLoginClick);
+      mobileLoginBtn.classList.remove('logged-in');
     }
     
     if (desktopLoginBtn) {
       desktopLoginBtn.textContent = 'Login';
-      desktopLoginBtn.id = 'desktop-login-btn';
-      desktopLoginBtn.addEventListener('click', handleDesktopLoginClick);
+      desktopLoginBtn.classList.remove('logged-in');
     }
   }
 }
@@ -552,6 +513,7 @@ function handleLogout(e) {
   isAuthenticated = false;
   updateAuthButton();
   closeChatBox();
+  closeProfilePanel();
   alert('You have been logged out');
   window.location.reload();
 }
@@ -577,7 +539,6 @@ function initializeChat() {
   const chatCloseBtn = document.getElementById('chat-close-btn');
   const chatSendBtn = document.getElementById('chat-send-btn');
   const chatInput = document.getElementById('chat-input');
-  const chatFooterBtn = document.getElementById('footer-chat-btn');
   
   if (chatCloseBtn) {
     chatCloseBtn.addEventListener('click', closeChatBox);
@@ -594,16 +555,101 @@ function initializeChat() {
       }
     });
   }
-  
-  if (chatFooterBtn) {
-    chatFooterBtn.addEventListener('click', () => {
-      if (isAuthenticated) {
-        openChatBox();
-      } else {
-        alert('Please login to access chat support');
-      }
-    });
+}
+
+function populateProfilePanel() {
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const name = user.name || user.fullName || 'User';
+  const phone = user.phone || user.mobile || '+256 700 123456';
+  const email = user.email || user.username || 'user@example.com';
+  const memberSince = user.createdAt ? new Date(user.createdAt).getFullYear() : '2024';
+  const initials = name
+    .split(' ')
+    .filter(Boolean)
+    .map((part) => part[0])
+    .slice(0, 2)
+    .join('')
+    .toUpperCase() || 'U';
+
+  const profileName = document.getElementById('profile-name');
+  const profilePhone = document.getElementById('profile-phone');
+  const profilePhoneInfo = document.getElementById('profile-phone-info');
+  const profileEmail = document.getElementById('profile-email');
+  const profileMemberSince = document.getElementById('profile-member-since');
+  const profileInitials = document.getElementById('profile-initials');
+
+  if (profileName) profileName.textContent = name;
+  if (profilePhone) profilePhone.textContent = phone;
+  if (profilePhoneInfo) profilePhoneInfo.textContent = phone;
+  if (profileEmail) profileEmail.textContent = email;
+  if (profileMemberSince) profileMemberSince.textContent = memberSince;
+  if (profileInitials) profileInitials.textContent = initials;
+}
+
+function openProfilePanel() {
+  populateProfilePanel();
+  const profilePanel = document.getElementById('profile-panel');
+  if (profilePanel) {
+    profilePanel.classList.add('open');
   }
+}
+
+function closeProfilePanel() {
+  const profilePanel = document.getElementById('profile-panel');
+  if (profilePanel) {
+    profilePanel.classList.remove('open');
+  }
+}
+
+function initializeProfilePanel() {
+  const closeProfileBtn = document.getElementById('close-profile');
+  if (closeProfileBtn) {
+    closeProfileBtn.addEventListener('click', closeProfilePanel);
+  }
+}
+
+function handleGlobalClick(event) {
+  const target = event.target.closest('#footer-chat-btn, #footer-profile-btn, #desktop-login-btn, #mobile-login-btn, #profile-logout-btn');
+  if (!target) return;
+
+  // Always prevent default and stop propagation for these controls
+  event.preventDefault();
+  event.stopPropagation();
+
+  const targetId = target.id;
+  console.log('Global click handler fired for:', targetId);
+
+  if (targetId === 'footer-chat-btn') {
+    console.log('Opening chat box');
+    openChatBox();
+  } else if (targetId === 'footer-profile-btn') {
+    console.log('Clicking profile - authenticated:', isAuthenticated);
+    if (isAuthenticated) {
+      openProfilePanel();
+    } else {
+      showLoginPrompt();
+    }
+  } else if (targetId === 'desktop-login-btn' || targetId === 'mobile-login-btn') {
+    console.log('Login button clicked, logged-in class:', target.classList.contains('logged-in'));
+    if (target.classList.contains('logged-in')) {
+      handleLogout(event);
+    } else {
+      if (targetId === 'desktop-login-btn') {
+        handleDesktopLoginClick(event);
+      } else {
+        handleMobileLoginClick(event);
+      }
+    }
+  } else if (targetId === 'profile-logout-btn') {
+    console.log('Profile logout clicked');
+    handleLogout(event);
+  }
+}
+
+function initializeGlobalClickHandlers() {
+  console.log('Initializing global click handlers');
+  document.addEventListener('click', handleGlobalClick, true);
+  console.log('Global click handler attached to document (capture phase)');
 }
 
 // Send chat message
@@ -676,17 +722,25 @@ document.addEventListener('DOMContentLoaded', () => {
   initializeSiteIntro();
   hydrateDashboardFromSharedState();
   initializeDashboard();
+  if (dashboardSharedStore) {
+    dashboardSharedStore.startAutoSync?.();
+    dashboardSharedStore.subscribe(() => {
+      hydrateDashboardFromSharedState();
+      initializeDashboard();
+    });
+    dashboardSharedStore.hydrate()
+      .then(() => {
+        hydrateDashboardFromSharedState();
+        initializeDashboard();
+      })
+      .catch((error) => {
+        console.error('Failed to load shared state from the database:', error);
+      });
+  }
   initializeSectionWaveNet();
   setupEventListeners();
   startRealTimeUpdates();
   setupIdleDetection();
-
-  window.addEventListener('storage', (event) => {
-    if (event.key === dashboardSharedStore?.STORAGE_KEY) {
-      hydrateDashboardFromSharedState();
-      initializeDashboard();
-    }
-  });
 
   // Cleanup on page unload
   window.addEventListener('beforeunload', () => {
@@ -703,6 +757,17 @@ document.addEventListener('DOMContentLoaded', () => {
   
   // Initialize chat functionality
   initializeChat();
+  initializeProfilePanel();
+  
+  // Verify buttons exist before adding handlers
+  console.log('Button check:');
+  console.log('footer-chat-btn:', !!document.getElementById('footer-chat-btn'));
+  console.log('footer-profile-btn:', !!document.getElementById('footer-profile-btn'));
+  console.log('desktop-login-btn:', !!document.getElementById('desktop-login-btn'));
+  console.log('mobile-login-btn:', !!document.getElementById('mobile-login-btn'));
+  console.log('profile-logout-btn:', !!document.getElementById('profile-logout-btn'));
+  
+  initializeGlobalClickHandlers();
 });
 
 function initializeSiteIntro() {
@@ -759,7 +824,6 @@ function initializeDashboard() {
   populateLoanDetails('all');
   initializeCharts();
   updateCountdown();
-  syncDashboardToSharedState();
 }
 
 function hydrateDashboardFromSharedState() {
@@ -826,7 +890,9 @@ function syncDashboardToSharedState() {
         ...dashboardState.marketing.pulse
       }
     }
-  }));
+  })).catch((error) => {
+    console.error('Failed to sync dashboard state to the database:', error);
+  });
 }
 
 function initializeSectionWaveNet() {
@@ -1463,9 +1529,6 @@ function updateCountdown() {
 
 // Setup Event Listeners
 function setupEventListeners() {
-  // Logout button
-  document.getElementById('logout-btn')?.addEventListener('click', handleLogout);
-
   // Home footer button
   document.getElementById('home-nav-btn')?.addEventListener('click', () => {
     switchView('overview');
@@ -1474,16 +1537,6 @@ function setupEventListeners() {
   // Footer money/loans button
   document.getElementById('footer-money-btn')?.addEventListener('click', () => {
     switchView('loans');
-  });
-
-  // Footer chat button
-  document.getElementById('footer-chat-btn')?.addEventListener('click', () => {
-    alert('Chat support feature would be implemented here.\n\nThis would open a chat interface for customer support, loan inquiries, or general assistance.');
-  });
-
-  // Footer profile button
-  document.getElementById('footer-profile-btn')?.addEventListener('click', () => {
-    alert('Profile settings would be implemented here.\n\nThis would show user profile, account settings, security options, and personal information management.');
   });
 
   // Header brand/logo button
@@ -1499,6 +1552,10 @@ function setupEventListeners() {
 
   // Navigation
   document.querySelectorAll('.nav-link').forEach(link => {
+    // Skip login/logout button - handled by global handler
+    if (link.id === 'desktop-login-btn' || link.id === 'mobile-login-btn') {
+      return;
+    }
     link.addEventListener('click', handleNavigation);
   });
   
@@ -1528,6 +1585,10 @@ function setupEventListeners() {
 
   // Sidebar menu items
   document.querySelectorAll('.menu-item').forEach(item => {
+    // Skip login/logout button - handled by global handler
+    if (item.id === 'mobile-login-btn') {
+      return;
+    }
     item.addEventListener('click', (e) => {
       const view = item.dataset.view;
       if (!view) {
@@ -1602,16 +1663,6 @@ function setupEventListeners() {
 
   // Loan items click
   document.getElementById('loans-list')?.addEventListener('click', handleLoanItemClick);
-}
-
-function handleLogout() {
-  // Clear authentication tokens
-  localStorage.removeItem('accessToken');
-  localStorage.removeItem('refreshToken');
-  localStorage.removeItem('deviceId');
-
-  // Redirect to login page
-  window.location.href = 'login.html';
 }
 
 function handleNavigation(event) {

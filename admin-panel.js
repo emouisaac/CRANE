@@ -53,6 +53,19 @@ document.addEventListener('DOMContentLoaded', () => {
   initializeAdminPanel();
   setupAdminEventListeners();
   renderDashboard();
+  sharedStore?.startAutoSync?.();
+  sharedStore?.subscribe(() => {
+    renderViewContent(adminPanelState.currentView);
+    syncSettingsForm(sharedStore.read());
+  });
+  sharedStore?.hydrate()
+    .then(() => {
+      renderViewContent(adminPanelState.currentView);
+      syncSettingsForm(sharedStore.read());
+    })
+    .catch((error) => {
+      console.error('Failed to load admin panel state from the database:', error);
+    });
   setupIdleDetection();
 });
 
@@ -102,6 +115,13 @@ function initializeSiteIntro() {
 function initializeAdminPanel() {
   setupNavigation();
   updateMetrics();
+}
+
+function persistSharedState(updater) {
+  return sharedStore.update(updater).catch((error) => {
+    console.error('Failed to persist admin panel state:', error);
+    throw error;
+  });
 }
 
 function setupNavigation() {
@@ -333,7 +353,7 @@ function viewLoanDetails(loanId) {
 }
 
 function approveLoan(loanId) {
-  sharedStore.update(state => {
+  persistSharedState(state => {
     const app = state.admin.loanApplications.find(a => a.id === loanId);
     if (app) {
       app.status = 'approved';
@@ -357,7 +377,7 @@ function rejectLoan(loanId) {
   const reason = prompt('Enter rejection reason:');
   if (!reason) return;
 
-  sharedStore.update(state => {
+  persistSharedState(state => {
     const app = state.admin.loanApplications.find(a => a.id === loanId);
     if (app) {
       app.status = 'rejected';
@@ -455,7 +475,7 @@ function updateAdminUser() {
   const newRole = document.getElementById('edit-admin-role').value;
   const newStatus = document.getElementById('edit-admin-status').value;
 
-  sharedStore.update(state => {
+  persistSharedState(state => {
     const user = state.admin.adminUsers.find(u => u.id === adminId);
     if (user) {
       user.role = newRole;
@@ -477,7 +497,7 @@ function updateAdminUser() {
 }
 
 function deleteAdminUser(adminId) {
-  sharedStore.update(state => {
+  persistSharedState(state => {
     const index = state.admin.adminUsers.findIndex(u => u.id === adminId);
     if (index !== -1) {
       const deletedUser = state.admin.adminUsers[index];
@@ -600,7 +620,7 @@ function viewRiskDetails(riskId) {
 }
 
 function updateRiskStatus(riskId, newStatus) {
-  sharedStore.update(state => {
+  persistSharedState(state => {
     const risk = state.admin.riskAlerts.find(r => r.id === riskId);
     if (risk) {
       risk.status = newStatus;
@@ -671,7 +691,7 @@ function setupAdminEventListeners() {
       lastLogin: 'Never'
     };
 
-    sharedStore.update(state => {
+    persistSharedState(state => {
       state.admin.adminUsers.push(newAdmin);
       return state;
     });
@@ -688,7 +708,7 @@ function setupAdminEventListeners() {
 
   document.getElementById('settings-form')?.addEventListener('submit', (e) => {
     e.preventDefault();
-    sharedStore.update(state => {
+    persistSharedState(state => {
       state.admin.settings = {
         defaultInterestRate: parseFloat(document.getElementById('default-rate').value),
         maxLoanAmount: parseInt(document.getElementById('max-loan').value),
@@ -702,12 +722,7 @@ function setupAdminEventListeners() {
   });
 
   // Load settings
-  const state = sharedStore.read();
-  document.getElementById('default-rate').value = state.admin.settings.defaultInterestRate;
-  document.getElementById('max-loan').value = state.admin.settings.maxLoanAmount;
-  document.getElementById('min-loan').value = state.admin.settings.minLoanAmount;
-  document.getElementById('auto-approval').value = state.admin.settings.autoApprovalThreshold;
-  document.getElementById('grace-period').value = state.admin.settings.paymentGracePeriod;
+  syncSettingsForm(sharedStore.read());
 
   // Admin logout
   document.getElementById('admin-panel-logout-btn')?.addEventListener('click', handleAdminLogout);
@@ -721,4 +736,21 @@ function handleAdminLogout() {
 
   // Redirect to admin login
   window.location.href = 'admin-login.html';
+}
+
+function syncSettingsForm(state) {
+  const settings = state?.admin?.settings;
+  if (!settings) return;
+
+  const defaultRate = document.getElementById('default-rate');
+  const maxLoan = document.getElementById('max-loan');
+  const minLoan = document.getElementById('min-loan');
+  const autoApproval = document.getElementById('auto-approval');
+  const gracePeriod = document.getElementById('grace-period');
+
+  if (defaultRate) defaultRate.value = settings.defaultInterestRate;
+  if (maxLoan) maxLoan.value = settings.maxLoanAmount;
+  if (minLoan) minLoan.value = settings.minLoanAmount;
+  if (autoApproval) autoApproval.value = settings.autoApprovalThreshold;
+  if (gracePeriod) gracePeriod.value = settings.paymentGracePeriod;
 }

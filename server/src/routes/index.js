@@ -7,6 +7,7 @@ const loansRoutes = require("./loans.routes");
 const profileRoutes = require("./profile.routes");
 const scoringRoutes = require("./scoring.routes");
 const sessionsRoutes = require("./sessions.routes");
+const sharedStateRoutes = require("./shared-state.routes");
 
 const router = express.Router();
 
@@ -17,5 +18,6 @@ router.use("/loans", loansRoutes);
 router.use("/profile", profileRoutes);
 router.use("/scoring", scoringRoutes);
 router.use("/sessions", sessionsRoutes);
+router.use("/shared-state", sharedStateRoutes);
 
 module.exports = router;

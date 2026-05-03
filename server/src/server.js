@@ -2,8 +2,11 @@ const http = require("http");
 const { exec } = require("child_process");
 
 const { createApp } = require("./app");
+const { getDatabase } = require("./config/database");
 const { config } = require("./config/env");
 const { bindVerificationSocket } = require("./websocket/verification.socket");
+
+getDatabase();
 
 const app = createApp();
 const server = http.createServer(app);

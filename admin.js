@@ -96,12 +96,17 @@ function initializeAdminConsole() {
   setupAdminEventListeners();
   initializeAdminWave();
   refreshAdminConsole();
-
-  window.addEventListener('storage', (event) => {
-    if (event.key === sharedStore?.STORAGE_KEY) {
-      refreshAdminConsole();
-    }
+  sharedStore?.startAutoSync?.();
+  sharedStore?.subscribe(() => {
+    refreshAdminConsole();
   });
+  sharedStore?.hydrate()
+    .then(() => {
+      refreshAdminConsole();
+    })
+    .catch((error) => {
+      console.error('Failed to load admin shared state from the database:', error);
+    });
 }
 
 function getSharedState() {
@@ -109,8 +114,14 @@ function getSharedState() {
 }
 
 function updateSharedState(updater) {
-  sharedStore.update(updater);
-  refreshAdminConsole();
+  sharedStore.update(updater)
+    .then(() => {
+      refreshAdminConsole();
+    })
+    .catch((error) => {
+      console.error('Failed to persist admin shared state:', error);
+      refreshAdminConsole();
+    });
 }
 
 function refreshAdminConsole() {

@@ -1,18 +1,53 @@
 const express = require("express");
+const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
 
 const { config } = require("../config/env");
+const {
+  findAuthUserByPhone,
+  upsertAuthUser,
+  touchAuthUserLogin,
+} = require("../config/database");
 
 const router = express.Router();
 
+function hashSecret(value) {
+  return crypto.createHash("sha256").update(String(value)).digest("hex");
+}
+
+function createBorrowerSession(user, deviceId) {
+  const accessToken = jwt.sign(
+    { sub: user.id, phone: user.phone, email: user.email, deviceId, scope: ["borrower"] },
+    config.jwtSecret,
+    { expiresIn: config.jwtExpiry }
+  );
+
+  return {
+    token: accessToken,
+    accessToken,
+    refreshToken: "refresh_demo_token",
+    onboardingState: "kyc_pending",
+    biometricAvailable: true,
+    deviceBound: true,
+    user: {
+      id: user.id,
+      phone: user.phone,
+      email: user.email || null,
+      isRegistered: true,
+      lastLoginAt: user.last_login_at || null,
+    },
+  };
+}
+
 router.post("/register/request-otp", (req, res) => {
   const { phone, country } = req.body;
+  const existingUser = findAuthUserByPhone(phone);
 
   res.json({
     challengeId: "otp_challenge_demo_001",
     phone,
     country,
-    returningUser: phone === "+256700123456",
+    returningUser: Boolean(existingUser),
     deliveryStatus: "queued",
     expiresInSeconds: 120,
   });
@@ -42,9 +77,6 @@ router.post("/register/verify-otp", (req, res) => {
   });
 });
 
-// In-memory store for registered users (in production, use a database)
-const registeredUsers = new Set();
-
 router.post("/register", (req, res) => {
   const { phone, email, pin, deviceId } = req.body;
 
@@ -67,31 +99,13 @@ router.post("/register", (req, res) => {
     }
   }
 
-  // Store registration info
-  registeredUsers.add(phone);
-
-  const user = {
-    id: "user_demo_001",
+  const user = upsertAuthUser({
     phone,
     email: email || null,
-    pin,
-    registeredAt: new Date().toISOString(),
-    isRegistered: true
-  };
-
-  const accessToken = jwt.sign(
-    { sub: "user_demo_001", phone, email, deviceId, scope: ["borrower"] },
-    config.jwtSecret,
-    { expiresIn: config.jwtExpiry }
-  );
-
-  return res.json({
-    token: accessToken,
-    refreshToken: "refresh_demo_token",
-    onboardingState: "kyc_pending",
-    deviceBound: true,
-    user,
+    pinHash: hashSecret(pin),
   });
+
+  return res.json(createBorrowerSession(user, deviceId));
 });
 
 router.post("/login", (req, res) => {
@@ -103,8 +117,9 @@ router.post("/login", (req, res) => {
     });
   }
 
-  // Check if user is registered
-  if (!registeredUsers.has(phone)) {
+  const user = findAuthUserByPhone(phone);
+
+  if (!user) {
     return res.status(401).json({
       error: "User not registered. Please register first.",
       code: "USER_NOT_REGISTERED",
@@ -119,26 +134,17 @@ router.post("/login", (req, res) => {
     });
   }
 
-  const user = {
-    id: "user_demo_001",
-    phone,
-    isRegistered: true,
-    loggedInAt: new Date().toISOString()
-  };
+  const suppliedSecret = pin || password;
+  if (user.pin_hash !== hashSecret(suppliedSecret)) {
+    return res.status(401).json({
+      error: "Invalid phone or PIN.",
+      code: "AUTH_INVALID",
+    });
+  }
 
-  const accessToken = jwt.sign(
-    { sub: "user_demo_001", phone, deviceId, scope: ["borrower"] },
-    config.jwtSecret,
-    { expiresIn: config.jwtExpiry }
-  );
+  const updatedUser = touchAuthUserLogin(phone) || user;
 
-  return res.json({
-    token: accessToken,
-    refreshToken: "refresh_demo_token",
-    biometricAvailable: true,
-    deviceBound: true,
-    user,
-  });
+  return res.json(createBorrowerSession(updatedUser, deviceId));
 });
 
 router.post("/admin/login", (req, res) => {

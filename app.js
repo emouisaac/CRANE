@@ -90,6 +90,8 @@ const state = {
   profileComplete: false,
   securityReady: false,
 };
+const onboardingSharedStore = window.CraneSharedState;
+const returningUserPhones = new Set();
 
 const currencyFormatter = new Intl.NumberFormat("en-UG", {
   style: "currency",
@@ -128,17 +130,14 @@ function normalizeDigits(value) {
 }
 
 function getStoredUsers() {
-  try {
-    return JSON.parse(localStorage.getItem("swiftlend-users") || "[]");
-  } catch {
-    return [];
-  }
+  return [...returningUserPhones];
 }
 
 function saveReturningUser(phoneKey) {
-  const users = new Set(getStoredUsers());
-  users.add(phoneKey);
-  localStorage.setItem("swiftlend-users", JSON.stringify([...users]));
+  returningUserPhones.add(phoneKey);
+  onboardingSharedStore?.rememberPhone?.(phoneKey).catch((error) => {
+    console.error("Failed to persist returning user to the database:", error);
+  });
 }
 
 function getPhoneKey() {
@@ -164,6 +163,13 @@ function detectReturningUser() {
   const valid = config.validate(digits);
   const phoneKey = `${config.dialCode}${digits}`;
   ui.returningUser.checked = valid && getStoredUsers().includes(phoneKey);
+}
+
+function syncReturningUsers(stateSnapshot) {
+  returningUserPhones.clear();
+  (stateSnapshot?.metadata?.knownPhones || []).forEach((phone) => {
+    returningUserPhones.add(phone);
+  });
 }
 
 function validatePhone() {
@@ -524,5 +530,20 @@ function attachListeners() {
 }
 
 setPhonePlaceholder();
+if (onboardingSharedStore) {
+  syncReturningUsers(onboardingSharedStore.read());
+  onboardingSharedStore.subscribe((stateSnapshot) => {
+    syncReturningUsers(stateSnapshot);
+    detectReturningUser();
+  });
+  onboardingSharedStore.hydrate()
+    .then((stateSnapshot) => {
+      syncReturningUsers(stateSnapshot);
+      detectReturningUser();
+    })
+    .catch((error) => {
+      console.error("Failed to load returning users from the database:", error);
+    });
+}
 attachListeners();
 updateDashboard();
