@@ -1633,8 +1633,14 @@ function setupEventListeners() {
   // View all loans
   document.getElementById('view-all-loans')?.addEventListener('click', () => switchToLoansView('all'));
   document.getElementById('view-loan-options')?.addEventListener('click', () => switchToLoansView('all'));
-  document.getElementById('view-more-insights')?.addEventListener('click', () => switchView('insights'));
-  
+  document.getElementById('view-more-insights')?.addEventListener('click', () => switchView('get-loan'));
+
+  const loanRequestForm = document.getElementById('loan-request-form');
+  loanRequestForm?.addEventListener('submit', handleLoanRequestSubmit);
+  const applicantCategorySelect = document.getElementById('applicant-category');
+  applicantCategorySelect?.addEventListener('change', updateLoanApplicantCategoryFields);
+  updateLoanApplicantCategoryFields();
+
   // Loan status pills
   document.querySelectorAll('.status-pill').forEach(pill => {
     pill.addEventListener('click', handleStatusFilter);
@@ -1663,6 +1669,70 @@ function setupEventListeners() {
 
   // Loan items click
   document.getElementById('loans-list')?.addEventListener('click', handleLoanItemClick);
+}
+
+function updateLoanApplicantCategoryFields() {
+  const category = document.getElementById('applicant-category')?.value;
+  const employeeFields = document.querySelectorAll('.employment-detail-group');
+  const businessFields = document.querySelectorAll('.business-detail-group');
+  const employeeVisible = category === 'employee' || category === 'civil_servant';
+  const businessVisible = category === 'self_employed' || category === 'service_provider' || category === 'other';
+
+  employeeFields.forEach(field => {
+    field.style.display = employeeVisible ? 'block' : 'none';
+  });
+  businessFields.forEach(field => {
+    field.style.display = businessVisible ? 'block' : 'none';
+  });
+}
+
+function handleLoanRequestSubmit(event) {
+  event.preventDefault();
+  const form = event.target;
+  const requiredIds = [
+    'applicant-name',
+    'applicant-phone',
+    'applicant-id-number',
+    'applicant-dob',
+    'applicant-address',
+    'applicant-category',
+    'loan-amount',
+    'loan-term',
+    'loan-purpose',
+    'id-front',
+    'id-back',
+    'income-proof',
+    'selfie-photo',
+  ];
+
+  const missing = requiredIds.filter((id) => {
+    const element = form.querySelector(`#${id}`);
+    if (!element) return true;
+    if (element.type === 'file') {
+      return element.files.length === 0;
+    }
+
+    return !element.value.trim();
+  });
+
+  const feedback = document.getElementById('loan-request-feedback');
+  if (missing.length) {
+    if (feedback) {
+      feedback.innerHTML = '<strong>Please complete all required fields and upload the requested documents.</strong>';
+      feedback.classList.add('feedback-warning');
+      feedback.classList.remove('feedback-success');
+    }
+    return;
+  }
+
+  if (feedback) {
+    feedback.innerHTML = '<strong>Loan request submitted.</strong> Your application has been received and is pending administrative verification. A Crane officer will review your files and follow up within 24 hours.';
+    feedback.classList.add('feedback-success');
+    feedback.classList.remove('feedback-warning');
+  }
+
+  form.reset();
+  updateLoanApplicantCategoryFields();
 }
 
 function handleNavigation(event) {

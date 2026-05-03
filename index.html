@@ -31,7 +31,7 @@
         <a href="#" class="nav-link" data-view="loans">My Loans</a>
         <a href="#" class="nav-link" data-view="repay">Repay</a>
         <a href="#" class="nav-link" data-view="score">Credit Score</a>
-        <a href="#" class="nav-link" data-view="insights">AI Insights</a>
+        <a href="#" class="nav-link" data-view="get-loan">Get Loan</a>
         <a href="#" class="nav-link" data-view="referrals">Referrals</a>
         <a href="#" class="nav-link" id="desktop-login-btn">Login</a>
 
@@ -94,13 +94,13 @@
           </svg>
           <span>Credit Score</span>
         </a>
-        <a href="#" class="menu-item" data-view="insights">
+        <a href="#" class="menu-item" data-view="get-loan">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M9 18h6"></path>
             <path d="M10 22h4"></path>
             <path d="M12 2a7 7 0 0 0-4 12.75c.6.45 1 1.13 1 1.88V17h6v-.37c0-.75.4-1.43 1-1.88A7 7 0 0 0 12 2z"></path>
           </svg>
-          <span>AI Insights</span>
+          <span>Get Loan</span>
         </a>
         <a href="#" class="menu-item" data-view="referrals">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -505,107 +505,209 @@
         </div>
       </section>
 
-      <section class="view-section" id="insights-view">
+      <section class="view-section" id="get-loan-view">
         <div class="dashboard-grid">
-          <article class="card ai-recommendations-card">
+          <article class="card loan-request-intro-card">
             <div class="section-heading">
               <div>
-                <h2>Recommended next offers</h2>
-              </div>
-            </div>
-            <div class="recommendations-list">
-              <div class="recommendation-card featured">
-                <span class="rec-badge">Best fit</span>
-                <div class="rec-header">
-                  <h3>Growth Boost</h3>
-                  <span class="rec-amount">UGX 5,000,000</span>
-                </div>
-                <div class="rec-details">
-                  <div class="rec-detail"><span>Rate</span><strong>1.2% monthly</strong></div>
-                  <div class="rec-detail"><span>Term</span><strong>12 months</strong></div>
-                  <div class="rec-detail"><span>Payout</span><strong>14 minutes</strong></div>
-                </div>
-              </div>
-              <div class="recommendation-card">
-                <div class="rec-header">
-                  <h3>Fast Flex</h3>
-                  <span class="rec-amount">UGX 3,200,000</span>
-                </div>
-                <div class="rec-details">
-                  <div class="rec-detail"><span>Rate</span><strong>1.5% monthly</strong></div>
-                  <div class="rec-detail"><span>Term</span><strong>6 months</strong></div>
-                  <div class="rec-detail"><span>Payout</span><strong>11 minutes</strong></div>
-                </div>
-              </div>
-              <div class="recommendation-card">
-                <div class="rec-header">
-                  <h3>Premium Lift</h3>
-                  <span class="rec-amount">UGX 7,800,000</span>
-                </div>
-                <div class="rec-details">
-                  <div class="rec-detail"><span>Rate</span><strong>1.1% monthly</strong></div>
-                  <div class="rec-detail"><span>Term</span><strong>18 months</strong></div>
-                  <div class="rec-detail"><span>Payout</span><strong>18 minutes</strong></div>
-                </div>
+                <h2>Request a loan</h2>
+                <p class="section-subtitle">Complete this application and upload required documents with clear camera photos. Your submission is reviewed by the Crane loan operations team before approval.</p>
               </div>
             </div>
           </article>
 
-          <article class="card spending-analysis-card">
+          <article class="card loan-request-card">
             <div class="section-heading">
               <div>
-                <h2>Spending mix</h2>
+                <h2>Loan application form</h2>
+                <p>Provide accurate borrower information and upload all required documentation for manual admin verification.</p>
               </div>
             </div>
-            <div class="chart-container">
-              <canvas id="spending-chart"></canvas>
-            </div>
-            <div class="spending-summary">
-              <div class="spending-item">
-                <span class="spending-dot" style="background: #0d8b63;"></span>
-                <span>Inventory</span>
-                <strong class="spending-value">65%</strong>
+            <form id="loan-request-form" class="loan-request-form">
+              <div class="form-grid">
+                <div class="form-group">
+                  <label for="applicant-name">Full name</label>
+                  <input type="text" id="applicant-name" placeholder="e.g. Grace Kato" required>
+                </div>
+                <div class="form-group">
+                  <label for="applicant-phone">Phone number</label>
+                  <input type="tel" id="applicant-phone" placeholder="+256 77X XXX XXX" required>
+                </div>
+                <div class="form-group">
+                  <label for="applicant-email">Email address</label>
+                  <input type="email" id="applicant-email" placeholder="name@example.com">
+                </div>
+                <div class="form-group">
+                  <label for="applicant-id-number">ID / passport number</label>
+                  <input type="text" id="applicant-id-number" placeholder="e.g. NIN123456789" required>
+                </div>
+                <div class="form-group">
+                  <label for="applicant-dob">Date of birth</label>
+                  <input type="date" id="applicant-dob" required>
+                </div>
+                <div class="form-group">
+                  <label for="applicant-address">Residential address</label>
+                  <input type="text" id="applicant-address" placeholder="Street, division, city" required>
+                </div>
+                <div class="form-group">
+                  <label for="applicant-category">Applicant category</label>
+                  <select id="applicant-category" required>
+                    <option value="">Select category</option>
+                    <option value="employee">Employee</option>
+                    <option value="civil_servant">Civil servant</option>
+                    <option value="self_employed">Self-employed</option>
+                    <option value="service_provider">Service provider</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="loan-amount">Loan amount requested</label>
+                  <input type="number" id="loan-amount" placeholder="UGX 1,200,000" required>
+                </div>
+                <div class="form-group">
+                  <label for="loan-term">Preferred term</label>
+                  <select id="loan-term" required>
+                    <option value="">Select term</option>
+                    <option value="3">3 months</option>
+                    <option value="6">6 months</option>
+                    <option value="9">9 months</option>
+                    <option value="12">12 months</option>
+                    <option value="18">18 months</option>
+                  </select>
+                </div>
+                <div class="form-group full-width">
+                  <label for="loan-purpose">Loan purpose</label>
+                  <select id="loan-purpose" required>
+                    <option value="">Select purpose</option>
+                    <option value="working_capital">Working capital</option>
+                    <option value="payroll">Payroll & wages</option>
+                    <option value="inventory">Inventory purchase</option>
+                    <option value="medical">Medical expenses</option>
+                    <option value="education">Education costs</option>
+                    <option value="equipment">Equipment or tools</option>
+                    <option value="business_expansion">Business expansion</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
               </div>
-              <div class="spending-item">
-                <span class="spending-dot" style="background: #e6b84e;"></span>
-                <span>School fees</span>
-                <strong class="spending-value">25%</strong>
+
+              <div class="form-divider"></div>
+
+              <div class="section-subheading">Employment / business details</div>
+              <div class="form-grid">
+                <div class="form-group employment-detail-group">
+                  <label for="employer-name">Employer / organization</label>
+                  <input type="text" id="employer-name" placeholder="Company or agency name">
+                </div>
+                <div class="form-group employment-detail-group">
+                  <label for="position-title">Position / grade</label>
+                  <input type="text" id="position-title" placeholder="e.g. Sales officer">
+                </div>
+                <div class="form-group employment-detail-group">
+                  <label for="employment-tenure">Length of service</label>
+                  <input type="text" id="employment-tenure" placeholder="e.g. 4 years">
+                </div>
+                <div class="form-group business-detail-group">
+                  <label for="business-name">Business or service name</label>
+                  <input type="text" id="business-name" placeholder="Name of enterprise">
+                </div>
+                <div class="form-group business-detail-group">
+                  <label for="business-type">Business / service category</label>
+                  <input type="text" id="business-type" placeholder="e.g. Retail, logistics, hospitality">
+                </div>
+                <div class="form-group business-detail-group">
+                  <label for="business-registration">Registration number</label>
+                  <input type="text" id="business-registration" placeholder="e.g. B12345/2025">
+                </div>
+                <div class="form-group">
+                  <label for="monthly-income">Monthly net income</label>
+                  <input type="number" id="monthly-income" placeholder="UGX 1,500,000">
+                </div>
+                <div class="form-group">
+                  <label for="other-income">Other monthly income</label>
+                  <input type="number" id="other-income" placeholder="UGX 0">
+                </div>
+                <div class="form-group">
+                  <label for="existing-obligations">Existing repayment obligations</label>
+                  <input type="text" id="existing-obligations" placeholder="e.g. Loan, rent">
+                </div>
               </div>
-              <div class="spending-item">
-                <span class="spending-dot" style="background: #2a5968;"></span>
-                <span>Emergency cash</span>
-                <strong class="spending-value">10%</strong>
+
+              <div class="form-divider"></div>
+
+              <div class="section-subheading">Document uploads</div>
+              <div class="document-grid">
+                <div class="form-group">
+                  <label for="id-front">ID / passport front</label>
+                  <input type="file" id="id-front" accept="image/*" capture="environment" required>
+                </div>
+                <div class="form-group">
+                  <label for="id-back">ID / passport back</label>
+                  <input type="file" id="id-back" accept="image/*" capture="environment" required>
+                </div>
+                <div class="form-group">
+                  <label for="income-proof">Income proof</label>
+                  <input type="file" id="income-proof" accept="image/*,.pdf" capture="environment" required>
+                </div>
+                <div class="form-group">
+                  <label for="bank-statement">Bank statement</label>
+                  <input type="file" id="bank-statement" accept="image/*,.pdf" capture="environment">
+                </div>
+                <div class="form-group">
+                  <label for="selfie-photo">Live selfie / verification photo</label>
+                  <input type="file" id="selfie-photo" accept="image/*" capture="user" required>
+                </div>
+                <div class="form-group">
+                  <label for="additional-documents">Additional documents</label>
+                  <input type="file" id="additional-documents" accept="image/*,.pdf" capture="environment" multiple>
+                </div>
               </div>
-            </div>
+
+              <div class="form-divider"></div>
+
+              <div class="submission-feedback" id="loan-request-feedback" aria-live="polite"></div>
+
+              <div class="form-actions">
+                <button type="submit" class="button button-primary">Submit request</button>
+                <span class="form-help-text">Status will be updated once admin review begins.</span>
+              </div>
+            </form>
           </article>
 
-          <article class="card risk-analysis-card">
+          <article class="card loan-request-sidebar-card">
             <div class="section-heading">
               <div>
-                <h2>Risk review</h2>
+                <h2>Application workflow</h2>
               </div>
             </div>
-            <div class="risk-meter">
-              <div class="risk-label">Overall account risk</div>
-              <div class="risk-bar"><div class="risk-fill low"></div></div>
-              <div class="risk-value">Low risk</div>
-            </div>
-            <div class="risk-factors">
-              <div class="risk-factor">
-                <span class="factor-icon positive">+</span>
-                <span>Clean recent repayment history</span>
+            <div class="loan-request-sidebar">
+              <div class="workflow-step">
+                <span class="workflow-badge">1</span>
+                <div>
+                  <strong>Complete borrower profile</strong>
+                  <p>Provide identity, category and address details for a tailored loan review.</p>
+                </div>
               </div>
-              <div class="risk-factor">
-                <span class="factor-icon positive">+</span>
-                <span>Stable borrower activity over multiple cycles</span>
+              <div class="workflow-step">
+                <span class="workflow-badge">2</span>
+                <div>
+                  <strong>Upload required documents</strong>
+                  <p>Use camera capture or upload clear images of your ID, proof of income, and selfie.</p>
+                </div>
               </div>
-              <div class="risk-factor">
-                <span class="factor-icon positive">+</span>
-                <span>Low overdue exposure this quarter</span>
+              <div class="workflow-step">
+                <span class="workflow-badge">3</span>
+                <div>
+                  <strong>Admin verification</strong>
+                  <p>The operations team reviews the documents and confirms your identity before approval.</p>
+                </div>
               </div>
-              <div class="risk-factor">
-                <span class="factor-icon positive">+</span>
-                <span>Strong response to reminders and prompts</span>
+              <div class="workflow-step">
+                <span class="workflow-badge">4</span>
+                <div>
+                  <strong>Decision & disbursement</strong>
+                  <p>Receive confirmation and payment instructions once the application is approved.</p>
+                </div>
               </div>
             </div>
           </article>
