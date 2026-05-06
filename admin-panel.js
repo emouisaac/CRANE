@@ -42,6 +42,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Check admin authentication first
   const token = localStorage.getItem('accessToken');
   const role = localStorage.getItem('userRole');
+  const adminRole = localStorage.getItem('adminRole'); // Can be 'admin' or 'master_admin'
 
   if (!token || role !== 'admin') {
     // Redirect to admin login if not authenticated as admin
@@ -49,9 +50,16 @@ document.addEventListener('DOMContentLoaded', () => {
     return;
   }
 
+  // Store admin role in state for later use
+  adminPanelState.adminRole = adminRole || 'admin';
+  
+  // Update UI based on role
+  updateUIBasedOnRole(adminPanelState.adminRole);
+
   initializeSiteIntro();
   initializeAdminPanel();
   setupAdminEventListeners();
+  setupRoleBasedEventListeners();
   renderDashboard();
   sharedStore?.startAutoSync?.();
   sharedStore?.subscribe(() => {
@@ -68,6 +76,25 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   setupIdleDetection();
 });
+
+// Update UI visibility based on admin role
+function updateUIBasedOnRole(role) {
+  const isMasterAdmin = role === 'master_admin';
+  const isRegularAdmin = role === 'admin';
+
+  // Update page title
+  const titleElement = document.getElementById('admin-title');
+  if (titleElement) {
+    titleElement.textContent = isMasterAdmin ? 'Crane Master Admin' : 'Crane Admin Panel';
+  }
+
+  // Show/hide navigation based on role
+  document.getElementById('nav-loans-link').style.display = isMasterAdmin ? 'block' : 'none';
+  document.getElementById('nav-admins-link').style.display = isMasterAdmin ? 'block' : 'none';
+  document.getElementById('nav-customers-link').style.display = isRegularAdmin ? 'block' : 'none';
+  document.getElementById('nav-chat-link').style.display = isRegularAdmin ? 'block' : 'none';
+  document.getElementById('nav-audit-link').style.display = isMasterAdmin ? 'block' : 'none';
+}
 
 function initializeSiteIntro() {
   const intro = document.getElementById('site-intro');
@@ -666,6 +693,370 @@ function renderAuditView(state) {
 function updateMetrics() {
   const state = sharedStore.read();
   renderDashboard();
+}
+
+// ============================================
+// ROLE-BASED EVENT LISTENERS
+// ============================================
+
+function setupRoleBasedEventListeners() {
+  const adminRole = adminPanelState.adminRole;
+  
+  if (adminRole === 'admin') {
+    // Regular admin: setup customer and chat listeners
+    setupCustomerListeners();
+    setupChatListeners();
+    setupPasswordResetListeners();
+    setupLoanReviewListeners();
+  } else if (adminRole === 'master_admin') {
+    // Master admin: setup approval listeners
+    setupMasterAdminListeners();
+  }
+}
+
+function setupCustomerListeners() {
+  // Customer search and filter
+  document.getElementById('customer-search')?.addEventListener('input', (e) => {
+    renderCustomersView(sharedStore.read(), e.target.value);
+  });
+
+  document.getElementById('customer-status-filter')?.addEventListener('change', (e) => {
+    renderCustomersView(sharedStore.read(), null, e.target.value);
+  });
+
+  // Close customer detail
+  document.getElementById('close-customer-detail')?.addEventListener('click', () => {
+    document.getElementById('customer-detail-card').style.display = 'none';
+  });
+
+  // Open chat button
+  document.getElementById('open-chat-btn')?.addEventListener('click', () => {
+    switchAdminView('chat');
+  });
+}
+
+function setupChatListeners() {
+  document.getElementById('send-message-btn')?.addEventListener('click', sendChatMessage);
+  document.getElementById('chat-message-input')?.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') sendChatMessage();
+  });
+}
+
+function setupPasswordResetListeners() {
+  document.getElementById('reset-password-btn')?.addEventListener('click', async () => {
+    const customerId = adminPanelState.selectedCustomerId;
+    if (!customerId) {
+      alert('No customer selected');
+      return;
+    }
+
+    const reason = prompt('Enter reason for password reset:', 'User forgot password');
+    if (!reason) return;
+
+    try {
+      const token = localStorage.getItem('accessToken');
+      const response = await fetch(`/api/admin/users/${customerId}/reset-password`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ reason })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        alert(`✓ Password reset initiated. Token: ${data.resetToken}\n\nExpires: ${new Date(data.expiresAt).toLocaleString()}`);
+      } else {
+        alert('Failed to initiate password reset');
+      }
+    } catch (error) {
+      console.error('Password reset error:', error);
+      alert('Error initiating password reset');
+    }
+  });
+}
+
+function setupLoanReviewListeners() {
+  // Loan rejection - submitted to master admin
+  document.getElementById('reject-loan-btn')?.addEventListener('click', async () => {
+    const loanId = adminPanelState.selectedLoanId;
+    if (!loanId) {
+      alert('No loan selected');
+      return;
+    }
+
+    const rejectionReason = prompt('Enter rejection reason:', '');
+    if (!rejectionReason) return;
+
+    try {
+      const token = localStorage.getItem('accessToken');
+      const response = await fetch(`/api/admin/loans/${loanId}/reject`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ rejectionReason })
+      });
+
+      if (response.ok) {
+        alert('✓ Loan rejection submitted for master admin approval');
+        document.getElementById('loan-detail-card').style.display = 'none';
+        renderLoansView(sharedStore.read());
+      } else {
+        alert('Failed to reject loan');
+      }
+    } catch (error) {
+      console.error('Reject loan error:', error);
+      alert('Error rejecting loan');
+    }
+  });
+
+  // Loan review
+  document.getElementById('approve-loan-btn')?.addEventListener('click', async () => {
+    const loanId = adminPanelState.selectedLoanId;
+    if (!loanId) {
+      alert('No loan selected');
+      return;
+    }
+
+    const notes = prompt('Enter review notes:', '');
+
+    try {
+      const token = localStorage.getItem('accessToken');
+      const response = await fetch(`/api/admin/loans/${loanId}/review`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ notes })
+      });
+
+      if (response.ok) {
+        alert('✓ Loan marked for review. Awaiting master admin approval.');
+        document.getElementById('loan-detail-card').style.display = 'none';
+        renderLoansView(sharedStore.read());
+      } else {
+        alert('Failed to review loan');
+      }
+    } catch (error) {
+      console.error('Review loan error:', error);
+      alert('Error reviewing loan');
+    }
+  });
+}
+
+function setupMasterAdminListeners() {
+  // Master admin specific: approve loans
+  document.getElementById('approve-loan-btn')?.addEventListener('click', async () => {
+    const loanId = adminPanelState.selectedLoanId;
+    if (!loanId) {
+      alert('No loan selected');
+      return;
+    }
+
+    const approvalNotes = prompt('Enter approval notes:', '');
+
+    try {
+      const token = localStorage.getItem('accessToken');
+      const response = await fetch(`/api/admin/loans/${loanId}/approve`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ approvalNotes })
+      });
+
+      if (response.ok) {
+        alert('✓ Loan approved successfully!');
+        document.getElementById('loan-detail-card').style.display = 'none';
+        renderLoansView(sharedStore.read());
+      } else {
+        alert('Failed to approve loan');
+      }
+    } catch (error) {
+      console.error('Approve loan error:', error);
+      alert('Error approving loan');
+    }
+  });
+
+  // Master admin: reject loan (final decision)
+  document.getElementById('reject-loan-btn')?.addEventListener('click', async () => {
+    const loanId = adminPanelState.selectedLoanId;
+    if (!loanId) {
+      alert('No loan selected');
+      return;
+    }
+
+    const rejectionNotes = prompt('Enter rejection reason:', '');
+    if (!rejectionNotes) return;
+
+    try {
+      const token = localStorage.getItem('accessToken');
+      const response = await fetch(`/api/admin/loans/${loanId}/reject-final`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ rejectionNotes })
+      });
+
+      if (response.ok) {
+        alert('✓ Loan rejected');
+        document.getElementById('loan-detail-card').style.display = 'none';
+        renderLoansView(sharedStore.read());
+      } else {
+        alert('Failed to reject loan');
+      }
+    } catch (error) {
+      console.error('Reject loan error:', error);
+      alert('Error rejecting loan');
+    }
+  });
+}
+
+function sendChatMessage() {
+  const customerId = adminPanelState.selectedCustomerId;
+  const messageInput = document.getElementById('chat-message-input');
+  const messageText = messageInput?.value?.trim();
+
+  if (!customerId || !messageText) {
+    alert('Please select a customer and enter a message');
+    return;
+  }
+
+  // Send message via API
+  const token = localStorage.getItem('accessToken');
+  fetch('/api/admin/messages/send', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      userId: customerId,
+      messageText,
+      messageType: 'text'
+    })
+  })
+    .then(res => res.json())
+    .then(data => {
+      if (data.sent) {
+        messageInput.value = '';
+        loadChatMessages(customerId);
+      }
+    })
+    .catch(err => console.error('Send message error:', err));
+}
+
+function loadChatMessages(customerId) {
+  const token = localStorage.getItem('accessToken');
+  fetch(`/api/admin/messages/${customerId}`, {
+    headers: { 'Authorization': `Bearer ${token}` }
+  })
+    .then(res => res.json())
+    .then(data => {
+      const messagesDiv = document.getElementById('chat-messages');
+      if (!messagesDiv) return;
+
+      messagesDiv.innerHTML = (data.messages || [])
+        .reverse()
+        .map(msg => `
+          <div class="message ${msg.is_from_admin ? 'admin-message' : 'customer-message'}">
+            <small>${new Date(msg.created_at).toLocaleTimeString()}</small>
+            <p>${msg.message_text}</p>
+          </div>
+        `)
+        .join('');
+
+      messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    })
+    .catch(err => console.error('Load messages error:', err));
+}
+
+function renderCustomersView(state, searchQuery = null, statusFilter = 'all') {
+  const customersTable = document.getElementById('customers-table');
+  if (!customersTable) return;
+
+  // Mock customer data - in production, fetch from API
+  const mockCustomers = [
+    { id: 'cust_001', name: 'John Doe', phone: '+256701234567', status: 'active', kycStatus: 'verified' },
+    { id: 'cust_002', name: 'Jane Smith', phone: '+256702345678', status: 'pending', kycStatus: 'documents_uploaded' },
+    { id: 'cust_003', name: 'Bob Johnson', phone: '+256703456789', status: 'active', kycStatus: 'verified' },
+  ];
+
+  let filtered = mockCustomers;
+  if (searchQuery) {
+    filtered = filtered.filter(c => 
+      c.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+      c.phone.includes(searchQuery)
+    );
+  }
+  if (statusFilter !== 'all') {
+    filtered = filtered.filter(c => c.status === statusFilter);
+  }
+
+  const html = `
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Phone</th>
+          <th>Status</th>
+          <th>KYC</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${filtered.map(customer => `
+          <tr>
+            <td>${customer.name}</td>
+            <td>${customer.phone}</td>
+            <td><span class="badge ${customer.status}">${customer.status}</span></td>
+            <td>${customer.kycStatus}</td>
+            <td>
+              <button class="btn btn-sm btn-secondary" onclick="selectCustomer('${customer.id}', '${customer.name}')">View</button>
+            </td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+  `;
+
+  customersTable.innerHTML = html;
+}
+
+function selectCustomer(customerId, customerName) {
+  adminPanelState.selectedCustomerId = customerId;
+  const detailCard = document.getElementById('customer-detail-card');
+  if (detailCard) {
+    detailCard.innerHTML = `
+      <button class="close-btn" id="close-customer-detail">✕</button>
+      <h3>${customerName}</h3>
+      <div id="customer-detail-content">
+        <p><strong>Customer ID:</strong> ${customerId}</p>
+        <p><strong>Phone:</strong> +256701234567</p>
+        <p><strong>Active Loans:</strong> 2</p>
+        <p><strong>Total Borrowed:</strong> UGX 2,500,000</p>
+        <p><strong>Repayment Status:</strong> On time</p>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-primary" id="reset-password-btn">Reset Password</button>
+        <button class="btn btn-secondary" id="view-loans-btn">View Loans</button>
+        <button class="btn btn-secondary" id="open-chat-btn">Open Chat</button>
+      </div>
+    `;
+    detailCard.style.display = 'block';
+    document.getElementById('close-customer-detail').addEventListener('click', () => {
+      detailCard.style.display = 'none';
+    });
+    setupPasswordResetListeners();
+    setupChatListeners();
+  }
 }
 
 // Quick action listeners

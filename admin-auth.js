@@ -2,6 +2,7 @@
 const adminElements = {
   loginForm: document.getElementById('admin-login-form'),
   password: document.getElementById('admin-password'),
+  role: document.getElementById('admin-role'),
   submitBtn: document.getElementById('admin-login-submit-btn'),
   spinner: document.getElementById('admin-login-spinner'),
   passwordError: document.getElementById('admin-password-error'),
@@ -47,9 +48,9 @@ async function apiRequest(endpoint, options = {}) {
   return data;
 }
 
-async function adminLogin(password) {
+async function adminLogin(password, role) {
   return apiRequest('/admin/login', {
-    body: JSON.stringify({ password, deviceId: 'admin_device_' + Date.now() }),
+    body: JSON.stringify({ password, role, deviceId: 'admin_device_' + Date.now() }),
   });
 }
 
@@ -58,9 +59,15 @@ async function handleAdminLogin(e) {
   e.preventDefault();
 
   const password = adminElements.password.value.trim();
+  const role = adminElements.role.value;
 
   if (!password) {
     showError(adminElements.passwordError, 'Please enter the admin password');
+    return;
+  }
+
+  if (!role) {
+    showError(adminElements.passwordError, 'Please select your role');
     return;
   }
 
@@ -68,15 +75,16 @@ async function handleAdminLogin(e) {
   setLoading(adminElements.submitBtn, adminElements.spinner, true);
 
   try {
-    const result = await adminLogin(password);
+    const result = await adminLogin(password, role);
 
-    // Store admin tokens
+    // Store admin tokens and role
     localStorage.setItem('accessToken', result.accessToken);
     localStorage.setItem('refreshToken', result.refreshToken);
     localStorage.setItem('userRole', 'admin');
+    localStorage.setItem('adminRole', result.role); // Store the specific admin role
 
     // Redirect to admin dashboard
-    window.location.href = 'admin.html';
+    window.location.href = 'admin-panel.html';
 
   } catch (error) {
     showError(adminElements.passwordError, error.message);
@@ -100,6 +108,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (token && role === 'admin') {
     // Already logged in as admin, redirect to admin dashboard
-    window.location.href = 'admin.html';
+    window.location.href = 'admin-panel.html';
   }
 });

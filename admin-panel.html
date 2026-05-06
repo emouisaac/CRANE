@@ -31,15 +31,17 @@
       </button>
       <button type="button" class="header-brand" id="admin-panel-home-btn" aria-label="Admin Home">
         <div class="logo-icon">⚙️</div>
-        <span>Crane Master Admin</span>
+        <span id="admin-title">Crane Master Admin</span>
       </button>
       <nav class="header-nav">
         <a href="#" class="nav-link active" data-view="dashboard">Dashboard</a>
-        <a href="#" class="nav-link" data-view="loans">Loan Approvals</a>
-        <a href="#" class="nav-link" data-view="admins">Admin Accounts</a>
+        <a href="#" class="nav-link" data-view="loans" id="nav-loans-link">Loan Approvals</a>
+        <a href="#" class="nav-link" data-view="admins" id="nav-admins-link">Admin Accounts</a>
+        <a href="#" class="nav-link" data-view="customers" id="nav-customers-link" style="display: none;">Customers</a>
+        <a href="#" class="nav-link" data-view="chat" id="nav-chat-link" style="display: none;">Messages</a>
         <a href="#" class="nav-link" data-view="risks">Risk Management</a>
         <a href="#" class="nav-link" data-view="settings">Settings</a>
-        <a href="#" class="nav-link" data-view="audit">Audit Logs</a>
+        <a href="#" class="nav-link" data-view="audit" id="nav-audit-link">Audit Logs</a>
         <a href="index.html" class="nav-link admin-back-link">Back to App</a>
       </nav>
       <div class="header-actions">
@@ -242,6 +244,58 @@
                 <button type="button" class="btn btn-secondary" onclick="document.getElementById('edit-admin-card').style.display='none'">Cancel</button>
               </div>
             </form>
+          </article>
+        </div>
+      </section>
+
+      <!-- Customers View (for regular admin) -->
+      <section class="admin-view" id="customers-view">
+        <div class="admin-grid">
+          <article class="card full-width">
+            <h2>Customer Management</h2>
+            <div class="filter-controls">
+              <select id="customer-status-filter">
+                <option value="all">All Customers</option>
+                <option value="active">Active</option>
+                <option value="pending">Pending KYC</option>
+                <option value="suspended">Suspended</option>
+              </select>
+              <input type="text" id="customer-search" placeholder="Search by name or phone...">
+            </div>
+            <div id="customers-table" class="admin-table"></div>
+          </article>
+
+          <!-- Customer Detail Modal -->
+          <article class="card full-width" id="customer-detail-card" style="display: none;">
+            <button class="close-btn" id="close-customer-detail">✕</button>
+            <h3>Customer Details</h3>
+            <div id="customer-detail-content"></div>
+            <div class="modal-actions">
+              <button class="btn btn-primary" id="reset-password-btn">Reset Password</button>
+              <button class="btn btn-secondary" id="view-loans-btn">View Loans</button>
+              <button class="btn btn-secondary" id="open-chat-btn">Open Chat</button>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <!-- Chat/Messages View (for regular admin) -->
+      <section class="admin-view" id="chat-view">
+        <div class="admin-grid">
+          <article class="card" style="grid-column: span 1; height: 600px; overflow-y: auto;">
+            <h3>Customers</h3>
+            <div id="chat-customer-list" class="chat-list"></div>
+          </article>
+          <article class="card" style="grid-column: span 1; height: 600px; display: flex; flex-direction: column;">
+            <div id="chat-header">
+              <h3 id="chat-customer-name">Select a customer</h3>
+              <small id="chat-customer-info"></small>
+            </div>
+            <div id="chat-messages" class="chat-messages" style="flex: 1; overflow-y: auto; margin: 10px 0;"></div>
+            <div class="chat-input-group">
+              <input type="text" id="chat-message-input" placeholder="Type a message..." style="flex: 1; padding: 8px;">
+              <button class="btn btn-primary" id="send-message-btn" style="margin-left: 10px;">Send</button>
+            </div>
           </article>
         </div>
       </section>
