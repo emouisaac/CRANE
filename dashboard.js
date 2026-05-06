@@ -1580,8 +1580,7 @@ function setupEventListeners() {
 
   // Apply Now button
   document.getElementById('apply-offer-btn')?.addEventListener('click', () => {
-    const offer = dashboardState.marketing.offers[marketingOfferIndex];
-    alert(`You selected: ${offer.title}\nAmount: ${currencyFormatter.format(offer.amount)}\nLet's proceed with your application!`);
+    switchView('get-loan');
   });
 
   // Navigation
