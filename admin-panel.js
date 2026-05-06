@@ -189,6 +189,17 @@ function setupNavigation() {
     });
   });
 
+  document.querySelectorAll('.footer-box[data-view]').forEach(button => {
+    button.addEventListener('click', (e) => {
+      e.preventDefault();
+      const view = e.currentTarget.dataset.view;
+      if (view) {
+        switchAdminView(view);
+        setMobileNavOpen(false);
+      }
+    });
+  });
+
   document.getElementById('admin-panel-home-btn')?.addEventListener('click', () => {
     switchAdminView('dashboard');
     setMobileNavOpen(false);

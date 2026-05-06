@@ -1,7 +1,30 @@
 /* Admin Panel Styles */
 
-.admin-header {
-  background: linear-gradient(135deg, #0a6c4d 0%, #0d8b63 100%);
+.dashboard-header.admin-header {
+  background: var(--dashboard-surface);
+  border-radius: var(--dashboard-radius);
+  box-shadow: var(--dashboard-shadow);
+  padding: 0.85rem 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.dashboard-header.admin-header .header-brand {
+  color: var(--dashboard-primary);
+}
+
+.dashboard-header.admin-header .header-nav {
+  gap: 0.5rem;
+}
+
+.dashboard-header.admin-header .nav-link {
+  padding: 0.55rem 0.9rem;
+  background: transparent;
+  color: var(--dashboard-muted);
+}
+
+.dashboard-header.admin-header .nav-link.active {
+  background: var(--dashboard-primary);
+  color: white;
 }
 
 .admin-menu-toggle {
@@ -36,18 +59,16 @@
 }
 
 .admin-header .nav-link {
-  color: rgba(255, 255, 255, 0.8);
   transition: all 0.3s ease;
 }
 
 .admin-header .nav-link:hover,
 .admin-header .nav-link.active {
-  color: #ffffff;
   font-weight: 600;
 }
 
 .admin-content {
-  padding: 2rem;
+  padding: 2rem 2rem 7.5rem;
   max-width: 1400px;
   margin: 0 auto;
   min-width: 0;
@@ -60,18 +81,37 @@
   margin-bottom: 2rem;
 }
 
-.admin-view#dashboard-view .admin-grid {
+.dashboard-metrics-grid,
+.dashboard-info-grid {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.dashboard-metrics-grid {
   grid-template-columns: repeat(4, minmax(240px, 1fr));
+  align-items: stretch;
+}
+
+.dashboard-info-grid {
+  grid-template-columns: 1fr;
+}
+
+.dashboard-metrics-grid .metric-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 170px;
 }
 
 @media (max-width: 1300px) {
-  .admin-view#dashboard-view .admin-grid {
+  .dashboard-metrics-grid {
     grid-template-columns: repeat(2, minmax(260px, 1fr));
   }
 }
 
 @media (max-width: 900px) {
-  .admin-view#dashboard-view .admin-grid {
+  .dashboard-metrics-grid,
+  .dashboard-info-grid {
     grid-template-columns: 1fr;
   }
 }
