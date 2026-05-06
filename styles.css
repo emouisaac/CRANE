@@ -1980,6 +1980,18 @@ select {
   line-height: 1.5;
 }
 
+.auth-login-note {
+  margin-top: 0.9rem;
+  padding: 0.85rem 1rem;
+  border-radius: var(--radius-md);
+  background: rgba(13, 139, 99, 0.08);
+  border: 1px solid rgba(13, 139, 99, 0.14);
+  color: var(--primary-dark);
+  font-size: 0.9rem;
+  line-height: 1.45;
+  text-align: left;
+}
+
 .modal-close {
   position: absolute;
   top: 1rem;

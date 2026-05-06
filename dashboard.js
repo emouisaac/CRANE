@@ -67,9 +67,18 @@ function closeLoginModal() {
   if (loginModal) {
     loginModal.style.display = 'none';
   }
+  setLoginRequiredMessage('');
 }
 
-function openLoginModal() {
+function setLoginRequiredMessage(message = '') {
+  const note = document.getElementById('login-required-note');
+  if (!note) return;
+
+  note.textContent = message;
+  note.style.display = message ? 'block' : 'none';
+}
+
+function openLoginModal(message = '') {
   const loginModal = document.getElementById('login-modal');
   const loginForm = document.getElementById('login-form');
   const registerForm = document.getElementById('register-form');
@@ -83,6 +92,7 @@ function openLoginModal() {
     registerForm.classList.remove('active');
   }
   updateAuthHeader('login');
+  setLoginRequiredMessage(message);
 }
 
 let marketingOfferIndex = 0;
@@ -181,11 +191,11 @@ function checkIdleTimeout() {
 function showLoginPrompt() {
   const modal = document.getElementById('login-modal');
   if (modal) {
-    openLoginModal();
+    openLoginModal('Please sign in first to continue with your Crane account.');
   } else {
     // Fallback: reopen the in-page login modal if the route is not available
     closeLoginModal();
-    openLoginModal();
+    openLoginModal('Please sign in first to continue with your Crane account.');
   }
 }
 
@@ -1543,7 +1553,7 @@ function setupEventListeners() {
     if (isAuthenticated) {
       openChatBox();
     } else {
-      alert('Please login to access chat support');
+      openLoginModal('Please sign in first to access support chat.');
     }
   });
 
@@ -1552,7 +1562,7 @@ function setupEventListeners() {
     if (isAuthenticated) {
       openProfilePanel();
     } else {
-      alert('Please login to access profile settings');
+      openLoginModal('Please sign in first to view your profile settings.');
     }
   });
 
