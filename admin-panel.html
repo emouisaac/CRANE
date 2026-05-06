@@ -187,6 +187,10 @@
                 <input type="text" id="admin-name" required>
               </div>
               <div class="form-group">
+                <label for="admin-username">Username *</label>
+                <input type="text" id="admin-username" autocomplete="username" required>
+              </div>
+              <div class="form-group">
                 <label for="admin-email">Email Address *</label>
                 <input type="email" id="admin-email" required>
               </div>
@@ -200,8 +204,8 @@
                 </select>
               </div>
               <div class="form-group">
-                <label for="admin-password">Temporary Password *</label>
-                <input type="password" id="admin-password" required>
+                <label for="admin-password">Password *</label>
+                <input type="password" id="admin-password" autocomplete="new-password" required>
               </div>
               <div class="form-actions">
                 <button type="submit" class="btn btn-primary">Create Admin</button>
@@ -218,6 +222,10 @@
               <div class="form-group">
                 <label for="edit-admin-name">Full Name</label>
                 <input type="text" id="edit-admin-name" readonly>
+              </div>
+              <div class="form-group">
+                <label for="edit-admin-username">Username</label>
+                <input type="text" id="edit-admin-username" readonly>
               </div>
               <div class="form-group">
                 <label for="edit-admin-email">Email Address</label>

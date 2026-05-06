@@ -7,6 +7,7 @@ const adminPanelState = {
   selectedAdminId: null,
   selectedRiskId: null,
   mobileNavOpen: false,
+  adminAccounts: [],
   filters: {
     loanStatus: 'all',
     riskSeverity: 'all',
@@ -22,6 +23,54 @@ const currencyFormatter = new Intl.NumberFormat('en-UG', {
   currency: 'UGX',
   maximumFractionDigits: 0
 });
+
+function getAdminAccessToken() {
+  return localStorage.getItem('accessToken');
+}
+
+async function adminApiRequest(path, options = {}) {
+  const token = getAdminAccessToken();
+  const response = await fetch(`/api/auth${path}`, {
+    method: options.method || 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+      ...(options.headers || {})
+    },
+    body: options.body
+  });
+
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(data.error || 'Admin request failed');
+  }
+
+  return data;
+}
+
+function toAdminUiAccount(account) {
+  return {
+    id: account.id,
+    username: account.username,
+    name: account.fullName,
+    email: account.email || '',
+    role: account.role || 'loan_officer',
+    status: account.status || 'active',
+    createdAt: account.createdAt ? String(account.createdAt).split('T')[0] : new Date().toISOString().split('T')[0],
+    lastLogin: account.lastLoginAt ? new Date(account.lastLoginAt).toLocaleString() : 'Never'
+  };
+}
+
+async function loadAdminAccounts() {
+  if (adminPanelState.adminRole !== 'master_admin') {
+    adminPanelState.adminAccounts = [];
+    return [];
+  }
+
+  const result = await adminApiRequest('/admin/accounts');
+  adminPanelState.adminAccounts = (result.accounts || []).map(toAdminUiAccount);
+  return adminPanelState.adminAccounts;
+}
 
 // Track user activity to detect idle
 function setupIdleDetection() {
@@ -61,6 +110,18 @@ document.addEventListener('DOMContentLoaded', () => {
   setupAdminEventListeners();
   setupRoleBasedEventListeners();
   renderDashboard();
+  if (adminPanelState.adminRole === 'master_admin') {
+    loadAdminAccounts()
+      .then(() => {
+        renderDashboard();
+        if (adminPanelState.currentView === 'admins') {
+          renderAdminsView(sharedStore.read());
+        }
+      })
+      .catch((error) => {
+        console.error('Failed to load persisted admin accounts:', error);
+      });
+  }
   sharedStore?.startAutoSync?.();
   sharedStore?.subscribe(() => {
     renderViewContent(adminPanelState.currentView);
@@ -94,6 +155,8 @@ function updateUIBasedOnRole(role) {
   document.getElementById('nav-customers-link').style.display = isRegularAdmin ? 'block' : 'none';
   document.getElementById('nav-chat-link').style.display = isRegularAdmin ? 'block' : 'none';
   document.getElementById('nav-audit-link').style.display = isMasterAdmin ? 'block' : 'none';
+  document.getElementById('create-admin-btn')?.style.setProperty('display', isMasterAdmin ? 'inline-flex' : 'none');
+  document.getElementById('new-admin-btn')?.style.setProperty('display', isMasterAdmin ? 'inline-flex' : 'none');
 }
 
 function initializeSiteIntro() {
@@ -292,7 +355,9 @@ function renderDashboard() {
   document.getElementById('pending-count').textContent = pendingCount;
   document.getElementById('active-loans').textContent = activeLoans;
   document.getElementById('risk-count').textContent = riskCount;
-  document.getElementById('admin-count').textContent = admin.adminUsers.length;
+  document.getElementById('admin-count').textContent = adminPanelState.adminRole === 'master_admin'
+    ? adminPanelState.adminAccounts.length
+    : admin.adminUsers.length;
   document.getElementById('alert-count').textContent = riskCount;
 
   // Render recent activities
@@ -477,13 +542,16 @@ function requestMoreDocs(loanId) {
 }
 
 function renderAdminsView(state) {
-  const admin = state.admin;
+  const adminUsers = adminPanelState.adminRole === 'master_admin'
+    ? adminPanelState.adminAccounts
+    : state.admin.adminUsers;
 
   const tableHtml = `
     <table>
       <thead>
         <tr>
           <th>ID</th>
+          <th>Username</th>
           <th>Name</th>
           <th>Email</th>
           <th>Role</th>
@@ -494,9 +562,10 @@ function renderAdminsView(state) {
         </tr>
       </thead>
       <tbody>
-        ${admin.adminUsers.map(user => `
+        ${adminUsers.map(user => `
           <tr class="table-row-clickable" onclick="editAdminUser('${user.id}')">
             <td><strong>${user.id}</strong></td>
+            <td>${user.username || '-'}</td>
             <td>${user.name}</td>
             <td>${user.email}</td>
             <td>${user.role.replace(/_/g, ' ')}</td>
@@ -515,13 +584,16 @@ function renderAdminsView(state) {
 
 function editAdminUser(adminId) {
   const state = sharedStore.read();
-  const user = state.admin.adminUsers.find(u => u.id === adminId);
+  const user = adminPanelState.adminRole === 'master_admin'
+    ? adminPanelState.adminAccounts.find(u => u.id === adminId)
+    : state.admin.adminUsers.find(u => u.id === adminId);
 
   if (!user) return;
 
   adminPanelState.selectedAdminId = adminId;
 
   document.getElementById('edit-admin-name').value = user.name;
+  document.getElementById('edit-admin-username').value = user.username || '';
   document.getElementById('edit-admin-email').value = user.email;
   document.getElementById('edit-admin-role').value = user.role;
   document.getElementById('edit-admin-status').value = user.status;
@@ -544,52 +616,56 @@ function editAdminUser(adminId) {
   };
 }
 
-function updateAdminUser() {
+async function updateAdminUser() {
   const adminId = adminPanelState.selectedAdminId;
   const newRole = document.getElementById('edit-admin-role').value;
   const newStatus = document.getElementById('edit-admin-status').value;
 
-  persistSharedState(state => {
-    const user = state.admin.adminUsers.find(u => u.id === adminId);
-    if (user) {
-      user.role = newRole;
-      user.status = newStatus;
-      state.admin.auditLogs.unshift({
-        id: `AUD-${Date.now()}`,
-        time: new Date().toLocaleTimeString(),
-        actor: 'Admin User',
-        action: `Updated admin user ${adminId}`,
-        details: `Role: ${newRole}, Status: ${newStatus}`
-      });
-    }
-    return state;
-  });
+  if (adminPanelState.adminRole !== 'master_admin') {
+    alert('Only the master admin can update admin accounts.');
+    return;
+  }
+
+  try {
+    await adminApiRequest(`/admin/accounts/${adminId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({
+        role: newRole,
+        status: newStatus
+      })
+    });
+    await loadAdminAccounts();
+  } catch (error) {
+    alert(error.message);
+    return;
+  }
 
   alert('Admin user updated successfully!');
   document.getElementById('edit-admin-card').style.display = 'none';
   renderAdminsView(sharedStore.read());
+  renderDashboard();
 }
 
-function deleteAdminUser(adminId) {
-  persistSharedState(state => {
-    const index = state.admin.adminUsers.findIndex(u => u.id === adminId);
-    if (index !== -1) {
-      const deletedUser = state.admin.adminUsers[index];
-      state.admin.adminUsers.splice(index, 1);
-      state.admin.auditLogs.unshift({
-        id: `AUD-${Date.now()}`,
-        time: new Date().toLocaleTimeString(),
-        actor: 'Admin User',
-        action: `Deleted admin user ${adminId}`,
-        details: `Removed ${deletedUser.name} (${deletedUser.email})`
-      });
-    }
-    return state;
-  });
+async function deleteAdminUser(adminId) {
+  if (adminPanelState.adminRole !== 'master_admin') {
+    alert('Only the master admin can suspend admin accounts.');
+    return;
+  }
+
+  try {
+    await adminApiRequest(`/admin/accounts/${adminId}`, {
+      method: 'DELETE'
+    });
+    await loadAdminAccounts();
+  } catch (error) {
+    alert(error.message);
+    return;
+  }
 
   alert('Admin user deleted successfully!');
   document.getElementById('edit-admin-card').style.display = 'none';
   renderAdminsView(sharedStore.read());
+  renderDashboard();
 }
 
 function renderRisksView(state) {
@@ -1110,34 +1186,59 @@ function selectCustomer(customerId, customerName) {
 function setupAdminEventListeners() {
   document.getElementById('view-pending-loans')?.addEventListener('click', () => switchAdminView('loans'));
   document.getElementById('create-admin-btn')?.addEventListener('click', () => {
+    if (adminPanelState.adminRole !== 'master_admin') {
+      alert('Only the master admin can create admin accounts.');
+      return;
+    }
     document.getElementById('create-admin-card').style.display = 'block';
   });
   document.getElementById('view-alerts-btn')?.addEventListener('click', () => switchAdminView('risks'));
   document.getElementById('new-admin-btn')?.addEventListener('click', () => {
+    if (adminPanelState.adminRole !== 'master_admin') {
+      alert('Only the master admin can create admin accounts.');
+      return;
+    }
     document.getElementById('create-admin-card').style.display = 'block';
   });
 
-  document.getElementById('create-admin-form')?.addEventListener('submit', (e) => {
+  document.getElementById('create-admin-form')?.addEventListener('submit', async (e) => {
     e.preventDefault();
+
+    if (adminPanelState.adminRole !== 'master_admin') {
+      alert('Only the master admin can create admin accounts.');
+      return;
+    }
+
     const newAdmin = {
-      id: `ADM-${Date.now()}`,
       name: document.getElementById('admin-name').value,
+      username: document.getElementById('admin-username').value,
       email: document.getElementById('admin-email').value,
       role: document.getElementById('admin-role').value,
-      status: 'active',
-      createdAt: new Date().toISOString().split('T')[0],
-      lastLogin: 'Never'
+      password: document.getElementById('admin-password').value
     };
 
-    persistSharedState(state => {
-      state.admin.adminUsers.push(newAdmin);
-      return state;
-    });
+    try {
+      await adminApiRequest('/admin/accounts', {
+        method: 'POST',
+        body: JSON.stringify({
+          fullName: newAdmin.name,
+          username: newAdmin.username,
+          email: newAdmin.email,
+          role: newAdmin.role,
+          password: newAdmin.password
+        })
+      });
+      await loadAdminAccounts();
+    } catch (error) {
+      alert(error.message);
+      return;
+    }
 
     alert(`✓ Admin account created for ${newAdmin.name}`);
     document.getElementById('create-admin-card').style.display = 'none';
     document.getElementById('create-admin-form').reset();
     renderAdminsView(sharedStore.read());
+    renderDashboard();
   });
 
   document.getElementById('close-create-admin')?.addEventListener('click', () => {

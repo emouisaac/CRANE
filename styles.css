@@ -35,8 +35,8 @@ body {
   min-height: 100vh;
   overscroll-behavior-y: none;
   background:
-    radial-gradient(circle at top left, rgba(13, 139, 99, 0.16), transparent 30%),
-    linear-gradient(180deg, #f9fcf9 0%, #eef4ef 48%, #f6f9f5 100%);
+    radial-gradient(circle at top left, rgba(149, 214, 178, 0.28), transparent 32%),
+    linear-gradient(180deg, #f6fcf7 0%, #e4f4e9 50%, #f1f8f3 100%);
   color: var(--text);
   font-family: "Manrope", sans-serif;
 }
@@ -53,8 +53,8 @@ body.intro-loading .app-shell {
 
 body.intro-complete {
   background:
-    radial-gradient(circle at top left, rgba(13, 139, 99, 0.16), transparent 30%),
-    linear-gradient(180deg, #f9fcf9 0%, #eef4ef 48%, #f6f9f5 100%);
+    radial-gradient(circle at top left, rgba(149, 214, 178, 0.28), transparent 32%),
+    linear-gradient(180deg, #f6fcf7 0%, #e4f4e9 50%, #f1f8f3 100%);
 }
 
 .site-intro {
@@ -155,13 +155,13 @@ select {
 .page-glow-left {
   top: 3rem;
   left: -5rem;
-  background: #7fd8b8;
+  background: #a9ddc1;
 }
 
 .page-glow-right {
   top: 26rem;
   right: -5rem;
-  background: #f3c55a;
+  background: #cbe9d6;
 }
 
 .app-shell {
@@ -1352,8 +1352,8 @@ select {
 /* Authentication Page Styles */
 .auth-page {
   background:
-    radial-gradient(circle at top left, rgba(13, 139, 99, 0.16), transparent 30%),
-    linear-gradient(180deg, #f9fcf9 0%, #eef4ef 48%, #f6f9f5 100%);
+    radial-gradient(circle at top left, rgba(149, 214, 178, 0.28), transparent 32%),
+    linear-gradient(180deg, #f6fcf7 0%, #e4f4e9 50%, #f1f8f3 100%);
   min-height: 100vh;
   display: flex;
   align-items: center;

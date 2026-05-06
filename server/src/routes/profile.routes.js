@@ -1,5 +1,10 @@
 const express = require("express");
 
+const {
+  buildAuthUserProfile,
+  findAuthUserById,
+  updateAuthUserProfile,
+} = require("../config/database");
 const { authenticate } = require("../middleware/authenticate");
 const { requireBoundDevice } = require("../middleware/deviceBinding");
 
@@ -8,23 +13,34 @@ const router = express.Router();
 router.use(authenticate, requireBoundDevice);
 
 router.get("/", (req, res) => {
+  const user = findAuthUserById(req.user.sub);
+
+  if (!user) {
+    return res.status(404).json({
+      error: "User profile not found",
+    });
+  }
+
   res.json({
-    userId: req.user.sub,
-    profile: {
-      fullName: "Amina Nankya",
-      address: "Kampala, Nakawa Division",
-      employmentStatus: "Self-employed",
-      monthlyIncomeUgx: 850000,
-      wallets: ["MTN Mobile Money"],
-      bankLinked: false,
-    },
+    userId: user.id,
+    profile: buildAuthUserProfile(user),
   });
 });
 
 router.put("/", (req, res) => {
+  const updatedUser = updateAuthUserProfile(req.user.sub, req.body);
+
+  if (!updatedUser) {
+    return res.status(404).json({
+      saved: false,
+      error: "User profile not found",
+    });
+  }
+
   res.json({
     saved: true,
-    profile: req.body,
+    userId: updatedUser.id,
+    profile: buildAuthUserProfile(updatedUser),
   });
 });
 

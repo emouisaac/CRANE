@@ -1,8 +1,12 @@
 // Admin Authentication
 const adminElements = {
   loginForm: document.getElementById('admin-login-form'),
+  loginType: document.getElementById('admin-login-type'),
+  usernameGroup: document.getElementById('admin-username-group'),
+  username: document.getElementById('admin-username'),
   password: document.getElementById('admin-password'),
-  role: document.getElementById('admin-role'),
+  passwordLabel: document.getElementById('admin-password-label'),
+  subtitle: document.getElementById('admin-auth-subtitle'),
   submitBtn: document.getElementById('admin-login-submit-btn'),
   spinner: document.getElementById('admin-login-spinner'),
   passwordError: document.getElementById('admin-password-error'),
@@ -48,26 +52,49 @@ async function apiRequest(endpoint, options = {}) {
   return data;
 }
 
-async function adminLogin(password, role) {
+async function adminLogin({ loginType, username, password }) {
   return apiRequest('/admin/login', {
-    body: JSON.stringify({ password, role, deviceId: 'admin_device_' + Date.now() }),
+    body: JSON.stringify({
+      loginType,
+      username,
+      password,
+      deviceId: 'admin_device_' + Date.now()
+    }),
   });
+}
+
+function updateLoginModeUI() {
+  const loginType = adminElements.loginType.value;
+  const isMasterAdmin = loginType === 'master_admin';
+
+  adminElements.usernameGroup.style.display = isMasterAdmin ? 'none' : 'block';
+  adminElements.username.required = !isMasterAdmin;
+  adminElements.username.value = isMasterAdmin ? '' : adminElements.username.value;
+  adminElements.passwordLabel.textContent = isMasterAdmin ? 'Master Password' : 'Admin Password';
+  adminElements.password.placeholder = isMasterAdmin
+    ? 'Enter master admin password'
+    : 'Enter your admin password';
+  adminElements.subtitle.textContent = isMasterAdmin
+    ? 'Only the master admin should use the password stored in .env.'
+    : 'Regular admins must sign in with the username and password created by the master admin.';
+  hideError(adminElements.passwordError);
 }
 
 // Form handlers
 async function handleAdminLogin(e) {
   e.preventDefault();
 
+  const loginType = adminElements.loginType.value;
+  const username = adminElements.username.value.trim();
   const password = adminElements.password.value.trim();
-  const role = adminElements.role.value;
 
   if (!password) {
-    showError(adminElements.passwordError, 'Please enter the admin password');
+    showError(adminElements.passwordError, 'Please enter the password');
     return;
   }
 
-  if (!role) {
-    showError(adminElements.passwordError, 'Please select your role');
+  if (loginType === 'admin' && !username) {
+    showError(adminElements.passwordError, 'Please enter the admin username');
     return;
   }
 
@@ -75,7 +102,7 @@ async function handleAdminLogin(e) {
   setLoading(adminElements.submitBtn, adminElements.spinner, true);
 
   try {
-    const result = await adminLogin(password, role);
+    const result = await adminLogin({ loginType, username, password });
 
     // Store admin tokens and role
     localStorage.setItem('accessToken', result.accessToken);
@@ -101,6 +128,8 @@ function handleBackToApp() {
 document.addEventListener('DOMContentLoaded', () => {
   adminElements.loginForm.addEventListener('submit', handleAdminLogin);
   adminElements.backToApp.addEventListener('click', handleBackToApp);
+  adminElements.loginType.addEventListener('change', updateLoginModeUI);
+  updateLoginModeUI();
 
   // Check if already logged in as admin
   const token = localStorage.getItem('accessToken');

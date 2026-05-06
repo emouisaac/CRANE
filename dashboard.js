@@ -103,6 +103,7 @@ let isAuthenticated = false;
 async function loadUserProfile() {
   try {
     const token = localStorage.getItem('accessToken');
+    const deviceId = localStorage.getItem('deviceId');
     if (!token) {
       clearAuthState();
       return false;
@@ -112,6 +113,7 @@ async function loadUserProfile() {
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
+        'x-device-id': deviceId || '',
       },
     });
 

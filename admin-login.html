@@ -100,30 +100,41 @@
         <span class="auth-logo-text">Crane</span>
       </div>
       <h1 class="auth-title">Admin Access</h1>
-      <p class="auth-subtitle">Enter master password to access admin console</p>
+      <p class="auth-subtitle" id="admin-auth-subtitle">Master admin uses the .env password. Regular admins use a username and password created by the master admin.</p>
     </div>
 
     <div class="admin-auth-form-container">
       <form id="admin-login-form" class="auth-form active">
         <div class="form-group">
-          <label for="admin-password" class="form-label">Master Password</label>
+          <label for="admin-login-type" class="form-label">Login As</label>
+          <select id="admin-login-type" class="form-input" required>
+            <option value="master_admin">Master Admin</option>
+            <option value="admin">Admin</option>
+          </select>
+        </div>
+
+        <div class="form-group" id="admin-username-group" style="display: none;">
+          <label for="admin-username" class="form-label">Username</label>
+          <input
+            type="text"
+            id="admin-username"
+            class="form-input"
+            placeholder="Enter admin username"
+            autocomplete="username"
+          >
+        </div>
+
+        <div class="form-group">
+          <label for="admin-password" class="form-label" id="admin-password-label">Master Password</label>
           <input
             type="password"
             id="admin-password"
             class="form-input"
-            placeholder="Enter admin password"
+            placeholder="Enter master admin password"
+            autocomplete="current-password"
             required
           >
           <div id="admin-password-error" class="form-error"></div>
-        </div>
-
-        <div class="form-group">
-          <label for="admin-role" class="form-label">Login As</label>
-          <select id="admin-role" class="form-input" required>
-            <option value="">Select your role...</option>
-            <option value="master_admin">Master Admin (Approve Loans)</option>
-            <option value="admin">Admin (Review Applicants)</option>
-          </select>
         </div>
 
         <button type="submit" class="btn btn-primary auth-submit-btn" id="admin-login-submit-btn">

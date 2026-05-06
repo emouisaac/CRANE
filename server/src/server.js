@@ -8,6 +8,14 @@ const { bindVerificationSocket } = require("./websocket/verification.socket");
 
 getDatabase();
 
+console.log(`SQLite database path: ${config.dbPath}`);
+if (!config.usingManagedDataDir) {
+  console.warn(
+    "No persistent data directory environment variable detected. " +
+      "For redeploy-safe user retention, set DB_PATH or a mounted data directory such as DATA_DIR/RENDER_DISK_PATH."
+  );
+}
+
 const app = createApp();
 const server = http.createServer(app);
 

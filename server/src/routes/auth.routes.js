@@ -1,18 +1,110 @@
 const express = require("express");
 const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
+const { timingSafeEqual } = require("crypto");
 
 const { config } = require("../config/env");
 const {
+  createAdminAccount,
+  findAdminAccountById,
+  findAdminAccountByUsername,
   findAuthUserByPhone,
+  listAdminAccounts,
+  sanitizeAdminAccount,
+  touchAdminAccountLogin,
   upsertAuthUser,
   touchAuthUserLogin,
+  updateAdminAccount,
 } = require("../config/database");
+const { authenticate } = require("../middleware/authenticate");
 
 const router = express.Router();
 
 function hashSecret(value) {
   return crypto.createHash("sha256").update(String(value)).digest("hex");
+}
+
+function hashAdminPassword(password, salt = crypto.randomBytes(16).toString("hex")) {
+  const derivedKey = crypto.scryptSync(String(password), salt, 64).toString("hex");
+  return `scrypt$${salt}$${derivedKey}`;
+}
+
+function verifyAdminPassword(password, storedHash) {
+  if (!storedHash || typeof storedHash !== "string") {
+    return false;
+  }
+
+  const [scheme, salt, expectedKey] = storedHash.split("$");
+  if (scheme !== "scrypt" || !salt || !expectedKey) {
+    return false;
+  }
+
+  const actualKey = crypto.scryptSync(String(password), salt, 64).toString("hex");
+  return timingSafeEqual(Buffer.from(actualKey, "hex"), Buffer.from(expectedKey, "hex"));
+}
+
+function authenticateAdminToken(req, res, next) {
+  authenticate(req, res, (error) => {
+    if (error) {
+      return next(error);
+    }
+
+    if (!req.user?.scope || !req.user.scope.includes("admin")) {
+      return res.status(403).json({
+        error: "Admin access required",
+        code: "ADMIN_ACCESS_REQUIRED",
+      });
+    }
+
+    return next();
+  });
+}
+
+function requireMasterAdmin(req, res, next) {
+  if (req.user?.role !== "master_admin") {
+    return res.status(403).json({
+      error: "Master admin access required",
+      code: "MASTER_ADMIN_ONLY",
+    });
+  }
+
+  return next();
+}
+
+function issueAdminSession({ subject, deviceId, role, username = null, adminAccount = null }) {
+  const accessToken = jwt.sign(
+    {
+      sub: subject,
+      deviceId,
+      scope: ["admin"],
+      role,
+      username,
+      adminAccountId: adminAccount?.id || null,
+      adminBusinessRole: adminAccount?.role || null,
+    },
+    config.jwtSecret,
+    { expiresIn: config.jwtExpiry }
+  );
+
+  return {
+    accessToken,
+    refreshToken: role === "master_admin" ? "master_admin_refresh_demo_token" : "admin_refresh_demo_token",
+    role,
+    deviceBound: true,
+    admin: adminAccount
+      ? sanitizeAdminAccount(adminAccount)
+      : {
+          id: "master_admin",
+          username: "master_admin",
+          fullName: "Master Admin",
+          email: "",
+          role: "master_admin",
+          status: "active",
+          createdAt: null,
+          updatedAt: null,
+          lastLoginAt: null,
+        },
+  };
 }
 
 function createBorrowerSession(user, deviceId) {
@@ -148,34 +240,179 @@ router.post("/login", (req, res) => {
 });
 
 router.post("/admin/login", (req, res) => {
-  const { password, deviceId } = req.body;
+  const { username, password, deviceId, loginType, role } = req.body;
+  const selectedLoginType = loginType || role || "admin";
 
-  // Unique admin password - should be changed in production
-  const ADMIN_PASSWORD = config.adminPassword;
+  if (!password || !deviceId) {
+    return res.status(400).json({
+      error: "Password and device ID are required",
+      code: "MISSING_ADMIN_FIELDS",
+    });
+  }
 
-  if (!password || password !== ADMIN_PASSWORD) {
+  if (selectedLoginType === "master_admin") {
+    if (password !== config.adminPassword) {
+      return res.status(401).json({
+        error: "Invalid master admin credentials",
+        code: "MASTER_ADMIN_AUTH_FAILED",
+      });
+    }
+
+    return res.json(
+      issueAdminSession({
+        subject: "master_admin",
+        deviceId,
+        role: "master_admin",
+        username: "master_admin",
+      })
+    );
+  }
+
+  if (!username || !String(username).trim()) {
+    return res.status(400).json({
+      error: "Username is required for admin login",
+      code: "ADMIN_USERNAME_REQUIRED",
+    });
+  }
+
+  const adminAccount = findAdminAccountByUsername(username);
+  if (!adminAccount || adminAccount.status !== "active" || !verifyAdminPassword(password, adminAccount.password_hash)) {
     return res.status(401).json({
-      error: "Invalid admin credentials",
+      error: "Invalid admin username or password",
       code: "ADMIN_AUTH_FAILED",
     });
   }
 
-  const accessToken = jwt.sign(
-    {
-      sub: "admin_demo_001",
-      role: "admin",
+  const updatedAdminAccount = touchAdminAccountLogin(adminAccount.id) || sanitizeAdminAccount(adminAccount);
+
+  return res.json(
+    issueAdminSession({
+      subject: adminAccount.id,
       deviceId,
-      scope: ["admin", "borrower"]
-    },
-    config.jwtSecret,
-    { expiresIn: config.jwtExpiry }
+      role: "admin",
+      username: adminAccount.username,
+      adminAccount: updatedAdminAccount,
+    })
   );
+});
+
+router.get("/admin/accounts", authenticateAdminToken, requireMasterAdmin, (req, res) => {
+  return res.json({
+    accounts: listAdminAccounts(),
+  });
+});
+
+router.post("/admin/accounts", authenticateAdminToken, requireMasterAdmin, (req, res) => {
+  const {
+    username,
+    fullName,
+    email,
+    password,
+    role = "loan_officer",
+  } = req.body || {};
+
+  if (!username || !String(username).trim()) {
+    return res.status(400).json({
+      error: "Username is required",
+      code: "ADMIN_USERNAME_REQUIRED",
+    });
+  }
+
+  if (!fullName || !String(fullName).trim()) {
+    return res.status(400).json({
+      error: "Full name is required",
+      code: "ADMIN_NAME_REQUIRED",
+    });
+  }
+
+  if (!password || String(password).length < 6) {
+    return res.status(400).json({
+      error: "Admin password must be at least 6 characters",
+      code: "ADMIN_PASSWORD_TOO_SHORT",
+    });
+  }
+
+  try {
+    const account = createAdminAccount({
+      username,
+      fullName,
+      email,
+      passwordHash: hashAdminPassword(password),
+      role,
+      status: "active",
+    });
+
+    return res.status(201).json({
+      created: true,
+      account,
+    });
+  } catch (error) {
+    const isUniqueConstraint = String(error.message || "").toLowerCase().includes("unique");
+    return res.status(isUniqueConstraint ? 409 : 500).json({
+      error: isUniqueConstraint
+        ? "That admin username or email already exists"
+        : "Failed to create admin account",
+      code: isUniqueConstraint ? "ADMIN_ACCOUNT_EXISTS" : "ADMIN_ACCOUNT_CREATE_FAILED",
+    });
+  }
+});
+
+router.patch("/admin/accounts/:adminId", authenticateAdminToken, requireMasterAdmin, (req, res) => {
+  const { adminId } = req.params;
+  const updates = { ...req.body };
+
+  if (updates.password) {
+    if (String(updates.password).length < 6) {
+      return res.status(400).json({
+        error: "Admin password must be at least 6 characters",
+        code: "ADMIN_PASSWORD_TOO_SHORT",
+      });
+    }
+
+    updates.passwordHash = hashAdminPassword(updates.password);
+    delete updates.password;
+  }
+
+  try {
+    const account = updateAdminAccount(adminId, updates);
+    if (!account) {
+      return res.status(404).json({
+        error: "Admin account not found",
+        code: "ADMIN_ACCOUNT_NOT_FOUND",
+      });
+    }
+
+    return res.json({
+      updated: true,
+      account,
+    });
+  } catch (error) {
+    const isUniqueConstraint = String(error.message || "").toLowerCase().includes("unique");
+    return res.status(isUniqueConstraint ? 409 : 500).json({
+      error: isUniqueConstraint
+        ? "That admin username or email already exists"
+        : "Failed to update admin account",
+      code: isUniqueConstraint ? "ADMIN_ACCOUNT_EXISTS" : "ADMIN_ACCOUNT_UPDATE_FAILED",
+    });
+  }
+});
+
+router.delete("/admin/accounts/:adminId", authenticateAdminToken, requireMasterAdmin, (req, res) => {
+  const { adminId } = req.params;
+  const existingAccount = findAdminAccountById(adminId);
+
+  if (!existingAccount) {
+    return res.status(404).json({
+      error: "Admin account not found",
+      code: "ADMIN_ACCOUNT_NOT_FOUND",
+    });
+  }
+
+  const account = updateAdminAccount(adminId, { status: "suspended" });
 
   return res.json({
-    accessToken,
-    refreshToken: "admin_refresh_demo_token",
-    role: "admin",
-    deviceBound: true,
+    deleted: true,
+    account,
   });
 });
 
