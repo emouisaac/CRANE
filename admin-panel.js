@@ -141,7 +141,33 @@ function initializeSiteIntro() {
 
 function initializeAdminPanel() {
   setupNavigation();
+  setupMetricCardNavigation();
   updateMetrics();
+}
+
+function setupMetricCardNavigation() {
+  document.querySelectorAll('.metric-card[data-view]').forEach(card => {
+    card.addEventListener('click', () => {
+      const view = card.dataset.view;
+      const filter = card.dataset.filter;
+
+      if (view === 'loans' && filter) {
+        adminPanelState.filters.loanStatus = filter;
+      }
+      if (view === 'risks' && filter) {
+        adminPanelState.filters.riskStatus = filter;
+      }
+
+      switchAdminView(view);
+    });
+
+    card.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        card.click();
+      }
+    });
+  });
 }
 
 function persistSharedState(updater) {
@@ -155,8 +181,8 @@ function setupNavigation() {
   document.querySelectorAll('.header-nav .nav-link[data-view]').forEach(link => {
     link.addEventListener('click', (e) => {
       e.preventDefault();
-      const view = e.target.dataset.view;
-      if (view === 'dashboard' || view === 'loans' || view === 'admins' || view === 'risks' || view === 'settings' || view === 'audit') {
+      const view = e.currentTarget.dataset.view;
+      if (view === 'dashboard' || view === 'loans' || view === 'admins' || view === 'customers' || view === 'chat' || view === 'risks' || view === 'settings' || view === 'audit') {
         switchAdminView(view);
         setMobileNavOpen(false);
       }
@@ -194,8 +220,10 @@ function switchAdminView(viewName) {
   adminPanelState.currentView = viewName;
 
   // Update nav links
-  document.querySelectorAll('.header-nav .nav-link').forEach(link => {
-    link.classList.toggle('active', link.dataset.view === viewName);
+  document.querySelectorAll('.header-nav .nav-link[data-view]').forEach(link => {
+    const isActive = link.dataset.view === viewName;
+    link.classList.toggle('active', isActive);
+    link.setAttribute('aria-current', isActive ? 'page' : 'false');
   });
 
   // Hide all views
@@ -223,6 +251,14 @@ function renderViewContent(viewName) {
       break;
     case 'admins':
       renderAdminsView(state);
+      break;
+    case 'customers':
+      renderCustomersView(state);
+      break;
+    case 'chat':
+      if (adminPanelState.selectedCustomerId) {
+        loadChatMessages(adminPanelState.selectedCustomerId);
+      }
       break;
     case 'risks':
       renderRisksView(state);

@@ -70,22 +70,22 @@
       <section class="admin-view active" id="dashboard-view">
         <div class="admin-grid">
           <!-- Key Metrics -->
-          <div class="metric-card">
+          <div class="metric-card" role="button" tabindex="0" data-view="loans" data-filter="pending" aria-label="View pending approvals">
             <div class="metric-label">Pending Approvals</div>
             <div class="metric-value" id="pending-count">2</div>
             <div class="metric-subtext">2 applications awaiting review</div>
           </div>
-          <div class="metric-card">
+          <div class="metric-card" role="button" tabindex="0" data-view="loans" data-filter="active" aria-label="View active loans">
             <div class="metric-label">Active Loans</div>
             <div class="metric-value" id="active-loans">28</div>
             <div class="metric-subtext">UGX 145M outstanding</div>
           </div>
-          <div class="metric-card">
+          <div class="metric-card alert" role="button" tabindex="0" data-view="risks" data-filter="open" aria-label="View risk alerts">
             <div class="metric-label">Risk Alerts</div>
             <div class="metric-value alert" id="risk-count">4</div>
             <div class="metric-subtext">3 high priority</div>
           </div>
-          <div class="metric-card">
+          <div class="metric-card" role="button" tabindex="0" data-view="admins" aria-label="View admin users">
             <div class="metric-label">Admin Users</div>
             <div class="metric-value" id="admin-count">3</div>
             <div class="metric-subtext">2 active, 1 inactive</div>

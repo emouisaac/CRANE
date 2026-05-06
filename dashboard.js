@@ -2,124 +2,19 @@
 
 // Dashboard State
 const dashboardState = {
-  user: {
-    name: 'John Doe',
-    initials: 'JD',
-    creditScore: 742,
-    loyaltyTier: 'Gold',
-    totalBorrowed: 2500000,
-    remainingBalance: 1850000,
-    nextDueDate: new Date(Date.now() + 12 * 24 * 60 * 60 * 1000)
-  },
-  loans: [
-    {
-      id: 'L2024001',
-      amount: 1200000,
-      remaining: 850000,
-      interest: 1.5,
-      status: 'active',
-      dueDate: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000),
-      term: 6,
-      paidInstallments: 3
-    },
-    {
-      id: 'L2024002',
-      amount: 650000,
-      remaining: 450000,
-      interest: 1.8,
-      status: 'active',
-      dueDate: new Date(Date.now() + 12 * 24 * 60 * 60 * 1000),
-      term: 4,
-      paidInstallments: 1
-    },
-    {
-      id: 'L2023045',
-      amount: 500000,
-      remaining: 0,
-      interest: 1.5,
-      status: 'completed',
-      dueDate: null,
-      term: 3,
-      paidInstallments: 3
-    }
-  ],
-  notifications: [
-    { id: 1, type: 'success', title: 'Limit Unlocked', text: 'Your clean repayment record is opening bigger offers.', time: 'Live', unread: true },
-    { id: 2, type: 'warning', title: 'Rate Window', text: 'Pay early to keep your best rate active.', time: 'Today', unread: true },
-    { id: 3, type: 'info', title: 'Hot Trend', text: 'Short-term business loans are moving fastest this week.', time: 'Trend', unread: false },
-    { id: 4, type: 'success', title: 'Fast Cash', text: 'Verified repeat borrowers are getting cash in under 15 minutes.', time: 'Now', unread: false }
-  ],
-  referrals: [
-    { name: 'Sarah K.', date: 'Apr 15, 2024', level: 1, earned: 50000, status: 'paid' },
-    { name: 'Mike R.', date: 'Apr 10, 2024', level: 1, earned: 50000, status: 'paid' },
-    { name: 'Jane D.', date: 'Apr 5, 2024', level: 2, earned: 25000, status: 'pending' }
-  ],
-  paymentHistory: [
-    { date: 'W1', amount: 1800000 },
-    { date: 'W2', amount: 2350000 },
-    { date: 'W3', amount: 3100000 },
-    { date: 'W4', amount: 4200000 }
-  ],
-  scoreHistory: [
-    { month: 'Nov', score: 680 },
-    { month: 'Dec', score: 695 },
-    { month: 'Jan', score: 710 },
-    { month: 'Feb', score: 725 },
-    { month: 'Mar', score: 730 },
-    { month: 'Apr', score: 742 }
-  ],
+  user: null, // Will be loaded from API
+  loans: [],
+  notifications: [],
+  referrals: [],
+  paymentHistory: [],
+  scoreHistory: [],
   marketing: {
-    offers: [
-      {
-        title: 'Growth Boost',
-        amount: 5000000,
-        rate: '1.2% monthly',
-        term: '12 months',
-        installment: 480000,
-        payout: '14 minutes',
-        message: 'Use it while your best rate is still live.',
-        blurb: 'Great for stock, school fees, or urgent cashflow.',
-        progress: 72
-      },
-      {
-        title: 'Fast Flex',
-        amount: 3200000,
-        rate: '1.5% monthly',
-        term: '6 months',
-        installment: 565000,
-        payout: '11 minutes',
-        message: 'Bridge the gap and keep moving today.',
-        blurb: 'Ideal for short-term needs and emergency expenses.',
-        progress: 81
-      },
-      {
-        title: 'Premium Lift',
-        amount: 7800000,
-        rate: '1.1% monthly',
-        term: '18 months',
-        installment: 505000,
-        payout: '18 minutes',
-        message: 'Borrow bigger with more breathing room.',
-        blurb: 'Built for expansion, equipment, and bigger goals.',
-        progress: 88
-      }
-    ],
-    tickerMessages: [
-      'Clean repayment streaks are unlocking bigger limits right now.',
-      'Early repayments are helping more users save on interest.',
-      'Repeat borrowers are getting quicker approvals this hour.'
-    ],
-    pulse: {
-      approvedToday: 128,
-      averageTicket: 'UGX 1.8M',
-      sameDay: '94%',
-      rating: '4.9/5',
-      approvalRate: '92%',
-      payoutSpeed: '14 min',
-      repeatBorrowers: '68%'
-    }
+    offers: [],
+    tickerMessages: [],
+    pulse: {}
   }
 };
+
 
 const dashboardSharedStore = window.CraneSharedState;
 
@@ -137,6 +32,59 @@ function setText(id, value) {
   }
 }
 
+function clearAuthState() {
+  localStorage.removeItem('accessToken');
+  localStorage.removeItem('refreshToken');
+  localStorage.removeItem('deviceId');
+  isAuthenticated = false;
+  dashboardState.user = null;
+  updateAuthButton();
+  startIdleTimeout(); // Start idle timeout for unauthenticated users
+}
+
+function startIdleTimeout() {
+  // Clear any existing idle timeout
+  if (idleCheckInterval) {
+    clearInterval(idleCheckInterval);
+    idleCheckInterval = null;
+  }
+
+  // Only start idle timeout for unauthenticated users
+  if (!isAuthenticated) {
+    idleCheckInterval = setInterval(checkIdleTimeout, 30000); // Check every 30 seconds
+  }
+}
+
+function stopIdleTimeout() {
+  if (idleCheckInterval) {
+    clearInterval(idleCheckInterval);
+    idleCheckInterval = null;
+  }
+}
+
+function closeLoginModal() {
+  const loginModal = document.getElementById('login-modal');
+  if (loginModal) {
+    loginModal.style.display = 'none';
+  }
+}
+
+function openLoginModal() {
+  const loginModal = document.getElementById('login-modal');
+  const loginForm = document.getElementById('login-form');
+  const registerForm = document.getElementById('register-form');
+  if (loginModal) {
+    loginModal.style.display = 'flex';
+  }
+  if (loginForm) {
+    loginForm.classList.add('active');
+  }
+  if (registerForm) {
+    registerForm.classList.remove('active');
+  }
+  updateAuthHeader('login');
+}
+
 let marketingOfferIndex = 0;
 let marketingTickerIndex = 0;
 let marketingRefreshCountdown = 12;
@@ -148,8 +96,51 @@ const SITE_INTRO_DURATION_MS = 2100;
 const INTRO_IDLE_TIME_MS = 10 * 60 * 1000; // 10 minutes
 let lastActivityTime = Date.now();
 let idleCheckInterval = null;
-const UNAUTH_IDLE_TIMEOUT_MS = 10 * 1000; // 10 seconds for testing
+const UNAUTH_IDLE_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes for unauthenticated users
 let isAuthenticated = false;
+
+// Load user profile from API
+async function loadUserProfile() {
+  try {
+    const token = localStorage.getItem('accessToken');
+    if (!token) {
+      clearAuthState();
+      return false;
+    }
+
+    const response = await fetch('/api/profile', {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      dashboardState.user = {
+        id: data.userId,
+        name: data.profile.fullName || 'User',
+        initials: data.profile.fullName ? data.profile.fullName.split(' ').map(n => n[0]).join('').toUpperCase() : 'U',
+        phone: data.profile.phone,
+        status: data.profile.status,
+        registeredAt: data.profile.registeredAt,
+        lastLoginAt: data.profile.lastLoginAt,
+      };
+      return true;
+    }
+
+    if (response.status === 401 || response.status === 403) {
+      clearAuthState();
+    }
+
+    console.error('Failed to load user profile', response.status);
+    return false;
+  } catch (error) {
+    console.error('Error loading user profile:', error);
+    clearAuthState();
+    return false;
+  }
+}
 
 // Track user activity to detect idle
 function setupIdleDetection() {
@@ -169,10 +160,7 @@ function setupIdleDetection() {
 function checkIdleTimeout() {
   if (isAuthenticated) {
     // Clear interval if user becomes authenticated
-    if (idleCheckInterval) {
-      clearInterval(idleCheckInterval);
-      idleCheckInterval = null;
-    }
+    stopIdleTimeout();
     return;
   }
 
@@ -181,10 +169,7 @@ function checkIdleTimeout() {
 
   if (timeSinceLastActivity >= UNAUTH_IDLE_TIMEOUT_MS) {
     // Clear the interval to prevent multiple modals
-    if (idleCheckInterval) {
-      clearInterval(idleCheckInterval);
-      idleCheckInterval = null;
-    }
+    stopIdleTimeout();
     // Show login prompt
     showLoginPrompt();
   }
@@ -194,23 +179,53 @@ function checkIdleTimeout() {
 function showLoginPrompt() {
   const modal = document.getElementById('login-modal');
   if (modal) {
-    modal.style.display = 'flex';
-    // Switch to login tab
-    document.querySelector('[data-tab="login"]').click();
+    openLoginModal();
   } else {
-    // Fallback: redirect to login page
-    window.location.href = 'login.html';
+    // Fallback: reopen the in-page login modal if the route is not available
+    closeLoginModal();
+    openLoginModal();
   }
 }
 
 // Initialize login modal functionality
 function initializeLoginModal() {
+  closeLoginModal();
   const loginModal = document.getElementById('login-modal');
   const loginModalClose = document.getElementById('login-modal-close');
   const loginForm = document.getElementById('login-form');
   const registerForm = document.getElementById('register-form');
   const switchToRegister = document.getElementById('switch-to-register');
   const switchToLogin = document.getElementById('switch-to-login');
+
+  // Mobile login button
+  const mobileLoginBtn = document.getElementById('mobile-login-btn');
+  if (mobileLoginBtn) {
+    mobileLoginBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (loginModal) {
+        loginModal.style.display = 'flex';
+        // Reset to login form
+        loginForm.classList.add('active');
+        registerForm.classList.remove('active');
+        updateAuthHeader('login');
+      }
+    });
+  }
+
+  // Desktop login button
+  const desktopLoginBtn = document.getElementById('desktop-login-btn');
+  if (desktopLoginBtn) {
+    desktopLoginBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (loginModal) {
+        loginModal.style.display = 'flex';
+        // Reset to login form
+        loginForm.classList.add('active');
+        registerForm.classList.remove('active');
+        updateAuthHeader('login');
+      }
+    });
+  }
 
   if (loginModalClose) {
     loginModalClose.addEventListener('click', () => {
@@ -276,31 +291,35 @@ function initializeLoginModal() {
       setButtonLoading('login-submit-btn', true);
       
       try {
+          const deviceId = localStorage.getItem('deviceId') || `device_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        localStorage.setItem('deviceId', deviceId);
+
         const response = await fetch('/api/auth/login', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ phone: phoneNumber, pin }),
+          body: JSON.stringify({ phone: phoneNumber, pin, deviceId }),
         });
         
         const data = await response.json();
         
         if (response.ok) {
           localStorage.setItem('accessToken', data.token);
-          localStorage.setItem('user', JSON.stringify(data.user));
-          isAuthenticated = true;
-          
-          // Update login/logout button
-          updateAuthButton();
-          
-          // Close modal
-          if (loginModal) {
-            loginModal.style.display = 'none';
+          if (data.refreshToken) {
+            localStorage.setItem('refreshToken', data.refreshToken);
           }
-          
-          // Reload page to update UI
-          setTimeout(() => window.location.reload(), 500);
+
+          isAuthenticated = true;
+          const loaded = await loadUserProfile();
+          if (loaded) {
+            updateAuthButton();
+            closeLoginModal();
+            initializeDashboard();
+            stopIdleTimeout(); // Stop idle timeout for authenticated users
+          } else {
+            showFormError('login-pin-error', 'Unable to load profile. Please try again.');
+          }
         } else {
           showFormError('login-pin-error', data.error || 'Login failed');
         }
@@ -352,24 +371,37 @@ function initializeLoginModal() {
       setButtonLoading('register-submit-btn', true);
       
       try {
+        const deviceId = localStorage.getItem('deviceId') || `device_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        localStorage.setItem('deviceId', deviceId);
+
         const response = await fetch('/api/auth/register', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ phone: phoneNumber, email: email || undefined, pin }),
+          body: JSON.stringify({ phone: phoneNumber, email: email || undefined, pin, deviceId }),
         });
         
         const data = await response.json();
         
         if (response.ok) {
-          alert('Registration successful! Please sign in.');
-          // Switch to login form
-          registerForm.classList.remove('active');
-          loginForm.classList.add('active');
-          updateAuthHeader('login');
+          localStorage.setItem('accessToken', data.token);
+          if (data.refreshToken) {
+            localStorage.setItem('refreshToken', data.refreshToken);
+          }
+
+          isAuthenticated = true;
+          const loaded = await loadUserProfile();
+          if (loaded) {
+            updateAuthButton();
+            closeLoginModal();
+            initializeDashboard();
+            stopIdleTimeout(); // Stop idle timeout for authenticated users
+          } else {
+            showFormError('register-pin-confirm-error', 'Unable to complete registration. Please try again.');
+          }
         } else {
-          showFormError('register-pin-confirm-error', data.message || 'Registration failed');
+          showFormError('register-pin-confirm-error', data.error || 'Registration failed');
         }
       } catch (error) {
         console.error('Registration error:', error);
@@ -438,9 +470,9 @@ function isValidEmail(email) {
 function updateAuthButton() {
   const mobileLoginBtn = document.getElementById('mobile-login-btn');
   const desktopLoginBtn = document.getElementById('desktop-login-btn');
-  const user = JSON.parse(localStorage.getItem('user') || '{}');
-  
-  if (isAuthenticated && user.phone) {
+  const user = dashboardState.user;
+
+  if (isAuthenticated && user && user.phone) {
     // Show logout button
     if (mobileLoginBtn) {
       mobileLoginBtn.innerHTML = `
@@ -451,12 +483,16 @@ function updateAuthButton() {
         </svg>
         <span>Logout</span>
       `;
-      mobileLoginBtn.classList.add('logged-in');
+      mobileLoginBtn.id = 'mobile-logout-btn';
+      mobileLoginBtn.removeEventListener('click', handleMobileLoginClick);
+      mobileLoginBtn.addEventListener('click', handleLogout);
     }
     
     if (desktopLoginBtn) {
       desktopLoginBtn.textContent = 'Logout';
-      desktopLoginBtn.classList.add('logged-in');
+      desktopLoginBtn.id = 'desktop-logout-btn';
+      desktopLoginBtn.removeEventListener('click', handleDesktopLoginClick);
+      desktopLoginBtn.addEventListener('click', handleLogout);
     }
   } else {
     // Show login button
@@ -469,12 +505,14 @@ function updateAuthButton() {
         </svg>
         <span>Login</span>
       `;
-      mobileLoginBtn.classList.remove('logged-in');
+      mobileLoginBtn.id = 'mobile-login-btn';
+      mobileLoginBtn.addEventListener('click', handleMobileLoginClick);
     }
     
     if (desktopLoginBtn) {
       desktopLoginBtn.textContent = 'Login';
-      desktopLoginBtn.classList.remove('logged-in');
+      desktopLoginBtn.id = 'desktop-login-btn';
+      desktopLoginBtn.addEventListener('click', handleDesktopLoginClick);
     }
   }
 }
@@ -507,15 +545,14 @@ function handleDesktopLoginClick(e) {
 
 // Handle logout
 function handleLogout(e) {
-  e.preventDefault();
-  localStorage.removeItem('accessToken');
-  localStorage.removeItem('user');
-  isAuthenticated = false;
-  updateAuthButton();
+  if (e && e.preventDefault) {
+    e.preventDefault();
+  }
+
+  clearAuthState();
   closeChatBox();
-  closeProfilePanel();
+  openLoginModal();
   alert('You have been logged out');
-  window.location.reload();
 }
 
 // Open chat box
@@ -534,11 +571,42 @@ function closeChatBox() {
   }
 }
 
+// Open profile panel
+function openProfilePanel() {
+  const profilePanel = document.getElementById('profile-panel');
+  if (profilePanel) {
+    populateProfilePanel();
+    profilePanel.classList.add('open');
+  }
+}
+
+// Close profile panel
+function closeProfilePanel() {
+  const profilePanel = document.getElementById('profile-panel');
+  if (profilePanel) {
+    profilePanel.classList.remove('open');
+  }
+}
+
+// Populate profile panel with user data
+function populateProfilePanel() {
+  const user = dashboardState.user;
+  if (!user) return;
+
+  setText('profile-initials', user.initials);
+  setText('profile-name', user.name);
+  setText('profile-phone', user.phone || '+256 700 123456');
+  setText('profile-phone-info', user.phone || '+256 700 123456');
+  setText('profile-email', 'N/A'); // No email sharing as per requirements
+  setText('profile-member-since', user.registeredAt ? new Date(user.registeredAt).getFullYear() : '2024');
+}
+
 // Initialize chat functionality
 function initializeChat() {
   const chatCloseBtn = document.getElementById('chat-close-btn');
   const chatSendBtn = document.getElementById('chat-send-btn');
   const chatInput = document.getElementById('chat-input');
+  const chatFooterBtn = document.getElementById('footer-chat-btn');
   
   if (chatCloseBtn) {
     chatCloseBtn.addEventListener('click', closeChatBox);
@@ -555,101 +623,28 @@ function initializeChat() {
       }
     });
   }
-}
-
-function populateProfilePanel() {
-  const user = JSON.parse(localStorage.getItem('user') || '{}');
-  const name = user.name || user.fullName || 'User';
-  const phone = user.phone || user.mobile || '+256 700 123456';
-  const email = user.email || user.username || 'user@example.com';
-  const memberSince = user.createdAt ? new Date(user.createdAt).getFullYear() : '2024';
-  const initials = name
-    .split(' ')
-    .filter(Boolean)
-    .map((part) => part[0])
-    .slice(0, 2)
-    .join('')
-    .toUpperCase() || 'U';
-
-  const profileName = document.getElementById('profile-name');
-  const profilePhone = document.getElementById('profile-phone');
-  const profilePhoneInfo = document.getElementById('profile-phone-info');
-  const profileEmail = document.getElementById('profile-email');
-  const profileMemberSince = document.getElementById('profile-member-since');
-  const profileInitials = document.getElementById('profile-initials');
-
-  if (profileName) profileName.textContent = name;
-  if (profilePhone) profilePhone.textContent = phone;
-  if (profilePhoneInfo) profilePhoneInfo.textContent = phone;
-  if (profileEmail) profileEmail.textContent = email;
-  if (profileMemberSince) profileMemberSince.textContent = memberSince;
-  if (profileInitials) profileInitials.textContent = initials;
-}
-
-function openProfilePanel() {
-  populateProfilePanel();
-  const profilePanel = document.getElementById('profile-panel');
-  if (profilePanel) {
-    profilePanel.classList.add('open');
-  }
-}
-
-function closeProfilePanel() {
-  const profilePanel = document.getElementById('profile-panel');
-  if (profilePanel) {
-    profilePanel.classList.remove('open');
-  }
-}
-
-function initializeProfilePanel() {
-  const closeProfileBtn = document.getElementById('close-profile');
-  if (closeProfileBtn) {
-    closeProfileBtn.addEventListener('click', closeProfilePanel);
-  }
-}
-
-function handleGlobalClick(event) {
-  const target = event.target.closest('#footer-chat-btn, #footer-profile-btn, #desktop-login-btn, #mobile-login-btn, #profile-logout-btn');
-  if (!target) return;
-
-  // Always prevent default and stop propagation for these controls
-  event.preventDefault();
-  event.stopPropagation();
-
-  const targetId = target.id;
-  console.log('Global click handler fired for:', targetId);
-
-  if (targetId === 'footer-chat-btn') {
-    console.log('Opening chat box');
-    openChatBox();
-  } else if (targetId === 'footer-profile-btn') {
-    console.log('Clicking profile - authenticated:', isAuthenticated);
-    if (isAuthenticated) {
-      openProfilePanel();
-    } else {
-      showLoginPrompt();
-    }
-  } else if (targetId === 'desktop-login-btn' || targetId === 'mobile-login-btn') {
-    console.log('Login button clicked, logged-in class:', target.classList.contains('logged-in'));
-    if (target.classList.contains('logged-in')) {
-      handleLogout(event);
-    } else {
-      if (targetId === 'desktop-login-btn') {
-        handleDesktopLoginClick(event);
+  
+  if (chatFooterBtn) {
+    chatFooterBtn.addEventListener('click', () => {
+      if (isAuthenticated) {
+        openChatBox();
       } else {
-        handleMobileLoginClick(event);
+        alert('Please login to access chat support');
+      }
+    });
+  }
+
+  // Close chat box when clicking outside
+  document.addEventListener('click', (e) => {
+    const chatContainer = document.getElementById('chat-container');
+    const footerChatBtn = document.getElementById('footer-chat-btn');
+    
+    if (chatContainer && chatContainer.style.display !== 'none') {
+      if (!chatContainer.contains(e.target) && e.target !== footerChatBtn && !footerChatBtn.contains(e.target)) {
+        closeChatBox();
       }
     }
-  } else if (targetId === 'profile-logout-btn') {
-    console.log('Profile logout clicked');
-    handleLogout(event);
-  }
-}
-
-function initializeGlobalClickHandlers() {
-  console.log('Initializing global click handlers');
-  document.addEventListener('click', handleGlobalClick, true);
-  console.log('Global click handler attached to document (capture phase)');
+  });
 }
 
 // Send chat message
@@ -700,14 +695,22 @@ function escapeHtml(text) {
 }
 
 // Initialize Dashboard
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   // Check authentication
   const token = localStorage.getItem('accessToken');
-  isAuthenticated = !!token;
+  if (token) {
+    isAuthenticated = true;
+    const valid = await loadUserProfile();
+    if (!valid) {
+      isAuthenticated = false;
+    } else {
+      closeLoginModal();
+    }
+  }
 
   if (!isAuthenticated) {
     // For unauthenticated users, start idle timeout check
-    idleCheckInterval = setInterval(checkIdleTimeout, 5000); // Check every 5 seconds
+    startIdleTimeout();
   }
 
   // Initialize last activity time
@@ -720,33 +723,22 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   initializeSiteIntro();
-  hydrateDashboardFromSharedState();
   initializeDashboard();
-  if (dashboardSharedStore) {
-    dashboardSharedStore.startAutoSync?.();
-    dashboardSharedStore.subscribe(() => {
-      hydrateDashboardFromSharedState();
-      initializeDashboard();
-    });
-    dashboardSharedStore.hydrate()
-      .then(() => {
-        hydrateDashboardFromSharedState();
-        initializeDashboard();
-      })
-      .catch((error) => {
-        console.error('Failed to load shared state from the database:', error);
-      });
-  }
   initializeSectionWaveNet();
   setupEventListeners();
   startRealTimeUpdates();
   setupIdleDetection();
 
+  window.addEventListener('storage', (event) => {
+    if (event.key === dashboardSharedStore?.STORAGE_KEY) {
+      hydrateDashboardFromSharedState();
+      initializeDashboard();
+    }
+  });
+
   // Cleanup on page unload
   window.addEventListener('beforeunload', () => {
-    if (idleCheckInterval) {
-      clearInterval(idleCheckInterval);
-    }
+    stopIdleTimeout();
   });
 
   // Update auth button on load
@@ -754,20 +746,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Initialize login modal functionality
   initializeLoginModal();
-  
+
   // Initialize chat functionality
   initializeChat();
-  initializeProfilePanel();
-  
-  // Verify buttons exist before adding handlers
-  console.log('Button check:');
-  console.log('footer-chat-btn:', !!document.getElementById('footer-chat-btn'));
-  console.log('footer-profile-btn:', !!document.getElementById('footer-profile-btn'));
-  console.log('desktop-login-btn:', !!document.getElementById('desktop-login-btn'));
-  console.log('mobile-login-btn:', !!document.getElementById('mobile-login-btn'));
-  console.log('profile-logout-btn:', !!document.getElementById('profile-logout-btn'));
-  
-  initializeGlobalClickHandlers();
 });
 
 function initializeSiteIntro() {
@@ -824,6 +805,7 @@ function initializeDashboard() {
   populateLoanDetails('all');
   initializeCharts();
   updateCountdown();
+  syncDashboardToSharedState();
 }
 
 function hydrateDashboardFromSharedState() {
@@ -832,11 +814,14 @@ function hydrateDashboardFromSharedState() {
   const sharedState = dashboardSharedStore.read();
   if (!sharedState) return;
 
-  dashboardState.user = {
-    ...dashboardState.user,
-    ...sharedState.user,
-    nextDueDate: sharedState.user?.nextDueDate ? new Date(sharedState.user.nextDueDate) : dashboardState.user.nextDueDate
-  };
+  // Only hydrate if we don't have real user data from API
+  if (!dashboardState.user || !dashboardState.user.id) {
+    dashboardState.user = {
+      ...dashboardState.user,
+      ...sharedState.user,
+      nextDueDate: sharedState.user?.nextDueDate ? new Date(sharedState.user.nextDueDate) : dashboardState.user?.nextDueDate
+    };
+  }
 
   dashboardState.loans = (sharedState.loans || []).map((loan) => ({
     ...loan,
@@ -890,9 +875,7 @@ function syncDashboardToSharedState() {
         ...dashboardState.marketing.pulse
       }
     }
-  })).catch((error) => {
-    console.error('Failed to sync dashboard state to the database:', error);
-  });
+  }));
 }
 
 function initializeSectionWaveNet() {
@@ -965,7 +948,7 @@ function initializeSectionWaveNet() {
 // Update Welcome Header
 function updateWelcomeHeader() {
   const userNameElement = document.getElementById('user-name');
-  if (userNameElement && dashboardState.user.name) {
+  if (userNameElement && dashboardState.user && dashboardState.user.name) {
     // Show only the last name
     const lastName = dashboardState.user.name.split(' ').pop();
     userNameElement.textContent = lastName;
@@ -976,7 +959,7 @@ function updateWelcomeHeader() {
 // Update Loan Balance Display
 function updateLoanBalance() {
   const balanceElement = document.getElementById('loan-balance-amount');
-  if (balanceElement && dashboardState.user.remainingBalance) {
+  if (balanceElement && dashboardState.user && dashboardState.user.remainingBalance) {
     balanceElement.textContent = currencyFormatter.format(dashboardState.user.remainingBalance);
   }
 }
@@ -984,9 +967,11 @@ function updateLoanBalance() {
 // Update Hero Stats
 function updateHeroStats() {
   const { user } = dashboardState;
-  setText('total-borrowed', currencyFormatter.format(user.totalBorrowed));
-  setText('remaining-balance', currencyFormatter.format(user.remainingBalance));
-  setText('credit-score-display', user.creditScore);
+  if (!user) return;
+
+  setText('total-borrowed', user.totalBorrowed ? currencyFormatter.format(user.totalBorrowed) : 'UGX 0');
+  setText('remaining-balance', user.remainingBalance ? currencyFormatter.format(user.remainingBalance) : 'UGX 0');
+  setText('credit-score-display', user.creditScore || 'N/A');
 }
 
 // Initialize Marketing Dashboard
@@ -1020,6 +1005,7 @@ function updateActiveOffer() {
 }
 
 function advanceMarketingOffer() {
+  if (!Array.isArray(dashboardState.marketing.offers) || dashboardState.marketing.offers.length === 0) return;
   marketingOfferIndex = (marketingOfferIndex + 1) % dashboardState.marketing.offers.length;
   // Removed countdown reset since we don't have automatic refreshes
   updateActiveOffer();
@@ -1028,6 +1014,7 @@ function advanceMarketingOffer() {
 }
 
 function updateMarketingTicker() {
+  if (!Array.isArray(dashboardState.marketing.tickerMessages) || dashboardState.marketing.tickerMessages.length === 0) return;
   const tickerContent = document.getElementById('ticker-content');
   const message = dashboardState.marketing.tickerMessages[marketingTickerIndex];
   if (!tickerContent || !message) return;
@@ -1152,12 +1139,13 @@ function populateLoanDetails(status = 'all') {
   const detailList = document.getElementById('loans-detail-list');
   if (!detailList) return;
 
-  const loans = dashboardState.loans;
+  const loans = Array.isArray(dashboardState.loans) ? dashboardState.loans : [];
   const activeLoans = loans.filter(loan => loan.status === 'active');
   const overdueLoans = loans.filter(loan => loan.status === 'overdue');
   const completedLoans = loans.filter(loan => loan.status === 'completed');
-  const totalBorrowed = loans.reduce((sum, loan) => sum + loan.amount, 0);
-  const remainingBalance = loans.reduce((sum, loan) => sum + loan.remaining, 0);
+  const totalBorrowed = loans.reduce((sum, loan) => sum + (loan.amount || 0), 0);
+  const remainingBalance = loans.reduce((sum, loan) => sum + (loan.remaining || 0), 0);
+  const user = dashboardState.user || {};
 
   let content = '';
 
@@ -1173,7 +1161,9 @@ function populateLoanDetails(status = 'all') {
       ],
       'All loans'
     );
-    content += loans.map(createLoanDetailItem).join('');
+    content += loans.length
+      ? loans.map(createLoanDetailItem).join('')
+      : createLoanEmptyState('No loans available yet.', 'Borrow a new loan to see it appear here instantly.');
   }
 
   if (status === 'active') {
@@ -1187,12 +1177,12 @@ function populateLoanDetails(status = 'all') {
       ? overdueLoans.map(createLoanDetailItem).join('')
       : createLoanOverviewBanner(
           'Total Borrowed Snapshot',
-          currencyFormatter.format(dashboardState.user.totalBorrowed),
+          currencyFormatter.format(user.totalBorrowed ?? totalBorrowed),
           'No overdue loan is on this profile right now, so this tab highlights your full borrowed position.',
           [
-            { label: 'Remaining balance', value: currencyFormatter.format(dashboardState.user.remainingBalance) },
+            { label: 'Remaining balance', value: currencyFormatter.format(user.remainingBalance ?? remainingBalance) },
             { label: 'Next due in', value: document.getElementById('next-due-countdown')?.textContent || '12d 5h' },
-            { label: 'Credit score', value: `${dashboardState.user.creditScore}` }
+            { label: 'Credit score', value: user.creditScore ?? 'N/A' }
           ],
           'Healthy account'
         );
@@ -1513,56 +1503,29 @@ function initializeEarningsChart() {
 
 // Update Countdown
 function updateCountdown() {
-  const { user } = dashboardState;
+  const user = dashboardState.user;
+  if (!user || !user.nextDueDate) return;
+
+  const nextDueDate = new Date(user.nextDueDate);
+  if (Number.isNaN(nextDueDate.getTime())) return;
+
   const now = new Date();
-  const diff = user.nextDueDate - now;
+  const diff = nextDueDate - now;
   const countdownElement = document.getElementById('next-due-countdown');
   if (!countdownElement) return;
-  
+
   if (diff > 0) {
     const days = Math.floor(diff / (1000 * 60 * 60 * 24));
     const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-    
     countdownElement.textContent = `${days}d ${hours}h`;
-  }
-}
-
-// Location data structure for hierarchical address selection
-const locationData = {
-  kampala: ['Central Division', 'Kawempe Division', 'Makindye Division', 'Nakawa Division'],
-  wakiso: ['Entebbe', 'Kira', 'Makindye', 'Nansana', 'Sebagalala'],
-  mukono: ['Mukono', 'Seeta', 'Tirinyi', 'Buwama', 'Kasaala'],
-  entebbe: ['Entebbe', 'Buwama', 'Kasenyi'],
-  masaka: ['Masaka', 'Rakai', 'Bukomansimbi'],
-  mbarara: ['Mbarara', 'Nyamityobora', 'Kazo'],
-  fort_portal: ['Fort Portal', 'Bundibugyo', 'Kabarole'],
-  jinja: ['Jinja', 'Bugembe', 'Budama'],
-  soroti: ['Soroti', 'Amuria'],
-  lira: ['Lira', 'Dokolo'],
-  gulu: ['Gulu', 'Nwoya', 'Omoro'],
-  arua: ['Arua', 'Maracha', 'Yumbe'],
-  other: ['Other location']
-};
-
-function updateApplicantSubcounties() {
-  const district = document.getElementById('applicant-district')?.value;
-  const subcountySelect = document.getElementById('applicant-subcounty');
-  if (!subcountySelect) return;
-  
-  subcountySelect.innerHTML = '<option value="">Select subcounty</option>';
-  
-  if (district && locationData[district]) {
-    locationData[district].forEach(subcounty => {
-      const option = document.createElement('option');
-      option.value = subcounty.toLowerCase().replace(/\s+/g, '_');
-      option.textContent = subcounty;
-      subcountySelect.appendChild(option);
-    });
   }
 }
 
 // Setup Event Listeners
 function setupEventListeners() {
+  // Logout button
+  document.getElementById('logout-btn')?.addEventListener('click', handleLogout);
+
   // Home footer button
   document.getElementById('home-nav-btn')?.addEventListener('click', () => {
     switchView('overview');
@@ -1573,6 +1536,62 @@ function setupEventListeners() {
     switchView('loans');
   });
 
+  // Footer chat button
+  document.getElementById('footer-chat-btn')?.addEventListener('click', () => {
+    if (isAuthenticated) {
+      openChatBox();
+    } else {
+      alert('Please login to access chat support');
+    }
+  });
+
+  // Footer profile button
+  document.getElementById('footer-profile-btn')?.addEventListener('click', () => {
+    if (isAuthenticated) {
+      openProfilePanel();
+    } else {
+      alert('Please login to access profile settings');
+    }
+  });
+
+  // Close profile button
+  document.getElementById('close-profile')?.addEventListener('click', closeProfilePanel);
+
+  // Close profile panel when clicking outside
+  document.addEventListener('click', (e) => {
+    const profilePanel = document.getElementById('profile-panel');
+    const footerProfileBtn = document.getElementById('footer-profile-btn');
+    
+    if (profilePanel && profilePanel.classList.contains('open')) {
+      if (!profilePanel.contains(e.target) && e.target !== footerProfileBtn && !footerProfileBtn.contains(e.target)) {
+        closeProfilePanel();
+      }
+    }
+  });
+
+  // Profile menu items
+  document.getElementById('change-pin-btn')?.addEventListener('click', () => {
+    alert('Change PIN feature would be implemented here.');
+  });
+  
+  document.getElementById('security-settings-btn')?.addEventListener('click', () => {
+    alert('Security settings would be implemented here.');
+  });
+  
+  document.getElementById('notification-prefs-btn')?.addEventListener('click', () => {
+    alert('Notification preferences would be implemented here.');
+  });
+  
+  document.getElementById('help-btn')?.addEventListener('click', () => {
+    alert('Help & Support would be implemented here.');
+  });
+  
+  document.getElementById('terms-btn')?.addEventListener('click', () => {
+    alert('Terms & Conditions would be implemented here.');
+  });
+  
+  document.getElementById('profile-logout-btn')?.addEventListener('click', handleLogout);
+
   // Header brand/logo button
   document.getElementById('header-brand-btn')?.addEventListener('click', () => {
     switchView('overview');
@@ -1580,15 +1599,12 @@ function setupEventListeners() {
 
   // Apply Now button
   document.getElementById('apply-offer-btn')?.addEventListener('click', () => {
-    switchView('get-loan');
+    const offer = dashboardState.marketing.offers[marketingOfferIndex];
+    alert(`You selected: ${offer.title}\nAmount: ${currencyFormatter.format(offer.amount)}\nLet's proceed with your application!`);
   });
 
   // Navigation
   document.querySelectorAll('.nav-link').forEach(link => {
-    // Skip login/logout button - handled by global handler
-    if (link.id === 'desktop-login-btn' || link.id === 'mobile-login-btn') {
-      return;
-    }
     link.addEventListener('click', handleNavigation);
   });
   
@@ -1618,10 +1634,6 @@ function setupEventListeners() {
 
   // Sidebar menu items
   document.querySelectorAll('.menu-item').forEach(item => {
-    // Skip login/logout button - handled by global handler
-    if (item.id === 'mobile-login-btn') {
-      return;
-    }
     item.addEventListener('click', (e) => {
       const view = item.dataset.view;
       if (!view) {
@@ -1666,19 +1678,8 @@ function setupEventListeners() {
   // View all loans
   document.getElementById('view-all-loans')?.addEventListener('click', () => switchToLoansView('all'));
   document.getElementById('view-loan-options')?.addEventListener('click', () => switchToLoansView('all'));
-  document.getElementById('view-more-insights')?.addEventListener('click', () => switchView('get-loan'));
-
-  const loanRequestForm = document.getElementById('loan-request-form');
-  loanRequestForm?.addEventListener('submit', handleLoanRequestSubmit);
+  document.getElementById('view-more-insights')?.addEventListener('click', () => switchView('insights'));
   
-  const applicantDistrictSelect = document.getElementById('applicant-district');
-  applicantDistrictSelect?.addEventListener('change', updateApplicantSubcounties);
-  updateApplicantSubcounties();
-  
-  const applicantCategorySelect = document.getElementById('applicant-category');
-  applicantCategorySelect?.addEventListener('change', updateLoanApplicantCategoryFields);
-  updateLoanApplicantCategoryFields();
-
   // Loan status pills
   document.querySelectorAll('.status-pill').forEach(pill => {
     pill.addEventListener('click', handleStatusFilter);
@@ -1707,72 +1708,6 @@ function setupEventListeners() {
 
   // Loan items click
   document.getElementById('loans-list')?.addEventListener('click', handleLoanItemClick);
-}
-
-function updateLoanApplicantCategoryFields() {
-  const category = document.getElementById('applicant-category')?.value;
-  const employeeFields = document.querySelectorAll('.employment-detail-group');
-  const businessFields = document.querySelectorAll('.business-detail-group');
-  const employeeVisible = category === 'employee' || category === 'civil_servant';
-  const businessVisible = category === 'self_employed' || category === 'service_provider' || category === 'other';
-
-  employeeFields.forEach(field => {
-    field.style.display = employeeVisible ? 'block' : 'none';
-  });
-  businessFields.forEach(field => {
-    field.style.display = businessVisible ? 'block' : 'none';
-  });
-}
-
-function handleLoanRequestSubmit(event) {
-  event.preventDefault();
-  const form = event.target;
-  const requiredIds = [
-    'applicant-name',
-    'applicant-phone',
-    'applicant-id-number',
-    'applicant-dob',
-    'applicant-district',
-    'applicant-subcounty',
-    'applicant-village',
-    'applicant-category',
-    'loan-amount',
-    'loan-term',
-    'loan-purpose',
-    'id-front',
-    'id-back',
-    'income-proof',
-    'selfie-photo',
-  ];
-
-  const missing = requiredIds.filter((id) => {
-    const element = form.querySelector(`#${id}`);
-    if (!element) return true;
-    if (element.type === 'file') {
-      return element.files.length === 0;
-    }
-
-    return !element.value.trim();
-  });
-
-  const feedback = document.getElementById('loan-request-feedback');
-  if (missing.length) {
-    if (feedback) {
-      feedback.innerHTML = '<strong>Please complete all required fields and upload the requested documents.</strong>';
-      feedback.classList.add('feedback-warning');
-      feedback.classList.remove('feedback-success');
-    }
-    return;
-  }
-
-  if (feedback) {
-    feedback.innerHTML = '<strong>Loan request submitted.</strong> Your application has been received and is pending administrative verification. A Crane officer will review your files and follow up within 24 hours.';
-    feedback.classList.add('feedback-success');
-    feedback.classList.remove('feedback-warning');
-  }
-
-  form.reset();
-  updateLoanApplicantCategoryFields();
 }
 
 function handleNavigation(event) {
