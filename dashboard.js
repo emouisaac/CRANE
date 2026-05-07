@@ -128,6 +128,32 @@ function closeLoginModal() {
   setLoginRequiredMessage('');
 }
 
+function hideAccountSnapshot() {
+  const accountSnapshot = document.getElementById('account-snapshot');
+  if (accountSnapshot) {
+    accountSnapshot.style.display = 'none';
+  }
+  // Show marketing content for authenticated users
+  const marketingContainer = document.querySelector('.marketing-container');
+  if (marketingContainer) {
+    marketingContainer.classList.remove('hidden-mock-section');
+    marketingContainer.removeAttribute('aria-hidden');
+  }
+}
+
+function showAccountSnapshot() {
+  const accountSnapshot = document.getElementById('account-snapshot');
+  if (accountSnapshot) {
+    accountSnapshot.style.display = 'flex';
+  }
+  // Hide marketing content for unauthenticated users
+  const marketingContainer = document.querySelector('.marketing-container');
+  if (marketingContainer) {
+    marketingContainer.classList.add('hidden-mock-section');
+    marketingContainer.setAttribute('aria-hidden', 'true');
+  }
+}
+
 function setLoginRequiredMessage(message = '') {
   const note = document.getElementById('login-required-note');
   if (!note) return;
@@ -486,6 +512,7 @@ function initializeLoginModal() {
           if (loaded) {
             updateAuthButton();
             closeLoginModal();
+            hideAccountSnapshot(); // Hide snapshot for authenticated users
             initializeDashboard();
             stopIdleTimeout(); // Stop idle timeout for authenticated users
           } else {
@@ -573,6 +600,7 @@ function initializeLoginModal() {
           if (loaded) {
             updateAuthButton();
             closeLoginModal();
+            hideAccountSnapshot(); // Hide snapshot for authenticated users
             initializeDashboard();
             stopIdleTimeout(); // Stop idle timeout for authenticated users
           } else {
@@ -1216,9 +1244,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     const valid = await loadUserProfile();
     if (!valid) {
       isAuthenticated = false;
+      showAccountSnapshot(); // Show snapshot for unauthenticated users
     } else {
       closeLoginModal();
+      hideAccountSnapshot(); // Hide snapshot for authenticated users
     }
+  } else {
+    showAccountSnapshot(); // Show snapshot for unauthenticated users
   }
 
   if (!isAuthenticated) {
