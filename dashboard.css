@@ -3664,3 +3664,195 @@ body.mobile-menu-open {
     font-size: 0.7rem;
   }
 }
+
+/* Contact Modal Styles */
+.contact-modal-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease, visibility 0.3s ease;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.contact-modal-overlay.active {
+  display: flex;
+  opacity: 1;
+  visibility: visible;
+}
+
+.contact-modal {
+  background: var(--dashboard-surface);
+  border-radius: var(--dashboard-radius);
+  box-shadow: var(--dashboard-shadow);
+  max-width: 500px;
+  width: 100%;
+  animation: slideUp 0.3s ease;
+  overflow: hidden;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.contact-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.5rem;
+  border-bottom: 1px solid var(--dashboard-border);
+}
+
+.contact-modal-header h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  color: var(--dashboard-text);
+  font-weight: 600;
+}
+
+.contact-modal-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--dashboard-muted);
+  transition: color var(--transition-fast);
+  border-radius: 8px;
+  padding: 0;
+}
+
+.contact-modal-close:hover {
+  color: var(--dashboard-text);
+  background: rgba(13, 139, 99, 0.08);
+}
+
+.contact-modal-body {
+  padding: 1.5rem;
+}
+
+.contact-modal-intro {
+  margin: 0 0 1.5rem 0;
+  color: var(--dashboard-muted);
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.contact-options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.contact-option {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  background: var(--dashboard-bg);
+  border: 1px solid var(--dashboard-border);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  text-align: left;
+  font-size: 1rem;
+}
+
+.contact-option:hover {
+  border-color: var(--dashboard-primary);
+  background: rgba(13, 139, 99, 0.04);
+  transform: translateX(4px);
+}
+
+.contact-option-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 50px;
+  height: 50px;
+  background: rgba(13, 139, 99, 0.1);
+  border-radius: 10px;
+  color: var(--dashboard-primary);
+  flex-shrink: 0;
+}
+
+.contact-option-content {
+  flex: 1;
+}
+
+.contact-option-content h3 {
+  margin: 0 0 0.25rem 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--dashboard-text);
+}
+
+.contact-option-content p {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--dashboard-muted);
+}
+
+.contact-option-arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--dashboard-primary);
+  opacity: 0.5;
+  transition: opacity var(--transition-fast), transform var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.contact-option:hover .contact-option-arrow {
+  opacity: 1;
+  transform: translateX(2px);
+}
+
+.contact-support-hours {
+  background: rgba(13, 139, 99, 0.08);
+  border: 1px solid rgba(13, 139, 99, 0.15);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  font-size: 0.85rem;
+  color: var(--dashboard-text);
+}
+
+.contact-support-hours p {
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+  .contact-modal {
+    max-width: calc(100% - 1rem);
+  }
+
+  .contact-option {
+    padding: 0.875rem;
+  }
+
+  .contact-option-icon {
+    width: 45px;
+    height: 45px;
+  }
+}

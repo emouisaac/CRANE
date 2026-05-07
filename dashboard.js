@@ -1080,6 +1080,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   initializeSectionWaveNet();
   setupEventListeners();
   setupLoanRequestForm();
+  setupContactModal();
   startRealTimeUpdates();
   setupIdleDetection();
 
@@ -2267,15 +2268,72 @@ function requireAuthFeature(viewName) {
 }
 
 function openContactOptions() {
-  const phone = '+256788408032';
-  const choice = window.prompt(
-    `Contact Crane support:\n1. Call ${phone}\n2. WhatsApp ${phone}\n\nEnter 1 or 2 to continue, or Cancel to dismiss.`
-  );
+  const overlay = document.getElementById('contact-modal-overlay');
+  if (overlay) {
+    overlay.classList.add('active');
+  }
+}
 
-  if (choice === '1') {
-    window.location.href = `tel:${phone}`;
-  } else if (choice === '2') {
-    window.open(`https://wa.me/${phone.replace(/\D/g, '')}`, '_blank');
+function closeContactModal() {
+  const overlay = document.getElementById('contact-modal-overlay');
+  if (overlay) {
+    overlay.classList.remove('active');
+  }
+}
+
+function setupContactModal() {
+  const phone = '+256788408032';
+  const phoneNoFormat = phone.replace(/\D/g, '');
+  const email = 'support@craneloans.com';
+
+  // Update phone numbers in modal
+  const callNumberEl = document.getElementById('call-number');
+  const whatsappNumberEl = document.getElementById('whatsapp-number');
+  if (callNumberEl) callNumberEl.textContent = phone;
+  if (whatsappNumberEl) whatsappNumberEl.textContent = phone;
+
+  // Close button
+  const closeBtn = document.getElementById('contact-modal-close');
+  if (closeBtn) {
+    closeBtn.addEventListener('click', closeContactModal);
+  }
+
+  // Overlay click to close
+  const overlay = document.getElementById('contact-modal-overlay');
+  if (overlay) {
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) {
+        closeContactModal();
+      }
+    });
+  }
+
+  // Call Now button
+  const callBtn = document.getElementById('call-now-btn');
+  if (callBtn) {
+    callBtn.addEventListener('click', () => {
+      closeContactModal();
+      window.location.href = `tel:${phone}`;
+    });
+  }
+
+  // WhatsApp button
+  const whatsappBtn = document.getElementById('whatsapp-btn');
+  if (whatsappBtn) {
+    whatsappBtn.addEventListener('click', () => {
+      closeContactModal();
+      const whatsappUrl = `https://wa.me/${phoneNoFormat}?text=Hi%20Crane%20Support,%20I%20need%20assistance`;
+      window.open(whatsappUrl, '_blank');
+    });
+  }
+
+  // Email button
+  const emailBtn = document.getElementById('email-btn');
+  if (emailBtn) {
+    emailBtn.addEventListener('click', () => {
+      closeContactModal();
+      window.location.href = `mailto:${email}?subject=Crane%20Support%20Request`;
+    });
   }
 }
 
