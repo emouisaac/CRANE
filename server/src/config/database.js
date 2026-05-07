@@ -1431,7 +1431,7 @@ function listAuthUsers({ search = "", status = "" } = {}) {
     });
 }
 
-function upsertAuthUser({ phone, email = null, pinHash, country = null, allowExisting = true }) {
+function upsertAuthUser({ phone, email = null, pinHash, country = null, allowExisting = true, profileUpdates = null }) {
   const normalizedPhone = canonicalizePhone(phone, country);
   if (!normalizedPhone) {
     throw new Error("Phone is required.");
@@ -1463,7 +1463,11 @@ function upsertAuthUser({ phone, email = null, pinHash, country = null, allowExi
       : email
         ? String(email).trim()
         : null;
-  const profilePayload = JSON.stringify(existingUser?.profile || {});
+  const mergedProfile = {
+    ...(existingUser?.profile || {}),
+    ...((profileUpdates && typeof profileUpdates === "object") ? profileUpdates : {}),
+  };
+  const profilePayload = JSON.stringify(mergedProfile);
 
   if (!allowExisting) {
     getDatabase()
@@ -1489,7 +1493,7 @@ function upsertAuthUser({ phone, email = null, pinHash, country = null, allowExi
       email: normalizedEmail,
       pinHash,
       status: existingUser?.status || "active",
-      profile: existingUser?.profile || {},
+      profile: mergedProfile,
       lastLoginAt: existingUser?.last_login_at || null,
       createdAt: existingUser?.created_at || timestamp,
       updatedAt: timestamp,

@@ -220,13 +220,21 @@ router.post("/register/verify-otp", (req, res) => {
 });
 
 router.post("/register", (req, res) => {
-  const { phone, email, pin, deviceId, country } = req.body || {};
+  const { phone, email, pin, deviceId, country, fullName } = req.body || {};
   const normalizedPhone = canonicalizePhone(phone, country);
+  const normalizedFullName = String(fullName || "").trim();
 
   if (!normalizedPhone) {
     return res.status(400).json({
       error: "Phone number is required",
       code: "PHONE_REQUIRED",
+    });
+  }
+
+  if (!normalizedFullName) {
+    return res.status(400).json({
+      error: "Full name is required",
+      code: "FULL_NAME_REQUIRED",
     });
   }
 
@@ -254,6 +262,9 @@ router.post("/register", (req, res) => {
       pinHash: hashSecret(pin),
       country,
       allowExisting: false,
+      profileUpdates: {
+        fullName: normalizedFullName,
+      },
     });
 
     return res.json(createBorrowerSession(user, deviceId));
