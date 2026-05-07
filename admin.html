@@ -11,6 +11,14 @@
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="dashboard.css">
   <link rel="stylesheet" href="admin.css">
+  <script>
+    const token = localStorage.getItem('accessToken');
+    const role = localStorage.getItem('userRole');
+    const adminRole = localStorage.getItem('adminRole');
+    if (!token || role !== 'admin' || !adminRole || !['admin', 'master_admin'].includes(adminRole)) {
+      window.location.replace('admin-login.html');
+    }
+  </script>
 </head>
 <body class="intro-loading">
   <div class="site-intro" id="site-intro" aria-hidden="true">

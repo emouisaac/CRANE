@@ -33,14 +33,41 @@ function setupIdleDetection() {
   document.addEventListener('touchstart', updateActivity);
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-  // Check admin authentication first
+function getAdminAuthState() {
   const token = localStorage.getItem('accessToken');
   const role = localStorage.getItem('userRole');
+  const adminRole = localStorage.getItem('adminRole');
 
-  if (!token || role !== 'admin') {
-    // Redirect to admin login if not authenticated as admin
+  return {
+    token,
+    role,
+    adminRole,
+    isAdmin: Boolean(
+      token &&
+      role === 'admin' &&
+      adminRole &&
+      ['admin', 'master_admin'].includes(adminRole)
+    )
+  };
+}
+
+function requireAdminLogin() {
+  const auth = getAdminAuthState();
+
+  if (!auth.isAdmin) {
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('refreshToken');
+    localStorage.removeItem('userRole');
+    localStorage.removeItem('adminRole');
     window.location.href = 'admin-login.html';
+    return false;
+  }
+
+  return true;
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  if (!requireAdminLogin()) {
     return;
   }
 
