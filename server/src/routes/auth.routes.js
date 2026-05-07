@@ -5,15 +5,19 @@ const { timingSafeEqual } = require("crypto");
 
 const { config } = require("../config/env");
 const {
+  buildAuthUserProfile,
+  consumeOtpChallenge,
   createAdminAccount,
+  createOtpChallenge,
+  createRefreshSession,
   findAdminAccountById,
   findAdminAccountByUsername,
   findAuthUserByPhone,
   listAdminAccounts,
   sanitizeAdminAccount,
   touchAdminAccountLogin,
-  upsertAuthUser,
   touchAuthUserLogin,
+  upsertAuthUser,
   updateAdminAccount,
 } = require("../config/database");
 const { authenticate } = require("../middleware/authenticate");
@@ -43,12 +47,93 @@ function verifyAdminPassword(password, storedHash) {
   return timingSafeEqual(Buffer.from(actualKey, "hex"), Buffer.from(expectedKey, "hex"));
 }
 
-function authenticateAdminToken(req, res, next) {
-  authenticate(req, res, (error) => {
-    if (error) {
-      return next(error);
-    }
+function getRefreshExpiryIso() {
+  return new Date(Date.now() + config.refreshExpiryDays * 24 * 60 * 60 * 1000).toISOString();
+}
 
+function createBorrowerSession(user, deviceId) {
+  const accessToken = jwt.sign(
+    { sub: user.id, phone: user.phone, email: user.email, deviceId, scope: ["borrower"] },
+    config.jwtSecret,
+    { expiresIn: config.jwtExpiry }
+  );
+
+  const refreshToken = createRefreshSession({
+    subjectType: "borrower",
+    subjectId: user.id,
+    deviceId,
+    scope: ["borrower"],
+    expiresAt: getRefreshExpiryIso(),
+  });
+
+  return {
+    token: accessToken,
+    accessToken,
+    refreshToken,
+    onboardingState: "profile_ready",
+    biometricAvailable: false,
+    deviceBound: Boolean(deviceId),
+    user: {
+      id: user.id,
+      phone: user.phone,
+      email: user.email || null,
+      isRegistered: true,
+      lastLoginAt: user.last_login_at || null,
+      profile: buildAuthUserProfile(user),
+    },
+  };
+}
+
+function issueAdminSession({ subject, deviceId, role, username = null, adminAccount = null }) {
+  const accessToken = jwt.sign(
+    {
+      sub: subject,
+      deviceId,
+      scope: ["admin"],
+      role,
+      username,
+      adminAccountId: adminAccount?.id || null,
+      adminBusinessRole: adminAccount?.role || null,
+    },
+    config.jwtSecret,
+    { expiresIn: config.jwtExpiry }
+  );
+
+  const refreshToken = createRefreshSession({
+    subjectType: "admin",
+    subjectId: subject,
+    deviceId,
+    scope: ["admin"],
+    role,
+    username,
+    adminAccountId: adminAccount?.id || null,
+    adminBusinessRole: adminAccount?.role || null,
+    expiresAt: getRefreshExpiryIso(),
+  });
+
+  return {
+    accessToken,
+    refreshToken,
+    role,
+    deviceBound: Boolean(deviceId),
+    admin: adminAccount
+      ? sanitizeAdminAccount(adminAccount)
+      : {
+          id: "master_admin",
+          username: "master_admin",
+          fullName: "Master Admin",
+          email: "",
+          role: "master_admin",
+          status: "active",
+          createdAt: null,
+          updatedAt: null,
+          lastLoginAt: null,
+        },
+  };
+}
+
+function authenticateAdminToken(req, res, next) {
+  authenticate(req, res, () => {
     if (!req.user?.scope || !req.user.scope.includes("admin")) {
       return res.status(403).json({
         error: "Admin access required",
@@ -71,108 +156,65 @@ function requireMasterAdmin(req, res, next) {
   return next();
 }
 
-function issueAdminSession({ subject, deviceId, role, username = null, adminAccount = null }) {
-  const accessToken = jwt.sign(
-    {
-      sub: subject,
-      deviceId,
-      scope: ["admin"],
-      role,
-      username,
-      adminAccountId: adminAccount?.id || null,
-      adminBusinessRole: adminAccount?.role || null,
-    },
-    config.jwtSecret,
-    { expiresIn: config.jwtExpiry }
-  );
-
-  return {
-    accessToken,
-    refreshToken: role === "master_admin" ? "master_admin_refresh_demo_token" : "admin_refresh_demo_token",
-    role,
-    deviceBound: true,
-    admin: adminAccount
-      ? sanitizeAdminAccount(adminAccount)
-      : {
-          id: "master_admin",
-          username: "master_admin",
-          fullName: "Master Admin",
-          email: "",
-          role: "master_admin",
-          status: "active",
-          createdAt: null,
-          updatedAt: null,
-          lastLoginAt: null,
-        },
-  };
-}
-
-function createBorrowerSession(user, deviceId) {
-  const accessToken = jwt.sign(
-    { sub: user.id, phone: user.phone, email: user.email, deviceId, scope: ["borrower"] },
-    config.jwtSecret,
-    { expiresIn: config.jwtExpiry }
-  );
-
-  return {
-    token: accessToken,
-    accessToken,
-    refreshToken: "refresh_demo_token",
-    onboardingState: "kyc_pending",
-    biometricAvailable: true,
-    deviceBound: true,
-    user: {
-      id: user.id,
-      phone: user.phone,
-      email: user.email || null,
-      isRegistered: true,
-      lastLoginAt: user.last_login_at || null,
-    },
-  };
-}
-
 router.post("/register/request-otp", (req, res) => {
-  const { phone, country } = req.body;
+  const { phone, country } = req.body || {};
+
+  if (!phone) {
+    return res.status(400).json({
+      error: "Phone number is required",
+      code: "PHONE_REQUIRED",
+    });
+  }
+
+  const otpCode = String(Math.floor(100000 + Math.random() * 900000));
+  const challenge = createOtpChallenge(String(phone).trim(), otpCode, new Date(Date.now() + 2 * 60 * 1000).toISOString());
   const existingUser = findAuthUserByPhone(phone);
 
-  res.json({
-    challengeId: "otp_challenge_demo_001",
+  return res.json({
+    challengeId: challenge.id,
     phone,
     country,
     returningUser: Boolean(existingUser),
-    deliveryStatus: "queued",
+    deliveryStatus: "accepted",
     expiresInSeconds: 120,
   });
 });
 
 router.post("/register/verify-otp", (req, res) => {
-  const { phone, otp, deviceId } = req.body;
+  const { phone, otp, deviceId } = req.body || {};
 
-  if (otp !== "123456") {
-    return res.status(401).json({
-      error: "Invalid OTP",
-      code: "OTP_INVALID",
+  if (!phone || !otp) {
+    return res.status(400).json({
+      error: "Phone number and OTP are required",
+      code: "OTP_FIELDS_REQUIRED",
     });
   }
 
-  const accessToken = jwt.sign(
-    { sub: "user_demo_001", phone, deviceId, scope: ["borrower"] },
-    config.jwtSecret,
-    { expiresIn: config.jwtExpiry }
-  );
+  const result = consumeOtpChallenge(String(phone).trim(), String(otp).trim());
+  if (!result.ok) {
+    return res.status(401).json({
+      error: "Invalid or expired OTP",
+      code: "OTP_INVALID",
+      reason: result.reason,
+    });
+  }
 
-  return res.json({
-    accessToken,
-    refreshToken: "refresh_demo_token",
-    onboardingState: "kyc_pending",
-    deviceBound: true,
-  });
+  const existingUser = findAuthUserByPhone(phone);
+  if (!existingUser) {
+    return res.json({
+      verified: true,
+      registered: false,
+      nextStep: "complete_registration",
+    });
+  }
+
+  const updatedUser = touchAuthUserLogin(phone) || existingUser;
+  return res.json(createBorrowerSession(updatedUser, deviceId));
 });
 
 router.post("/register", (req, res) => {
-  const { phone, email, pin, deviceId } = req.body;
+  const { phone, email, pin, deviceId } = req.body || {};
 
-  // Validate PIN
   if (!pin || pin.length !== 6 || !/^\d{6}$/.test(pin)) {
     return res.status(400).json({
       error: "PIN must be 6 digits",
@@ -180,8 +222,7 @@ router.post("/register", (req, res) => {
     });
   }
 
-  // Validate email if provided
-  if (email && email.trim() !== '') {
+  if (email && email.trim() !== "") {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       return res.status(400).json({
@@ -201,16 +242,16 @@ router.post("/register", (req, res) => {
 });
 
 router.post("/login", (req, res) => {
-  const { phone, pin, password, deviceId } = req.body;
+  const { phone, pin, password, deviceId } = req.body || {};
 
   if (!phone || (!pin && !password)) {
     return res.status(400).json({
       error: "Phone and PIN/password are required",
+      code: "AUTH_FIELDS_REQUIRED",
     });
   }
 
   const user = findAuthUserByPhone(phone);
-
   if (!user) {
     return res.status(401).json({
       error: "User not registered. Please register first.",
@@ -218,15 +259,14 @@ router.post("/login", (req, res) => {
     });
   }
 
-  // Validate PIN if provided
-  if (pin && (pin.length !== 6 || !/^\d{6}$/.test(pin))) {
+  const suppliedSecret = pin || password;
+  if (!/^\d{6}$/.test(String(suppliedSecret))) {
     return res.status(400).json({
       error: "PIN must be 6 digits",
       code: "PIN_INVALID",
     });
   }
 
-  const suppliedSecret = pin || password;
   if (user.pin_hash !== hashSecret(suppliedSecret)) {
     return res.status(401).json({
       error: "Invalid phone or PIN.",
@@ -235,12 +275,11 @@ router.post("/login", (req, res) => {
   }
 
   const updatedUser = touchAuthUserLogin(phone) || user;
-
   return res.json(createBorrowerSession(updatedUser, deviceId));
 });
 
 router.post("/admin/login", (req, res) => {
-  const { username, password, deviceId, loginType, role } = req.body;
+  const { username, password, deviceId, loginType, role } = req.body || {};
   const normalizedUsername = String(username || "").trim();
   const wantsMasterAdmin =
     normalizedUsername.toLowerCase() === "master_admin" ||
@@ -288,7 +327,6 @@ router.post("/admin/login", (req, res) => {
   }
 
   const updatedAdminAccount = touchAdminAccountLogin(adminAccount.id) || sanitizeAdminAccount(adminAccount);
-
   return res.json(
     issueAdminSession({
       subject: adminAccount.id,
@@ -307,13 +345,7 @@ router.get("/admin/accounts", authenticateAdminToken, requireMasterAdmin, (req, 
 });
 
 router.post("/admin/accounts", authenticateAdminToken, requireMasterAdmin, (req, res) => {
-  const {
-    username,
-    fullName,
-    email,
-    password,
-    role = "loan_officer",
-  } = req.body || {};
+  const { username, fullName, email, password, role = "loan_officer" } = req.body || {};
 
   if (!username || !String(username).trim()) {
     return res.status(400).json({
@@ -413,7 +445,6 @@ router.delete("/admin/accounts/:adminId", authenticateAdminToken, requireMasterA
   }
 
   const account = updateAdminAccount(adminId, { status: "suspended" });
-
   return res.json({
     deleted: true,
     account,
@@ -421,16 +452,14 @@ router.delete("/admin/accounts/:adminId", authenticateAdminToken, requireMasterA
 });
 
 router.post("/biometric/assertion", (req, res) => {
-  res.json({
-    accessToken: "biometric_access_demo",
-    refreshToken: "biometric_refresh_demo",
-    deviceBound: true,
-    authMethod: "biometric",
+  return res.status(501).json({
+    error: "Biometric login is not configured for this deployment.",
+    code: "BIOMETRIC_NOT_CONFIGURED",
   });
 });
 
 router.post("/logout", (req, res) => {
-  res.status(204).send();
+  return res.status(204).send();
 });
 
 module.exports = router;

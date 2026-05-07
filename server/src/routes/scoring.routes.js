@@ -1,5 +1,6 @@
 const express = require("express");
 
+const { computeCreditSummary } = require("../config/database");
 const { authenticate } = require("../middleware/authenticate");
 const { requireBoundDevice } = require("../middleware/deviceBinding");
 
@@ -8,25 +9,24 @@ const router = express.Router();
 router.use(authenticate, requireBoundDevice);
 
 router.post("/evaluate", (req, res) => {
+  const summary = computeCreditSummary(req.user.sub);
   res.status(202).json({
-    jobId: "score_job_demo_001",
-    status: "queued",
-    sources: ["wallet_transactions", "repayment_history", "device_behavior"],
+    jobId: `score_${Date.now().toString(36)}`,
+    status: "completed",
+    sources: ["profile", "consents", "applications", "repayment_history"],
+    summary,
   });
 });
 
 router.get("/summary", (req, res) => {
+  const summary = computeCreditSummary(req.user.sub);
   res.json({
     userId: req.user.sub,
-    score: 718,
-    eligibility: "eligible_with_soft_review",
-    creditLimitUgx: 650000,
-    monthlyInterestRate: 0.058,
-    drivers: [
-      "Wallet cash flow stability",
-      "Clean KYC pass rate",
-      "Trusted device continuity",
-    ],
+    score: summary.score,
+    eligibility: summary.eligibility,
+    creditLimitUgx: summary.creditLimitUgx,
+    monthlyInterestRate: summary.monthlyInterestRate,
+    drivers: summary.drivers,
   });
 });
 

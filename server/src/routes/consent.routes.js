@@ -1,5 +1,6 @@
 const express = require("express");
 
+const { getUserConsents, saveUserConsents } = require("../config/database");
 const { authenticate } = require("../middleware/authenticate");
 const { requireBoundDevice } = require("../middleware/deviceBinding");
 
@@ -10,19 +11,15 @@ router.use(authenticate, requireBoundDevice);
 router.get("/", (req, res) => {
   res.json({
     userId: req.user.sub,
-    consents: [
-      { key: "sms_patterns", state: "granted" },
-      { key: "usage_metadata", state: "granted" },
-      { key: "contacts", state: "denied" },
-      { key: "wallet_transactions", state: "granted" },
-    ],
+    consents: getUserConsents(req.user.sub),
   });
 });
 
 router.put("/", (req, res) => {
+  const consents = Array.isArray(req.body?.consents) ? req.body.consents : [];
   res.json({
     updated: true,
-    consents: req.body.consents || [],
+    consents: saveUserConsents(req.user.sub, consents),
     audited: true,
   });
 });

@@ -1,5 +1,4 @@
 const http = require("http");
-const { exec } = require("child_process");
 
 const { createApp } = require("./app");
 const { getDatabase } = require("./config/database");
@@ -21,21 +20,6 @@ const server = http.createServer(app);
 
 bindVerificationSocket(server);
 
-function openBrowser(url) {
-  const command =
-    process.platform === "win32"
-      ? `start "" "${url}"`
-      : process.platform === "darwin"
-      ? `open "${url}"`
-      : `xdg-open "${url}"`;
-
-  exec(command, (err) => {
-    if (err) {
-      console.warn(`Could not open browser automatically: ${err.message}`);
-    }
-  });
-}
-
 server.on("error", (err) => {
   if (err.code === "EADDRINUSE") {
     console.warn(`Port ${config.port} is already in use. Selecting an available fresh port...`);
@@ -53,5 +37,4 @@ server.listen(config.port, () => {
   const url = `http://${host}:${address.port}`;
 
   console.log(`SwiftLend backend listening at ${url}`);
-  openBrowser(url);
 });

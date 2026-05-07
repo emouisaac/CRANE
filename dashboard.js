@@ -4,7 +4,9 @@
 const dashboardState = {
   user: null, // Will be loaded from API
   loans: [],
+  applications: [],
   notifications: [],
+  chatMessages: [],
   referrals: [],
   paymentHistory: [],
   scoreHistory: [],
@@ -38,6 +40,10 @@ function clearAuthState() {
   localStorage.removeItem('deviceId');
   isAuthenticated = false;
   dashboardState.user = null;
+  dashboardState.loans = [];
+  dashboardState.applications = [];
+  dashboardState.notifications = [];
+  dashboardState.chatMessages = [];
   updateAuthButton();
   startIdleTimeout(); // Start idle timeout for unauthenticated users
 }
@@ -119,7 +125,7 @@ async function loadUserProfile() {
       return false;
     }
 
-    const response = await fetch('/api/profile', {
+    const response = await fetch('/api/profile/dashboard', {
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
@@ -130,14 +136,39 @@ async function loadUserProfile() {
     if (response.ok) {
       const data = await response.json();
       dashboardState.user = {
-        id: data.userId,
-        name: data.profile.fullName || 'User',
-        initials: data.profile.fullName ? data.profile.fullName.split(' ').map(n => n[0]).join('').toUpperCase() : 'U',
-        phone: data.profile.phone,
-        status: data.profile.status,
-        registeredAt: data.profile.registeredAt,
-        lastLoginAt: data.profile.lastLoginAt,
+        ...(data.user || {}),
+        email: data.profile?.email || data.user?.email || null,
+        initials: data.user?.initials || (data.user?.name ? data.user.name.split(' ').map(n => n[0]).join('').toUpperCase() : 'U'),
+        nextDueDate: data.user?.nextDueDate ? new Date(data.user.nextDueDate) : null,
       };
+      dashboardState.loans = Array.isArray(data.loans)
+        ? data.loans.map((loan) => ({
+            ...loan,
+            dueDate: loan.dueDate ? new Date(loan.dueDate) : null,
+          }))
+        : [];
+      dashboardState.applications = Array.isArray(data.applications)
+        ? data.applications.map((application) => ({ ...application }))
+        : [];
+      dashboardState.notifications = Array.isArray(data.notifications)
+        ? data.notifications.map((notification) => ({ ...notification }))
+        : [];
+      dashboardState.referrals = Array.isArray(data.referrals)
+        ? data.referrals.map((referral) => ({ ...referral }))
+        : [];
+      dashboardState.chatMessages = Array.isArray(data.messages)
+        ? data.messages.map((message) => ({ ...message }))
+        : [];
+      if (data.marketing) {
+        dashboardState.marketing = {
+          ...dashboardState.marketing,
+          ...data.marketing,
+          pulse: {
+            ...dashboardState.marketing.pulse,
+            ...(data.marketing.pulse || {}),
+          },
+        };
+      }
       return true;
     }
 
@@ -208,6 +239,7 @@ function initializeLoginModal() {
   const registerForm = document.getElementById('register-form');
   const switchToRegister = document.getElementById('switch-to-register');
   const switchToLogin = document.getElementById('switch-to-login');
+  const forgotPinLink = document.getElementById('forgot-pin-link');
 
   // Mobile login button
   const mobileLoginBtn = document.getElementById('mobile-login-btn');
@@ -276,13 +308,19 @@ function initializeLoginModal() {
     });
   }
 
+  if (forgotPinLink) {
+    forgotPinLink.addEventListener('click', (e) => {
+      e.preventDefault();
+      openContactOptions();
+    });
+  }
+
   // Login form submission
   if (loginForm) {
     loginForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       
-      const countryCode = document.getElementById('login-country').value;
-      const phoneNumber = document.getElementById('login-phone').value;
+      const phoneNumber = document.getElementById('login-phone').value.replace(/\s+/g, '');
       const pin = document.getElementById('login-pin').value;
       
       // Clear previous errors
@@ -349,8 +387,7 @@ function initializeLoginModal() {
     registerForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       
-      const countryCode = document.getElementById('register-country').value;
-      const phoneNumber = document.getElementById('register-phone').value;
+      const phoneNumber = document.getElementById('register-phone').value.replace(/\s+/g, '');
       const email = document.getElementById('register-email').value;
       const pin = document.getElementById('register-pin').value;
       const confirmPin = document.getElementById('register-pin-confirm').value;
@@ -567,11 +604,24 @@ function handleLogout(e) {
   alert('You have been logged out');
 }
 
+function getAuthenticatedHeaders() {
+  const token = localStorage.getItem('accessToken');
+  const deviceId = localStorage.getItem('deviceId') || '';
+  return {
+    'Authorization': `Bearer ${token}`,
+    'Content-Type': 'application/json',
+    'x-device-id': deviceId,
+  };
+}
+
 // Open chat box
 function openChatBox() {
   const chatContainer = document.getElementById('chat-container');
   if (chatContainer) {
     chatContainer.style.display = 'flex';
+  }
+  if (isAuthenticated) {
+    loadChatMessages();
   }
 }
 
@@ -609,7 +659,7 @@ function populateProfilePanel() {
   setText('profile-name', user.name);
   setText('profile-phone', user.phone || '+256 700 123456');
   setText('profile-phone-info', user.phone || '+256 700 123456');
-  setText('profile-email', 'N/A'); // No email sharing as per requirements
+  setText('profile-email', user.email || 'Not provided');
   setText('profile-member-since', user.registeredAt ? new Date(user.registeredAt).getFullYear() : '2024');
 }
 
@@ -659,44 +709,76 @@ function initializeChat() {
   });
 }
 
-// Send chat message
-function sendChatMessage() {
-  const chatInput = document.getElementById('chat-input');
+function renderChatMessages() {
   const chatMessages = document.getElementById('chat-messages');
-  
-  if (!chatInput || !chatMessages) return;
+  if (!chatMessages) return;
+
+  const messages = Array.isArray(dashboardState.chatMessages) ? dashboardState.chatMessages : [];
+  if (!messages.length) {
+    chatMessages.innerHTML = `
+      <div class="chat-message system">
+        <p>Welcome to Crane Support! How can we help you today?</p>
+      </div>
+    `;
+    return;
+  }
+
+  chatMessages.innerHTML = messages.map((message) => `
+    <div class="chat-message ${message.is_from_admin ? 'admin' : 'user'}">
+      <p>${escapeHtml(message.message_text || '')}</p>
+    </div>
+  `).join('');
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+async function loadChatMessages() {
+  if (!isAuthenticated) return;
+
+  try {
+    const response = await fetch('/api/profile/messages', {
+      headers: getAuthenticatedHeaders(),
+    });
+
+    if (!response.ok) {
+      return;
+    }
+
+    const data = await response.json();
+    dashboardState.chatMessages = Array.isArray(data.messages) ? data.messages : [];
+    renderChatMessages();
+  } catch (error) {
+    console.error('Failed to load chat messages:', error);
+  }
+}
+
+// Send chat message
+async function sendChatMessage() {
+  const chatInput = document.getElementById('chat-input');
+  if (!chatInput) return;
   
   const message = chatInput.value.trim();
   if (!message) return;
-  
-  // Add user message
-  const userMessageDiv = document.createElement('div');
-  userMessageDiv.className = 'chat-message user';
-  userMessageDiv.innerHTML = `<p>${escapeHtml(message)}</p>`;
-  chatMessages.appendChild(userMessageDiv);
-  
-  // Clear input
-  chatInput.value = '';
-  
-  // Auto-scroll to bottom
-  chatMessages.scrollTop = chatMessages.scrollHeight;
-  
-  // Simulate admin response
-  setTimeout(() => {
-    const adminMessageDiv = document.createElement('div');
-    adminMessageDiv.className = 'chat-message admin';
-    const responses = [
-      'Thank you for your message. How can I help you further?',
-      'I understand. Let me assist you with that.',
-      "That's a great question. Our support team will review this shortly.",
-      'Thanks for contacting us. Is there anything else I can help with?',
-      "I'm here to help. Please let me know more details."
-    ];
-    const randomResponse = responses[Math.floor(Math.random() * responses.length)];
-    adminMessageDiv.innerHTML = `<p>${randomResponse}</p>`;
-    chatMessages.appendChild(adminMessageDiv);
-    chatMessages.scrollTop = chatMessages.scrollHeight;
-  }, 500);
+
+  try {
+    const response = await fetch('/api/profile/messages', {
+      method: 'POST',
+      headers: getAuthenticatedHeaders(),
+      body: JSON.stringify({
+        messageText: message,
+        messageType: 'text',
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Unable to send message');
+    }
+
+    chatInput.value = '';
+    await loadChatMessages();
+  } catch (error) {
+    console.error('Failed to send chat message:', error);
+    alert('We could not send your message right now. Please try again.');
+  }
 }
 
 // Escape HTML to prevent XSS
@@ -704,6 +786,153 @@ function escapeHtml(text) {
   const div = document.createElement('div');
   div.textContent = text;
   return div.innerHTML;
+}
+
+function prefillLoanRequestForm(offer = null) {
+  const user = dashboardState.user;
+  const formDefaults = {
+    name: document.getElementById('applicant-name'),
+    phone: document.getElementById('applicant-phone'),
+    email: document.getElementById('applicant-email'),
+    amount: document.getElementById('loan-amount'),
+    term: document.getElementById('loan-term'),
+  };
+
+  if (user) {
+    if (formDefaults.name && !formDefaults.name.value) formDefaults.name.value = user.name || '';
+    if (formDefaults.phone && !formDefaults.phone.value) formDefaults.phone.value = user.phone || '';
+    if (formDefaults.email && !formDefaults.email.value) formDefaults.email.value = user.email || '';
+  }
+
+  if (offer) {
+    if (formDefaults.amount) formDefaults.amount.value = offer.amount || '';
+    if (formDefaults.term) {
+      const normalizedTerm = String(parseInt(offer.term, 10) || 6);
+      if ([...formDefaults.term.options].some((option) => option.value === normalizedTerm)) {
+        formDefaults.term.value = normalizedTerm;
+      }
+    }
+  }
+}
+
+function collectDocumentNames() {
+  const documentInputs = [
+    { id: 'id-front', label: 'id_front' },
+    { id: 'id-back', label: 'id_back' },
+    { id: 'income-proof', label: 'income_proof' },
+    { id: 'bank-statement', label: 'bank_statement' },
+    { id: 'selfie-photo', label: 'selfie_photo' },
+    { id: 'additional-documents', label: 'additional_documents' },
+  ];
+
+  return documentInputs.flatMap(({ id, label }) => {
+    const input = document.getElementById(id);
+    if (!input?.files?.length) return [];
+    return Array.from(input.files).map((file, index) => `${label}:${index + 1}:${file.name}`);
+  });
+}
+
+const districtSubcountyMap = {
+  kampala: ['Central', 'Kawempe', 'Makindye', 'Nakawa', 'Rubaga'],
+  wakiso: ['Nansana', 'Kira', 'Katabi', 'Makindye Ssabagabo', 'Kasangati'],
+  mukono: ['Mukono Central', 'Goma', 'Ntenjeru', 'Nakisunga'],
+  entebbe: ['Division A', 'Division B', 'Katabi'],
+  masaka: ['Nyendo-Mukungwe', 'Kimaanya-Kabonera', 'Buwunga'],
+  mbarara: ['Kakoba', 'Nyamitanga', 'Kamukuzi'],
+  fort_portal: ['Central', 'South Division', 'East Division'],
+  jinja: ['Northern Division', 'Southern Division', 'Walukuba-Masese'],
+  soroti: ['Western Division', 'Northern Division', 'Eastern Division'],
+  lira: ['Central', 'Adyel', 'Ojwina'],
+  gulu: ['Pece-Laroo', 'Bardege-Layibi', 'Bardege'],
+  arua: ['Central Division', 'River Oli', 'Ayivu'],
+  other: ['Community Centre', 'Urban Division', 'Rural Subcounty'],
+};
+
+function populateSubcountyOptions(selectedDistrict = '', selectedSubcounty = '') {
+  const subcountySelect = document.getElementById('applicant-subcounty');
+  if (!subcountySelect) return;
+
+  const options = districtSubcountyMap[selectedDistrict] || [];
+  subcountySelect.innerHTML = '<option value="">Select subcounty</option>' + options
+    .map((name) => `<option value="${name}">${name}</option>`)
+    .join('');
+
+  if (selectedSubcounty && options.includes(selectedSubcounty)) {
+    subcountySelect.value = selectedSubcounty;
+  }
+}
+
+function setupLoanRequestForm() {
+  const form = document.getElementById('loan-request-form');
+  const feedback = document.getElementById('loan-request-feedback');
+  if (!form || !feedback) return;
+
+  const districtSelect = document.getElementById('applicant-district');
+  if (districtSelect) {
+    populateSubcountyOptions(districtSelect.value, document.getElementById('applicant-subcounty')?.value || '');
+    districtSelect.addEventListener('change', () => {
+      populateSubcountyOptions(districtSelect.value);
+    });
+  }
+
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+
+    if (!isAuthenticated) {
+      openLoginModal('Please sign in before submitting a loan request.');
+      return;
+    }
+
+    const payload = {
+      fullName: document.getElementById('applicant-name')?.value?.trim(),
+      phone: document.getElementById('applicant-phone')?.value?.trim(),
+      email: document.getElementById('applicant-email')?.value?.trim(),
+      idNumber: document.getElementById('applicant-id-number')?.value?.trim(),
+      dateOfBirth: document.getElementById('applicant-dob')?.value,
+      district: document.getElementById('applicant-district')?.value,
+      subcounty: document.getElementById('applicant-subcounty')?.value,
+      village: document.getElementById('applicant-village')?.value?.trim(),
+      category: document.getElementById('applicant-category')?.value,
+      amount: Number(document.getElementById('loan-amount')?.value),
+      termMonths: Number(document.getElementById('loan-term')?.value),
+      purpose: document.getElementById('loan-purpose')?.value,
+      employerName: document.getElementById('employer-name')?.value?.trim(),
+      positionTitle: document.getElementById('position-title')?.value?.trim(),
+      employmentTenure: document.getElementById('employment-tenure')?.value?.trim(),
+      businessName: document.getElementById('business-name')?.value?.trim(),
+      businessType: document.getElementById('business-type')?.value?.trim(),
+      businessRegistration: document.getElementById('business-registration')?.value?.trim(),
+      monthlyIncome: Number(document.getElementById('monthly-income')?.value || 0),
+      otherIncome: Number(document.getElementById('other-income')?.value || 0),
+      existingObligations: document.getElementById('existing-obligations')?.value?.trim(),
+      documents: collectDocumentNames(),
+    };
+
+    feedback.textContent = 'Submitting your application...';
+    feedback.className = 'submission-feedback is-active';
+
+    try {
+      const response = await fetch('/api/loans/applications', {
+        method: 'POST',
+        headers: getAuthenticatedHeaders(),
+        body: JSON.stringify(payload),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Unable to submit the application right now.');
+      }
+
+      feedback.textContent = `Application ${data.application.id} submitted successfully. It is now in the admin review queue.`;
+      feedback.className = 'submission-feedback is-active success';
+      await loadUserProfile();
+      initializeDashboard();
+      switchView('loans');
+    } catch (error) {
+      feedback.textContent = error.message;
+      feedback.className = 'submission-feedback is-active error';
+    }
+  });
 }
 
 // Initialize Dashboard
@@ -738,15 +967,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   initializeDashboard();
   initializeSectionWaveNet();
   setupEventListeners();
+  setupLoanRequestForm();
   startRealTimeUpdates();
   setupIdleDetection();
-
-  window.addEventListener('storage', (event) => {
-    if (event.key === dashboardSharedStore?.STORAGE_KEY) {
-      hydrateDashboardFromSharedState();
-      initializeDashboard();
-    }
-  });
 
   // Cleanup on page unload
   window.addEventListener('beforeunload', () => {
@@ -761,6 +984,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Initialize chat functionality
   initializeChat();
+  renderChatMessages();
 });
 
 function initializeSiteIntro() {
@@ -817,77 +1041,16 @@ function initializeDashboard() {
   populateLoanDetails('all');
   initializeCharts();
   updateCountdown();
-  syncDashboardToSharedState();
+  renderChatMessages();
+  prefillLoanRequestForm();
 }
 
 function hydrateDashboardFromSharedState() {
-  if (!dashboardSharedStore) return;
-
-  const sharedState = dashboardSharedStore.read();
-  if (!sharedState) return;
-
-  // Only hydrate if we don't have real user data from API
-  if (!dashboardState.user || !dashboardState.user.id) {
-    dashboardState.user = {
-      ...dashboardState.user,
-      ...sharedState.user,
-      nextDueDate: sharedState.user?.nextDueDate ? new Date(sharedState.user.nextDueDate) : dashboardState.user?.nextDueDate
-    };
-  }
-
-  dashboardState.loans = (sharedState.loans || []).map((loan) => ({
-    ...loan,
-    dueDate: loan.dueDate ? new Date(loan.dueDate) : null
-  }));
-
-  dashboardState.notifications = Array.isArray(sharedState.notifications)
-    ? sharedState.notifications.map((notification) => ({ ...notification }))
-    : dashboardState.notifications;
-
-  dashboardState.referrals = Array.isArray(sharedState.referrals)
-    ? sharedState.referrals.map((referral) => ({ ...referral }))
-    : dashboardState.referrals;
-
-  if (sharedState.marketing) {
-    dashboardState.marketing = {
-      ...dashboardState.marketing,
-      ...sharedState.marketing,
-      pulse: {
-        ...dashboardState.marketing.pulse,
-        ...(sharedState.marketing.pulse || {})
-      }
-    };
-  }
+  return;
 }
 
 function syncDashboardToSharedState() {
-  if (!dashboardSharedStore) return;
-
-  dashboardSharedStore.update((state) => ({
-    ...state,
-    user: {
-      ...state.user,
-      ...dashboardState.user,
-      nextDueDate: dashboardState.user.nextDueDate instanceof Date
-        ? dashboardState.user.nextDueDate.toISOString()
-        : dashboardState.user.nextDueDate
-    },
-    loans: dashboardState.loans.map((loan) => ({
-      ...loan,
-      borrowerName: loan.borrowerName || dashboardState.user.name,
-      dueDate: loan.dueDate instanceof Date ? loan.dueDate.toISOString() : loan.dueDate
-    })),
-    notifications: dashboardState.notifications.map((notification) => ({ ...notification })),
-    referrals: dashboardState.referrals.map((referral) => ({ ...referral })),
-    marketing: {
-      ...state.marketing,
-      ...dashboardState.marketing,
-      pulse: {
-        ...(state.marketing?.pulse || {}),
-        ...dashboardState.marketing.pulse
-      }
-    }
-  }));
+  return;
 }
 
 function initializeSectionWaveNet() {
@@ -1533,6 +1696,76 @@ function updateCountdown() {
   }
 }
 
+async function handleChangePin() {
+  if (!isAuthenticated) {
+    openLoginModal('Please sign in first to update your PIN.');
+    return;
+  }
+
+  const currentPin = window.prompt('Enter your current 6-digit PIN:');
+  if (!currentPin) return;
+  const newPin = window.prompt('Enter your new 6-digit PIN:');
+  if (!newPin) return;
+
+  try {
+    const response = await fetch('/api/profile/change-pin', {
+      method: 'POST',
+      headers: getAuthenticatedHeaders(),
+      body: JSON.stringify({ currentPin, newPin }),
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || 'Unable to change PIN.');
+    }
+    alert('Your PIN has been updated successfully.');
+  } catch (error) {
+    alert(error.message);
+  }
+}
+
+function handleSecuritySettings() {
+  if (!dashboardState.user?.security) {
+    alert('Security settings are not available yet for this account.');
+    return;
+  }
+
+  const security = dashboardState.user.security;
+  alert(
+    `Security settings\n\nDevice binding: ${security.deviceBindingEnabled ? 'Enabled' : 'Disabled'}\nBiometric sign-in: ${security.biometricEnabled ? 'Enabled' : 'Disabled'}\nAuto-debit: ${security.autoDebitEnabled ? 'Enabled' : 'Disabled'}`
+  );
+}
+
+async function handleNotificationPreferences() {
+  if (!isAuthenticated) {
+    openLoginModal('Please sign in first to manage notification preferences.');
+    return;
+  }
+
+  const marketingEnabled = window.confirm('Enable marketing and promotional notifications for this account?');
+  try {
+    const currentPrefs = dashboardState.user?.notificationPreferences || {};
+    const response = await fetch('/api/profile', {
+      method: 'PUT',
+      headers: getAuthenticatedHeaders(),
+      body: JSON.stringify({
+        notificationPreferences: {
+          ...currentPrefs,
+          marketing: marketingEnabled,
+        },
+      }),
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || 'Unable to update notification preferences.');
+    }
+    await loadUserProfile();
+    initializeDashboard();
+    alert(`Marketing notifications ${marketingEnabled ? 'enabled' : 'disabled'}.`);
+  } catch (error) {
+    alert(error.message);
+  }
+}
+
 // Setup Event Listeners
 function setupEventListeners() {
   // Logout button
@@ -1595,24 +1828,15 @@ function setupEventListeners() {
   });
 
   // Profile menu items
-  document.getElementById('change-pin-btn')?.addEventListener('click', () => {
-    alert('Change PIN feature would be implemented here.');
-  });
-  
-  document.getElementById('security-settings-btn')?.addEventListener('click', () => {
-    alert('Security settings would be implemented here.');
-  });
-  
-  document.getElementById('notification-prefs-btn')?.addEventListener('click', () => {
-    alert('Notification preferences would be implemented here.');
-  });
-  
+  document.getElementById('change-pin-btn')?.addEventListener('click', handleChangePin);
+  document.getElementById('security-settings-btn')?.addEventListener('click', handleSecuritySettings);
+  document.getElementById('notification-prefs-btn')?.addEventListener('click', handleNotificationPreferences);
   document.getElementById('help-btn')?.addEventListener('click', () => {
-    alert('Help & Support would be implemented here.');
+    openChatBox();
   });
   
   document.getElementById('terms-btn')?.addEventListener('click', () => {
-    alert('Terms & Conditions would be implemented here.');
+    window.location.href = 'terms.html';
   });
   
   document.getElementById('profile-logout-btn')?.addEventListener('click', handleLogout);
@@ -1631,8 +1855,8 @@ function setupEventListeners() {
 
     const offer = dashboardState.marketing.offers[marketingOfferIndex];
     if (!offer) return;
-
-    alert(`You selected: ${offer.title}\nAmount: ${currencyFormatter.format(offer.amount)}\nLet's proceed with your application!`);
+    prefillLoanRequestForm(offer);
+    switchView('get-loan');
   });
 
   // Navigation
@@ -1806,7 +2030,7 @@ function switchView(viewName) {
 }
 
 // Handle Refresh Dashboard
-function handleRefreshDashboard() {
+async function handleRefreshDashboard() {
   const refreshBtn = document.getElementById('refresh-dashboard');
   if (refreshBtn) {
     // Add spinning animation
@@ -1822,14 +2046,16 @@ function handleRefreshDashboard() {
     }
   }
   
-  // Reinitialize dashboard data
+  if (isAuthenticated) {
+    await loadUserProfile();
+  }
+
   initializeDashboard();
   
   // Manually refresh marketing content
   advanceMarketingOffer();
   advanceMarketingTicker();
   animateLiveStats();
-  syncDashboardToSharedState();
 }
 
 // Switch To Loans View
@@ -1874,19 +2100,38 @@ function setMobileMenuOpen(isOpen) {
 
 // Toggle Mobile Search
 function toggleMobileSearch() {
-  // For now, show a simple search alert
-  // In a full implementation, this would show/hide a search input
   const searchTerm = prompt('Search loans, transactions, or insights:');
   if (searchTerm && searchTerm.trim()) {
-    alert(`Searching for: "${searchTerm.trim()}"\n\nSearch functionality would be implemented here to find loans, transactions, or insights matching your query.`);
+    const query = searchTerm.trim().toLowerCase();
+    if (query.includes('loan')) {
+      switchView('loans');
+    } else if (query.includes('repay') || query.includes('payment')) {
+      switchView('repay');
+    } else if (query.includes('score')) {
+      switchView('score');
+    } else if (query.includes('referral')) {
+      switchView('referrals');
+    } else {
+      switchView('overview');
+    }
   }
 }
 
 // Mark All Notifications Read
-function markAllNotificationsRead() {
+async function markAllNotificationsRead() {
   dashboardState.notifications.forEach(n => n.unread = false);
   populateNotifications();
-  syncDashboardToSharedState();
+
+  if (isAuthenticated) {
+    try {
+      await fetch('/api/profile/notifications/read-all', {
+        method: 'POST',
+        headers: getAuthenticatedHeaders(),
+      });
+    } catch (error) {
+      console.error('Failed to sync notification state:', error);
+    }
+  }
   
   // Update badge
   const badge = document.querySelector('.notification-badge');
@@ -1920,39 +2165,45 @@ function closePaymentModal() {
 }
 
 // Confirm Payment
-function confirmPayment() {
-  // Simulate payment processing
+async function confirmPayment() {
   const btn = document.getElementById('confirm-payment-btn');
   if (!btn) return;
 
+  const firstOutstandingLoan = dashboardState.loans.find((loan) => loan.remaining > 0);
+  if (!firstOutstandingLoan) {
+    alert('There is no outstanding loan to repay right now.');
+    return;
+  }
+
+  const paymentAmount = Math.min(firstOutstandingLoan.remaining, 420000);
+
   btn.textContent = 'Processing...';
   btn.disabled = true;
-  
-  setTimeout(() => {
+
+  try {
+    const response = await fetch(`/api/loans/${firstOutstandingLoan.id}/payments`, {
+      method: 'POST',
+      headers: getAuthenticatedHeaders(),
+      body: JSON.stringify({
+        amount: paymentAmount,
+        method: 'mobile_money',
+      }),
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || 'Payment failed.');
+    }
+
+    await loadUserProfile();
+    initializeDashboard();
+    closePaymentModal();
+    alert(`Payment of ${currencyFormatter.format(paymentAmount)} recorded successfully.`);
+  } catch (error) {
+    alert(error.message);
+  } finally {
     btn.textContent = 'Confirm Payment';
     btn.disabled = false;
-    closePaymentModal();
-
-    const firstOutstandingLoan = dashboardState.loans.find((loan) => loan.remaining > 0);
-    if (firstOutstandingLoan) {
-      const paymentAmount = Math.min(firstOutstandingLoan.remaining, 420000);
-      firstOutstandingLoan.remaining = Math.max(0, firstOutstandingLoan.remaining - paymentAmount);
-      firstOutstandingLoan.status = firstOutstandingLoan.remaining === 0 ? 'completed' : 'active';
-      if (firstOutstandingLoan.status === 'completed') {
-        firstOutstandingLoan.paidInstallments = firstOutstandingLoan.term;
-      }
-      dashboardState.user.remainingBalance = dashboardState.loans.reduce((sum, loan) => sum + loan.remaining, 0);
-    }
-    
-    // Show success notification
-    addNotification({
-      type: 'success',
-      title: 'Payment Successful',
-      text: 'Your payment has been processed successfully.',
-      time: 'Just now',
-      unread: true
-    });
-  }, 2000);
+  }
 }
 
 // Copy Referral Code
@@ -1995,7 +2246,7 @@ function handlePeriodChange(e) {
 }
 
 // Setup Auto-Debit
-function setupAutoDebit() {
+async function setupAutoDebit() {
   const agree = document.getElementById('autodebit-agree');
   if (!agree) return;
 
@@ -2003,8 +2254,28 @@ function setupAutoDebit() {
     alert('Please agree to automatic deductions first.');
     return;
   }
-  
-  alert('Auto-debit has been set up successfully! You will receive 5% discount on your interest.');
+
+  try {
+    const response = await fetch('/api/profile', {
+      method: 'PUT',
+      headers: getAuthenticatedHeaders(),
+      body: JSON.stringify({
+        security: {
+          ...(dashboardState.user?.security || {}),
+          autoDebitEnabled: true,
+        },
+      }),
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || 'Unable to enable auto-debit.');
+    }
+    await loadUserProfile();
+    initializeDashboard();
+    alert('Auto-debit has been enabled for your account.');
+  } catch (error) {
+    alert(error.message);
+  }
 }
 
 // Handle Early Repayment
@@ -2024,7 +2295,7 @@ function handleQuickAction(e) {
   switch (action) {
     case 'apply':
       if (!requireAuthFeature('get-loan')) return;
-      alert('Redirecting to loan application...');
+      switchView('get-loan');
       break;
     case 'repay':
       if (!requireAuthFeature('repay')) return;
@@ -2032,7 +2303,7 @@ function handleQuickAction(e) {
       break;
     case 'topup':
       if (!requireAuthFeature('get-loan')) return;
-      alert('Top-up feature coming soon!');
+      switchView('get-loan');
       break;
     case 'early':
       if (!requireAuthFeature('repay')) return;

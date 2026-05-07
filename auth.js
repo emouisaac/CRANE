@@ -345,8 +345,7 @@ document.addEventListener('DOMContentLoaded', () => {
     window.location.href = 'index.html';
   });
 
-  // Forgot PIN (placeholder)
   elements.forgotPinLink.addEventListener('click', () => {
-    alert('PIN reset functionality will be available soon. Please contact support.');
+    window.location.href = 'tel:+256788408032';
   });
 });

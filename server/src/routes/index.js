@@ -1,5 +1,6 @@
 const express = require("express");
 
+const adminRoutes = require("./admin.routes");
 const authRoutes = require("./auth.routes");
 const consentRoutes = require("./consent.routes");
 const kycRoutes = require("./kyc.routes");
@@ -12,6 +13,7 @@ const sharedStateRoutes = require("./shared-state.routes");
 const router = express.Router();
 
 router.use("/auth", authRoutes);
+router.use("/admin", adminRoutes);
 router.use("/consents", consentRoutes);
 router.use("/kyc", kycRoutes);
 router.use("/loans", loansRoutes);

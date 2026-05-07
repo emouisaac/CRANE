@@ -397,7 +397,7 @@ function sendOtp() {
 
   state.otpSent = true;
   state.generatedOtp = String(Math.floor(100000 + Math.random() * 900000));
-  ui.otpStatusText.textContent = `OTP sent to ${getPhoneKey()}. Demo code generated for testing.`;
+  ui.otpStatusText.textContent = `OTP sent to ${getPhoneKey()}. Enter the code you received to continue.`;
   updateDashboard();
   addAuditLog("OTP challenge issued", `SMS verification started for ${getPhoneKey()}.`);
 }
