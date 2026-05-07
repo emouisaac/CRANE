@@ -1555,6 +1555,39 @@ select {
   gap: 0.5rem;
 }
 
+.password-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.password-toggle {
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+  color: var(--primary);
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0.5rem;
+  font-size: 0.85rem;
+  border-radius: var(--radius-sm);
+  transition: background-color 0.2s;
+}
+
+.password-toggle:hover {
+  background-color: var(--light);
+}
+
+.password-toggle:focus {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.password-input-wrapper .form-input {
+  flex: 1;
+}
+
 .country-select {
   flex-shrink: 0;
   padding: 0.875rem 0.75rem;

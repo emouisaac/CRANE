@@ -49,31 +49,50 @@ const countryConfig = {
     dialCode: "+256",
     placeholder: "7XX XXX XXX",
     format: [3, 3, 3],
-    validate: (digits) => /^7\d{8}$/.test(digits),
+    validate: (digits) => /^0?7\d{8}$/.test(digits),
   },
   KE: {
     dialCode: "+254",
     placeholder: "7XX XXX XXX",
     format: [3, 3, 3],
-    validate: (digits) => /^(1|7)\d{8}$/.test(digits),
+    validate: (digits) => /^0?(1|7)\d{8}$/.test(digits),
   },
   TZ: {
     dialCode: "+255",
     placeholder: "6XX XXX XXX",
     format: [3, 3, 3],
-    validate: (digits) => /^(6|7)\d{8}$/.test(digits),
+    validate: (digits) => /^0?[67]\d{8}$/.test(digits),
   },
   NG: {
     dialCode: "+234",
     placeholder: "8XX XXX XXXX",
     format: [3, 3, 4],
-    validate: (digits) => /^[7-9]\d{9}$/.test(digits),
+    validate: (digits) => /^0?[7-9]\d{9}$/.test(digits),
   },
 };
 
-// Utility functions
-function generateDeviceId() {
-  return 'device_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+function cleanPhoneDigits(phone) {
+  return String(phone || '').replace(/\D/g, '');
+}
+
+function buildCanonicalPhone(phone, country) {
+  const config = countryConfig[country];
+  if (!config) {
+    const digits = cleanPhoneDigits(phone);
+    if (!digits) return '';
+    return digits.startsWith('+') ? digits : `+${digits}`;
+  }
+
+  let digits = cleanPhoneDigits(phone);
+  if (!digits) return '';
+
+  const dial = config.dialCode.replace('+', '');
+  if (digits.startsWith(dial)) {
+    digits = digits.slice(dial.length);
+  }
+
+  digits = digits.replace(/^0+/, '');
+  return `+${dial}${digits}`;
 }
 
 function formatPhoneNumber(input, country) {
@@ -94,6 +113,11 @@ function formatPhoneNumber(input, country) {
   }
 
   return formatted;
+}
+
+// Utility functions
+function generateDeviceId() {
+  return 'device_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
 }
 
 function validatePhoneNumber(phone, country) {
@@ -148,15 +172,15 @@ async function apiRequest(endpoint, options = {}) {
   return data;
 }
 
-async function registerUser(phone, email, pin, deviceId) {
+async function registerUser(phone, email, pin, deviceId, country) {
   return apiRequest('/register', {
-    body: JSON.stringify({ phone, email, pin, deviceId }),
+    body: JSON.stringify({ phone, email, pin, deviceId, country }),
   });
 }
 
-async function login(phone, pin, deviceId) {
+async function login(phone, pin, deviceId, country) {
   return apiRequest('/login', {
-    body: JSON.stringify({ phone, pin, deviceId }),
+    body: JSON.stringify({ phone, pin, deviceId, country }),
   });
 }
 
@@ -214,7 +238,8 @@ async function handleRegister(e) {
 
   try {
     const deviceId = generateDeviceId();
-    const result = await registerUser(phone, email, pin, deviceId);
+    const canonicalPhone = buildCanonicalPhone(phone, country);
+    const result = await registerUser(canonicalPhone, email, pin, deviceId, country);
 
     // Store tokens
     authState.accessToken = result.accessToken;
@@ -260,7 +285,8 @@ async function handleLogin(e) {
 
   try {
     const deviceId = localStorage.getItem('deviceId') || generateDeviceId();
-    const result = await login(phone, pin, deviceId);
+    const canonicalPhone = buildCanonicalPhone(phone, country);
+    const result = await login(canonicalPhone, pin, deviceId, country);
 
     // Store tokens
     authState.accessToken = result.accessToken;
@@ -339,6 +365,19 @@ document.addEventListener('DOMContentLoaded', () => {
   // Form submissions
   elements.registerForm.addEventListener('submit', handleRegister);
   elements.loginForm.addEventListener('submit', handleLogin);
+
+  // PIN visibility toggle
+  document.addEventListener('click', (e) => {
+    if (e.target.classList.contains('password-toggle')) {
+      e.preventDefault();
+      const targetId = e.target.dataset.target;
+      const input = document.getElementById(targetId);
+      if (!input) return;
+      const isPassword = input.type === 'password';
+      input.type = isPassword ? 'text' : 'password';
+      e.target.textContent = isPassword ? 'Hide' : 'Show';
+    }
+  });
 
   // Success modal
   elements.continueToOnboarding.addEventListener('click', () => {

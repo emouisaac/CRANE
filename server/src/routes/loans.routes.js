@@ -1,10 +1,12 @@
 const express = require("express");
 
 const {
+  assertUniqueProjectResources,
   buildBorrowerDashboard,
   buildLoanCardFromRow,
   buildMarketingFromScore,
   buildAuthUserProfile,
+  canonicalizePhone,
   computeCreditSummary,
   createLoanApplication,
   createNotification,
@@ -19,6 +21,19 @@ const { authenticate } = require("../middleware/authenticate");
 const { requireBoundDevice } = require("../middleware/deviceBinding");
 
 const router = express.Router();
+
+function sendLoanConflict(res, error) {
+  if (error?.code !== "DUPLICATE_RESOURCE") {
+    return false;
+  }
+
+  res.status(409).json({
+    error: error.message || "That information is already linked to another account.",
+    code: "APPLICATION_DUPLICATE_RESOURCE",
+    field: error.field || null,
+  });
+  return true;
+}
 
 router.get("/offers", authenticate, requireBoundDevice, (req, res) => {
   const summary = computeCreditSummary(req.user.sub);
@@ -73,7 +88,7 @@ router.post("/applications", authenticate, requireBoundDevice, (req, res) => {
 
   const payload = req.body || {};
   const fullName = String(payload.fullName || "").trim();
-  const phone = String(payload.phone || user.phone || "").trim();
+  const phone = canonicalizePhone(payload.phone || user.phone || "") || String(payload.phone || user.phone || "").trim();
   const amount = Number(payload.amount);
   const termMonths = Number(payload.termMonths);
   const purpose = String(payload.purpose || "").trim();
@@ -86,55 +101,87 @@ router.post("/applications", authenticate, requireBoundDevice, (req, res) => {
   }
 
   const documents = Array.isArray(payload.documents) ? payload.documents : [];
-  const updatedProfile = updateAuthUserProfile(user.id, {
-    fullName,
-    address: payload.village || "",
-    district: payload.district || "",
-    subcounty: payload.subcounty || "",
-    village: payload.village || "",
-    category: payload.category || "",
-    dateOfBirth: payload.dateOfBirth || "",
-    idNumber: payload.idNumber || "",
-    employmentStatus: payload.category || "",
-    employerName: payload.employerName || "",
-    positionTitle: payload.positionTitle || "",
-    employmentTenure: payload.employmentTenure || "",
-    businessName: payload.businessName || "",
-    businessType: payload.businessType || "",
-    businessRegistration: payload.businessRegistration || "",
-    monthlyIncomeUgx: Number(payload.monthlyIncome) || 0,
-    otherIncomeUgx: Number(payload.otherIncome) || 0,
-    existingObligations: payload.existingObligations || "",
-    primaryWallet: payload.primaryWallet || buildAuthUserProfile(user).primaryWallet,
-    bankAccount: payload.bankAccount || buildAuthUserProfile(user).bankAccount,
-    bankLinked: Boolean(payload.bankAccount || buildAuthUserProfile(user).bankAccount),
-  });
+  const existingProfile = buildAuthUserProfile(user);
 
-  const application = createLoanApplication({
-    userId: user.id,
-    fullName,
-    phone,
-    email: payload.email || user.email,
-    idNumber: payload.idNumber,
-    dateOfBirth: payload.dateOfBirth,
-    district: payload.district,
-    subcounty: payload.subcounty,
-    village: payload.village,
-    category: payload.category,
-    amount,
-    termMonths,
-    purpose,
-    employerName: payload.employerName,
-    positionTitle: payload.positionTitle,
-    employmentTenure: payload.employmentTenure,
-    businessName: payload.businessName,
-    businessType: payload.businessType,
-    businessRegistration: payload.businessRegistration,
-    monthlyIncome: payload.monthlyIncome,
-    otherIncome: payload.otherIncome,
-    existingObligations: payload.existingObligations,
-    documents,
-  });
+  try {
+    assertUniqueProjectResources({
+      userId: user.id,
+      phone,
+      email: payload.email || user.email,
+      idNumber: payload.idNumber,
+      businessRegistration: payload.businessRegistration,
+      primaryWallet: payload.primaryWallet || existingProfile.primaryWallet,
+      wallets: payload.primaryWallet || existingProfile.primaryWallet
+        ? [payload.primaryWallet || existingProfile.primaryWallet]
+        : existingProfile.wallets,
+      bankAccount: payload.bankAccount || existingProfile.bankAccount,
+      documents,
+    });
+  } catch (error) {
+    if (sendLoanConflict(res, error)) {
+      return;
+    }
+    throw error;
+  }
+
+  let updatedProfile;
+  let application;
+  try {
+    updatedProfile = updateAuthUserProfile(user.id, {
+      fullName,
+      address: payload.village || "",
+      district: payload.district || "",
+      subcounty: payload.subcounty || "",
+      village: payload.village || "",
+      category: payload.category || "",
+      dateOfBirth: payload.dateOfBirth || "",
+      idNumber: payload.idNumber || "",
+      employmentStatus: payload.category || "",
+      employerName: payload.employerName || "",
+      positionTitle: payload.positionTitle || "",
+      employmentTenure: payload.employmentTenure || "",
+      businessName: payload.businessName || "",
+      businessType: payload.businessType || "",
+      businessRegistration: payload.businessRegistration || "",
+      monthlyIncomeUgx: Number(payload.monthlyIncome) || 0,
+      otherIncomeUgx: Number(payload.otherIncome) || 0,
+      existingObligations: payload.existingObligations || "",
+      primaryWallet: payload.primaryWallet || existingProfile.primaryWallet,
+      bankAccount: payload.bankAccount || existingProfile.bankAccount,
+      bankLinked: Boolean(payload.bankAccount || existingProfile.bankAccount),
+    });
+
+    application = createLoanApplication({
+      userId: user.id,
+      fullName,
+      phone,
+      email: payload.email || user.email,
+      idNumber: payload.idNumber,
+      dateOfBirth: payload.dateOfBirth,
+      district: payload.district,
+      subcounty: payload.subcounty,
+      village: payload.village,
+      category: payload.category,
+      amount,
+      termMonths,
+      purpose,
+      employerName: payload.employerName,
+      positionTitle: payload.positionTitle,
+      employmentTenure: payload.employmentTenure,
+      businessName: payload.businessName,
+      businessType: payload.businessType,
+      businessRegistration: payload.businessRegistration,
+      monthlyIncome: payload.monthlyIncome,
+      otherIncome: payload.otherIncome,
+      existingObligations: payload.existingObligations,
+      documents,
+    });
+  } catch (error) {
+    if (sendLoanConflict(res, error)) {
+      return;
+    }
+    throw error;
+  }
 
   createNotification({
     userId: user.id,

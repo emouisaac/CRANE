@@ -1120,16 +1120,19 @@
             <div id="login-phone-error" class="form-error"></div>
           </div>
 
-          <div class="form-group">
+          <div class="form-group password-field">
             <label for="login-pin" class="form-label">PIN</label>
-            <input
-              type="password"
-              id="login-pin"
-              class="form-input"
-              placeholder="Enter your 6-digit PIN"
-              maxlength="6"
-              required
-            >
+            <div class="password-input-wrapper">
+              <input
+                type="password"
+                id="login-pin"
+                class="form-input"
+                placeholder="Enter your 6-digit PIN"
+                maxlength="6"
+                required
+              >
+              <button type="button" class="password-toggle" data-target="login-pin">Show</button>
+            </div>
             <div id="login-pin-error" class="form-error"></div>
           </div>
 
@@ -1178,29 +1181,35 @@
             <div id="register-email-error" class="form-error"></div>
           </div>
 
-          <div class="form-group">
+          <div class="form-group password-field">
             <label for="register-pin" class="form-label">Create 6-Digit PIN</label>
-            <input
-              type="password"
-              id="register-pin"
-              class="form-input"
-              placeholder="Enter 6-digit PIN"
-              maxlength="6"
-              required
-            >
+            <div class="password-input-wrapper">
+              <input
+                type="password"
+                id="register-pin"
+                class="form-input"
+                placeholder="Enter 6-digit PIN"
+                maxlength="6"
+                required
+              >
+              <button type="button" class="password-toggle" data-target="register-pin">Show</button>
+            </div>
             <div id="register-pin-error" class="form-error"></div>
           </div>
 
-          <div class="form-group">
+          <div class="form-group password-field">
             <label for="register-pin-confirm" class="form-label">Confirm PIN</label>
-            <input
-              type="password"
-              id="register-pin-confirm"
-              class="form-input"
-              placeholder="Confirm your PIN"
-              maxlength="6"
-              required
-            >
+            <div class="password-input-wrapper">
+              <input
+                type="password"
+                id="register-pin-confirm"
+                class="form-input"
+                placeholder="Confirm your PIN"
+                maxlength="6"
+                required
+              >
+              <button type="button" class="password-toggle" data-target="register-pin-confirm">Show</button>
+            </div>
             <div id="register-pin-confirm-error" class="form-error"></div>
           </div>
 

@@ -44,6 +44,396 @@ function ensureColumn(tableName, columnName, definition) {
   }
 }
 
+function ensureUniqueExpressionIndex(indexName, tableName, expression, whereClause = "") {
+  const predicate = whereClause ? ` WHERE ${whereClause}` : "";
+  getDatabase().exec(`
+    CREATE UNIQUE INDEX IF NOT EXISTS ${indexName}
+    ON ${tableName} (${expression})${predicate}
+  `);
+}
+
+const DEFAULT_PHONE_COUNTRY = "UG";
+const phoneCountryConfig = {
+  UG: {
+    dialCode: "256",
+    localPattern: /^7\d{8}$/,
+  },
+  KE: {
+    dialCode: "254",
+    localPattern: /^(?:1|7)\d{8}$/,
+  },
+  TZ: {
+    dialCode: "255",
+    localPattern: /^[67]\d{8}$/,
+  },
+  NG: {
+    dialCode: "234",
+    localPattern: /^[7-9]\d{9}$/,
+  },
+};
+const phoneDialCodes = Object.fromEntries(
+  Object.entries(phoneCountryConfig).map(([country, settings]) => [country, settings.dialCode])
+);
+
+function parsePhoneDigits(phone) {
+  return String(phone || "")
+    .replace(/\D/g, "")
+    .replace(/^00/, "");
+}
+
+function normalizeSubscriberDigits(digits, country) {
+  const config = phoneCountryConfig[country];
+  if (!config || !digits) {
+    return "";
+  }
+
+  let subscriber = String(digits).replace(/\D/g, "");
+  if (subscriber.startsWith(config.dialCode)) {
+    subscriber = subscriber.slice(config.dialCode.length);
+  }
+
+  subscriber = subscriber.replace(/^0+/, "");
+  if (!subscriber) {
+    return "";
+  }
+
+  return config.localPattern.test(subscriber) ? subscriber : "";
+}
+
+function buildPhoneLookupCandidates(phone, country = null) {
+  const digits = parsePhoneDigits(phone);
+  if (!digits) {
+    return [];
+  }
+
+  const candidates = [];
+  const pushCandidate = (value) => {
+    if (value && !candidates.includes(value)) {
+      candidates.push(value);
+    }
+  };
+
+  const preferredCountry = phoneCountryConfig[country] ? country : null;
+  const explicitCountry = Object.keys(phoneCountryConfig).find((key) => digits.startsWith(phoneCountryConfig[key].dialCode));
+  const tryCountry = (code) => {
+    const subscriber = normalizeSubscriberDigits(digits, code);
+    if (subscriber) {
+      pushCandidate(`+${phoneCountryConfig[code].dialCode}${subscriber}`);
+    }
+  };
+
+  if (preferredCountry) {
+    tryCountry(preferredCountry);
+  }
+
+  if (explicitCountry) {
+    tryCountry(explicitCountry);
+  }
+
+  if (!preferredCountry && !explicitCountry) {
+    tryCountry(DEFAULT_PHONE_COUNTRY);
+  }
+
+  if (!candidates.length) {
+    if (preferredCountry) {
+      const fallbackSubscriber = digits.replace(/^0+/, "");
+      if (fallbackSubscriber) {
+        pushCandidate(`+${phoneCountryConfig[preferredCountry].dialCode}${fallbackSubscriber}`);
+      }
+    } else if (explicitCountry) {
+      pushCandidate(`+${digits}`);
+    } else {
+      pushCandidate(`+${digits.replace(/^0+/, "") || digits}`);
+    }
+  }
+
+  return candidates;
+}
+
+function canonicalizePhone(phone, country = null) {
+  return buildPhoneLookupCandidates(phone, country)[0] || "";
+}
+
+function getLastNineDigits(phone) {
+  const digits = parsePhoneDigits(phone);
+  return digits.length >= 9 ? digits.slice(-9) : "";
+}
+
+function parseIsoDate(value) {
+  if (!value) {
+    return Number.NaN;
+  }
+
+  const time = new Date(value).getTime();
+  return Number.isFinite(time) ? time : Number.NaN;
+}
+
+function pickEarlierIso(first, second) {
+  const firstTime = parseIsoDate(first);
+  const secondTime = parseIsoDate(second);
+
+  if (!Number.isFinite(firstTime)) return second || null;
+  if (!Number.isFinite(secondTime)) return first || null;
+  return firstTime <= secondTime ? first : second;
+}
+
+function pickLaterIso(first, second) {
+  const firstTime = parseIsoDate(first);
+  const secondTime = parseIsoDate(second);
+
+  if (!Number.isFinite(firstTime)) return second || null;
+  if (!Number.isFinite(secondTime)) return first || null;
+  return firstTime >= secondTime ? first : second;
+}
+
+function uniqueValues(values) {
+  return Array.from(new Set((values || []).filter(Boolean)));
+}
+
+function normalizeEmailValue(value) {
+  const normalized = String(value || "").trim().toLowerCase();
+  return normalized || null;
+}
+
+function normalizeComparableValue(value) {
+  const normalized = String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "");
+  return normalized || null;
+}
+
+function normalizePhoneLikeValue(value, country = null) {
+  if (!value) {
+    return null;
+  }
+
+  const normalized = canonicalizePhone(value, country);
+  return normalized || null;
+}
+
+function normalizeDocumentTokens(documents = []) {
+  const tokens = [];
+  const pushToken = (value) => {
+    const normalized = normalizeComparableValue(value);
+    if (normalized) {
+      tokens.push(normalized);
+    }
+  };
+
+  for (const document of Array.isArray(documents) ? documents : []) {
+    if (!document) {
+      continue;
+    }
+
+    if (typeof document === "string" || typeof document === "number") {
+      pushToken(document);
+      continue;
+    }
+
+    if (typeof document === "object") {
+      const tokenCountBeforeDocument = tokens.length;
+      [
+        document.id,
+        document.fileId,
+        document.name,
+        document.fileName,
+        document.filename,
+        document.path,
+        document.url,
+        document.number,
+        document.documentNumber,
+        document.reference,
+      ].forEach(pushToken);
+
+      if (tokens.length === tokenCountBeforeDocument) {
+        pushToken(JSON.stringify(document));
+      }
+    }
+  }
+
+  return tokens;
+}
+
+function createDuplicateResourceError(field, message) {
+  const error = new Error(message);
+  error.code = "DUPLICATE_RESOURCE";
+  error.field = field;
+  error.statusCode = 409;
+  return error;
+}
+
+function assertUniqueArrayItems(items, field, message) {
+  const values = Array.isArray(items) ? items.filter(Boolean) : [];
+  if (new Set(values).size !== values.length) {
+    throw createDuplicateResourceError(field, message);
+  }
+}
+
+function assertUniqueProjectResources({
+  userId = null,
+  adminId = null,
+  phone = null,
+  phoneCountry = null,
+  email = null,
+  idNumber = null,
+  businessRegistration = null,
+  primaryWallet = null,
+  wallets = [],
+  bankAccount = null,
+  documents = [],
+} = {}) {
+  const normalizedPhone = normalizePhoneLikeValue(phone, phoneCountry);
+  const normalizedEmail = normalizeEmailValue(email);
+  const normalizedIdNumber = normalizeComparableValue(idNumber);
+  const normalizedBusinessRegistration = normalizeComparableValue(businessRegistration);
+  const normalizedWallet = normalizePhoneLikeValue(primaryWallet, phoneCountry);
+  const normalizedWallets = (Array.isArray(wallets) ? wallets : [])
+    .map((wallet) => normalizePhoneLikeValue(wallet, phoneCountry))
+    .filter(Boolean);
+  const normalizedBankAccount = normalizeComparableValue(bankAccount);
+  const normalizedDocuments = normalizeDocumentTokens(documents);
+  const uniqueDocumentTokens = uniqueValues(normalizedDocuments);
+
+  assertUniqueArrayItems(
+    normalizedWallets,
+    "wallets",
+    "Duplicate wallet phone numbers were supplied in this request."
+  );
+
+  assertUniqueArrayItems(
+    normalizedDocuments,
+    "documents",
+    "Duplicate documents were supplied in this request."
+  );
+
+  const authUsers = getDatabase()
+    .prepare(`
+      SELECT id, phone, email, profile_json
+      FROM auth_users
+    `)
+    .all()
+    .map(normalizeAuthUserRow);
+
+  for (const user of authUsers) {
+    if (userId && user.id === userId) {
+      continue;
+    }
+
+    const profile = buildAuthUserProfile(user);
+    const usedPhones = uniqueValues([
+      normalizePhoneLikeValue(user.phone),
+      normalizePhoneLikeValue(profile.primaryWallet),
+      ...((Array.isArray(profile.wallets) ? profile.wallets : []).map((wallet) => normalizePhoneLikeValue(wallet))),
+    ]);
+
+    if (normalizedPhone && usedPhones.includes(normalizedPhone)) {
+      throw createDuplicateResourceError("phone", "That phone number is already in use.");
+    }
+
+    if (normalizedWallet && usedPhones.includes(normalizedWallet)) {
+      throw createDuplicateResourceError("primaryWallet", "That phone number is already in use.");
+    }
+
+    if (normalizedWallets.some((wallet) => usedPhones.includes(wallet))) {
+      throw createDuplicateResourceError("wallets", "One or more wallet phone numbers are already in use.");
+    }
+
+    if (normalizedEmail && normalizeEmailValue(user.email) === normalizedEmail) {
+      throw createDuplicateResourceError("email", "That email address is already in use.");
+    }
+
+    if (normalizedIdNumber && normalizeComparableValue(profile.idNumber) === normalizedIdNumber) {
+      throw createDuplicateResourceError("idNumber", "That ID document number is already linked to another account.");
+    }
+
+    if (
+      normalizedBusinessRegistration &&
+      normalizeComparableValue(profile.businessRegistration) === normalizedBusinessRegistration
+    ) {
+      throw createDuplicateResourceError(
+        "businessRegistration",
+        "That business registration is already linked to another account."
+      );
+    }
+
+    if (normalizedBankAccount && normalizeComparableValue(profile.bankAccount) === normalizedBankAccount) {
+      throw createDuplicateResourceError("bankAccount", "That bank account is already linked to another account.");
+    }
+
+    const existingKycDocuments = uniqueValues(normalizeDocumentTokens(profile.kycDocuments || []));
+    if (uniqueDocumentTokens.some((document) => existingKycDocuments.includes(document))) {
+      throw createDuplicateResourceError("documents", "One or more documents are already linked to another account.");
+    }
+  }
+
+  const adminAccounts = getDatabase()
+    .prepare(`
+      SELECT id, email
+      FROM admin_accounts
+    `)
+    .all();
+
+  for (const admin of adminAccounts) {
+    if (adminId && admin.id === adminId) {
+      continue;
+    }
+
+    if (normalizedEmail && normalizeEmailValue(admin.email) === normalizedEmail) {
+      throw createDuplicateResourceError("email", "That email address is already in use.");
+    }
+  }
+
+  const applications = getDatabase()
+    .prepare(`
+      SELECT id, user_id, phone, email, id_number, business_registration, documents_json
+      FROM loan_applications
+    `)
+    .all()
+    .map(normalizeLoanApplicationRow);
+
+  for (const application of applications) {
+    if (userId && application.user_id === userId) {
+      continue;
+    }
+
+    if (normalizedPhone && normalizePhoneLikeValue(application.phone) === normalizedPhone) {
+      throw createDuplicateResourceError("phone", "That phone number is already in use.");
+    }
+
+    if (normalizedWallet && normalizePhoneLikeValue(application.phone) === normalizedWallet) {
+      throw createDuplicateResourceError("primaryWallet", "That phone number is already in use.");
+    }
+
+    if (normalizedWallets.some((wallet) => normalizePhoneLikeValue(application.phone) === wallet)) {
+      throw createDuplicateResourceError("wallets", "One or more wallet phone numbers are already in use.");
+    }
+
+    if (normalizedEmail && normalizeEmailValue(application.email) === normalizedEmail) {
+      throw createDuplicateResourceError("email", "That email address is already in use.");
+    }
+
+    if (normalizedIdNumber && normalizeComparableValue(application.id_number) === normalizedIdNumber) {
+      throw createDuplicateResourceError("idNumber", "That ID document number is already linked to another account.");
+    }
+
+    if (
+      normalizedBusinessRegistration &&
+      normalizeComparableValue(application.business_registration) === normalizedBusinessRegistration
+    ) {
+      throw createDuplicateResourceError(
+        "businessRegistration",
+        "That business registration is already linked to another account."
+      );
+    }
+
+    const existingApplicationDocuments = uniqueValues(normalizeDocumentTokens(application.documents || []));
+    if (uniqueDocumentTokens.some((document) => existingApplicationDocuments.includes(document))) {
+      throw createDuplicateResourceError("documents", "One or more documents are already linked to another account.");
+    }
+  }
+}
+
 function normalizeAuthUserRow(row) {
   if (!row) {
     return null;
@@ -232,6 +622,436 @@ function buildAuthUserProfile(user) {
       autoDebitEnabled: Boolean(storedProfile.security?.autoDebitEnabled),
     },
   };
+}
+
+function mergeUserProfiles(primaryProfile, secondaryProfile) {
+  const baseProfile = primaryProfile && typeof primaryProfile === "object" ? primaryProfile : {};
+  const incomingProfile = secondaryProfile && typeof secondaryProfile === "object" ? secondaryProfile : {};
+
+  return {
+    ...incomingProfile,
+    ...baseProfile,
+    wallets: uniqueValues([
+      ...(Array.isArray(incomingProfile.wallets) ? incomingProfile.wallets : []),
+      ...(Array.isArray(baseProfile.wallets) ? baseProfile.wallets : []),
+    ]),
+    notificationPreferences: {
+      ...(incomingProfile.notificationPreferences || {}),
+      ...(baseProfile.notificationPreferences || {}),
+    },
+    security: {
+      ...(incomingProfile.security || {}),
+      ...(baseProfile.security || {}),
+    },
+  };
+}
+
+function saveAuthUserRecord(user) {
+  getDatabase()
+    .prepare(`
+      INSERT INTO auth_users (id, phone, email, pin_hash, status, profile_json, last_login_at, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(id) DO UPDATE SET
+        phone = excluded.phone,
+        email = excluded.email,
+        pin_hash = excluded.pin_hash,
+        status = excluded.status,
+        profile_json = excluded.profile_json,
+        last_login_at = excluded.last_login_at,
+        created_at = excluded.created_at,
+        updated_at = excluded.updated_at
+    `)
+    .run(
+      user.id,
+      user.phone,
+      user.email || null,
+      user.pinHash,
+      user.status || "active",
+      JSON.stringify(user.profile || {}),
+      user.lastLoginAt || null,
+      user.createdAt || nowIso(),
+      user.updatedAt || nowIso()
+    );
+
+  return findAuthUserById(user.id);
+}
+
+function mergeUserConsents(sourceUserId, targetUserId) {
+  const sourceRows = getDatabase()
+    .prepare(`
+      SELECT id, consent_key, consent_state, updated_at
+      FROM user_consents
+      WHERE user_id = ?
+    `)
+    .all(sourceUserId);
+
+  for (const row of sourceRows) {
+    const existing = getDatabase()
+      .prepare(`
+        SELECT id, updated_at
+        FROM user_consents
+        WHERE user_id = ? AND consent_key = ?
+      `)
+      .get(targetUserId, row.consent_key);
+
+    if (!existing) {
+      getDatabase()
+        .prepare("UPDATE user_consents SET user_id = ? WHERE id = ?")
+        .run(targetUserId, row.id);
+      continue;
+    }
+
+    if ((parseIsoDate(row.updated_at) || 0) > (parseIsoDate(existing.updated_at) || 0)) {
+      getDatabase()
+        .prepare(`
+          UPDATE user_consents
+          SET consent_state = ?, updated_at = ?
+          WHERE id = ?
+        `)
+        .run(row.consent_state, row.updated_at, existing.id);
+    }
+
+    getDatabase()
+      .prepare("DELETE FROM user_consents WHERE id = ?")
+      .run(row.id);
+  }
+}
+
+function reassignUserReferences(sourceUserId, targetUserId) {
+  mergeUserConsents(sourceUserId, targetUserId);
+
+  [
+    ["loan_applications", "user_id"],
+    ["loans", "user_id"],
+    ["notifications", "user_id"],
+    ["chat_messages", "user_id"],
+    ["password_reset_requests", "user_id"],
+    ["audit_logs", "user_id"],
+    ["risk_alerts", "user_id"],
+  ].forEach(([tableName, columnName]) => {
+    getDatabase()
+      .prepare(`UPDATE ${tableName} SET ${columnName} = ? WHERE ${columnName} = ?`)
+      .run(targetUserId, sourceUserId);
+  });
+
+  getDatabase()
+    .prepare(`
+      UPDATE refresh_sessions
+      SET subject_id = ?
+      WHERE subject_type = 'borrower' AND subject_id = ?
+    `)
+    .run(targetUserId, sourceUserId);
+
+  getDatabase()
+    .prepare(`
+      UPDATE audit_logs
+      SET actor_id = ?
+      WHERE actor_type = 'user' AND actor_id = ?
+    `)
+    .run(targetUserId, sourceUserId);
+}
+
+function syncOwnedPhoneFields(userId, phone) {
+  getDatabase()
+    .prepare("UPDATE loan_applications SET phone = ? WHERE user_id = ?")
+    .run(phone, userId);
+}
+
+function choosePrimaryAuthUser(users) {
+  return [...users].sort((left, right) => {
+    const lastLoginDiff = (parseIsoDate(right.last_login_at) || 0) - (parseIsoDate(left.last_login_at) || 0);
+    if (lastLoginDiff !== 0) {
+      return lastLoginDiff;
+    }
+
+    const updatedDiff = (parseIsoDate(right.updated_at) || 0) - (parseIsoDate(left.updated_at) || 0);
+    if (updatedDiff !== 0) {
+      return updatedDiff;
+    }
+
+    return (parseIsoDate(left.created_at) || 0) - (parseIsoDate(right.created_at) || 0);
+  })[0];
+}
+
+function choosePreferredRecord(rows, { idField = "id", lastActivityField = "last_login_at", updatedField = "updated_at", createdField = "created_at" } = {}) {
+  return [...rows].sort((left, right) => {
+    const activityDiff = (parseIsoDate(right[lastActivityField]) || 0) - (parseIsoDate(left[lastActivityField]) || 0);
+    if (activityDiff !== 0) {
+      return activityDiff;
+    }
+
+    const updatedDiff = (parseIsoDate(right[updatedField]) || 0) - (parseIsoDate(left[updatedField]) || 0);
+    if (updatedDiff !== 0) {
+      return updatedDiff;
+    }
+
+    const createdDiff = (parseIsoDate(left[createdField]) || 0) - (parseIsoDate(right[createdField]) || 0);
+    if (createdDiff !== 0) {
+      return createdDiff;
+    }
+
+    return String(left[idField] || "").localeCompare(String(right[idField] || ""));
+  })[0];
+}
+
+function mergeAuthUsers(primaryUser, secondaryUser, canonicalPhone) {
+  reassignUserReferences(secondaryUser.id, primaryUser.id);
+
+  const mergedUser = saveAuthUserRecord({
+    id: primaryUser.id,
+    phone: canonicalPhone,
+    email: primaryUser.email || secondaryUser.email || null,
+    pinHash: primaryUser.pin_hash || secondaryUser.pin_hash,
+    status: primaryUser.status === "active" ? primaryUser.status : secondaryUser.status || primaryUser.status,
+    profile: mergeUserProfiles(primaryUser.profile, secondaryUser.profile),
+    lastLoginAt: pickLaterIso(primaryUser.last_login_at, secondaryUser.last_login_at),
+    createdAt: pickEarlierIso(primaryUser.created_at, secondaryUser.created_at) || primaryUser.created_at,
+    updatedAt: pickLaterIso(primaryUser.updated_at, secondaryUser.updated_at) || nowIso(),
+  });
+
+  getDatabase()
+    .prepare("DELETE FROM auth_users WHERE id = ?")
+    .run(secondaryUser.id);
+
+  syncOwnedPhoneFields(mergedUser.id, canonicalPhone);
+  return mergedUser;
+}
+
+function normalizeActiveAuthUsers() {
+  const users = getDatabase()
+    .prepare(`
+      SELECT id, phone, email, pin_hash, status, profile_json, last_login_at, created_at, updated_at
+      FROM auth_users
+      ORDER BY created_at ASC
+    `)
+    .all()
+    .map(normalizeAuthUserRow);
+
+  const groupedUsers = new Map();
+  for (const user of users) {
+    const canonicalPhone = canonicalizePhone(user.phone);
+    if (!canonicalPhone) {
+      continue;
+    }
+
+    if (!groupedUsers.has(canonicalPhone)) {
+      groupedUsers.set(canonicalPhone, []);
+    }
+
+    groupedUsers.get(canonicalPhone).push(user);
+  }
+
+  for (const [canonicalPhone, matchingUsers] of groupedUsers.entries()) {
+    if (!matchingUsers.length) {
+      continue;
+    }
+
+    let primaryUser = choosePrimaryAuthUser(matchingUsers);
+    for (const duplicateUser of matchingUsers) {
+      if (duplicateUser.id === primaryUser.id) {
+        continue;
+      }
+
+      primaryUser = mergeAuthUsers(primaryUser, duplicateUser, canonicalPhone);
+    }
+
+    if (primaryUser.phone !== canonicalPhone) {
+      primaryUser = saveAuthUserRecord({
+        id: primaryUser.id,
+        phone: canonicalPhone,
+        email: primaryUser.email || null,
+        pinHash: primaryUser.pin_hash,
+        status: primaryUser.status,
+        profile: primaryUser.profile,
+        lastLoginAt: primaryUser.last_login_at,
+        createdAt: primaryUser.created_at,
+        updatedAt: nowIso(),
+      });
+    }
+
+    syncOwnedPhoneFields(primaryUser.id, canonicalPhone);
+  }
+}
+
+function normalizeUniqueEmailAssignments() {
+  const authUsers = getDatabase()
+    .prepare(`
+      SELECT id, phone, email, pin_hash, status, profile_json, last_login_at, created_at, updated_at
+      FROM auth_users
+      ORDER BY created_at ASC
+    `)
+    .all()
+    .map(normalizeAuthUserRow);
+
+  const authUsersByEmail = new Map();
+  for (const user of authUsers) {
+    const normalizedEmail = normalizeEmailValue(user.email);
+    if (!normalizedEmail) {
+      continue;
+    }
+
+    if (!authUsersByEmail.has(normalizedEmail)) {
+      authUsersByEmail.set(normalizedEmail, []);
+    }
+
+    authUsersByEmail.get(normalizedEmail).push(user);
+  }
+
+  for (const [, matchingUsers] of authUsersByEmail.entries()) {
+    if (matchingUsers.length <= 1) {
+      continue;
+    }
+
+    const primaryUser = choosePrimaryAuthUser(matchingUsers);
+    for (const duplicateUser of matchingUsers) {
+      if (duplicateUser.id === primaryUser.id) {
+        continue;
+      }
+
+      saveAuthUserRecord({
+        id: duplicateUser.id,
+        phone: duplicateUser.phone,
+        email: null,
+        pinHash: duplicateUser.pin_hash,
+        status: duplicateUser.status,
+        profile: duplicateUser.profile,
+        lastLoginAt: duplicateUser.last_login_at,
+        createdAt: duplicateUser.created_at,
+        updatedAt: nowIso(),
+      });
+    }
+  }
+
+  const adminAccounts = getDatabase()
+    .prepare(`
+      SELECT id, username, full_name, email, password_hash, role, status, last_login_at, created_at, updated_at
+      FROM admin_accounts
+      ORDER BY created_at ASC
+    `)
+    .all()
+    .map(normalizeAdminAccountRow);
+
+  const adminAccountsByEmail = new Map();
+  for (const account of adminAccounts) {
+    const normalizedEmail = normalizeEmailValue(account.email);
+    if (!normalizedEmail) {
+      continue;
+    }
+
+    if (!adminAccountsByEmail.has(normalizedEmail)) {
+      adminAccountsByEmail.set(normalizedEmail, []);
+    }
+
+    adminAccountsByEmail.get(normalizedEmail).push(account);
+  }
+
+  for (const [, matchingAccounts] of adminAccountsByEmail.entries()) {
+    if (matchingAccounts.length <= 1) {
+      continue;
+    }
+
+    const primaryAccount = choosePreferredRecord(matchingAccounts, {
+      lastActivityField: "last_login_at",
+      updatedField: "updated_at",
+      createdField: "created_at",
+    });
+
+    for (const duplicateAccount of matchingAccounts) {
+      if (duplicateAccount.id === primaryAccount.id) {
+        continue;
+      }
+
+      updateAdminAccount(duplicateAccount.id, {
+        email: null,
+      });
+    }
+  }
+}
+
+function importLegacyAuthUsers() {
+  const legacyDatabasePaths = [
+    path.resolve(process.cwd(), "database.sqlite"),
+    path.resolve(process.cwd(), "server", "database.sqlite"),
+  ].filter((legacyPath) => legacyPath !== config.dbPath && fs.existsSync(legacyPath));
+
+  for (const legacyPath of legacyDatabasePaths) {
+    let legacyDb;
+
+    try {
+      legacyDb = new DatabaseSync(legacyPath, { readonly: true });
+      const hasAuthTable = legacyDb
+        .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'auth_users'")
+        .get();
+
+      if (!hasAuthTable) {
+        continue;
+      }
+
+      const legacyColumns = new Set(
+        legacyDb.prepare("PRAGMA table_info(auth_users)").all().map((column) => column.name)
+      );
+      const selectColumns = [
+        "id",
+        "phone",
+        "email",
+        "pin_hash",
+        legacyColumns.has("status") ? "status" : "'active' AS status",
+        legacyColumns.has("profile_json") ? "profile_json" : "'{}' AS profile_json",
+        legacyColumns.has("last_login_at") ? "last_login_at" : "NULL AS last_login_at",
+        legacyColumns.has("created_at") ? "created_at" : "NULL AS created_at",
+        legacyColumns.has("updated_at")
+          ? "updated_at"
+          : (legacyColumns.has("created_at") ? "created_at AS updated_at" : "NULL AS updated_at"),
+      ];
+      const legacyUsers = legacyDb
+        .prepare(`
+          SELECT ${selectColumns.join(", ")}
+          FROM auth_users
+          ORDER BY created_at ASC
+        `)
+        .all();
+
+      for (const row of legacyUsers) {
+        const sourceUser = normalizeAuthUserRow(row);
+        const canonicalPhone = canonicalizePhone(sourceUser.phone);
+        if (!canonicalPhone) {
+          continue;
+        }
+
+        const existingUser = findAuthUserByPhone(sourceUser.phone);
+        if (!existingUser) {
+          saveAuthUserRecord({
+            id: sourceUser.id || crypto.randomUUID(),
+            phone: canonicalPhone,
+            email: sourceUser.email || null,
+            pinHash: sourceUser.pin_hash,
+            status: sourceUser.status || "active",
+            profile: sourceUser.profile || {},
+            lastLoginAt: sourceUser.last_login_at,
+            createdAt: sourceUser.created_at || nowIso(),
+            updatedAt: sourceUser.updated_at || sourceUser.created_at || nowIso(),
+          });
+          continue;
+        }
+
+        saveAuthUserRecord({
+          id: existingUser.id,
+          phone: canonicalPhone,
+          email: existingUser.email || sourceUser.email || null,
+          pinHash: existingUser.pin_hash || sourceUser.pin_hash,
+          status: existingUser.status === "active" ? existingUser.status : sourceUser.status || existingUser.status,
+          profile: mergeUserProfiles(existingUser.profile, sourceUser.profile),
+          lastLoginAt: pickLaterIso(existingUser.last_login_at, sourceUser.last_login_at),
+          createdAt: pickEarlierIso(existingUser.created_at, sourceUser.created_at) || existingUser.created_at,
+          updatedAt: pickLaterIso(existingUser.updated_at, sourceUser.updated_at) || nowIso(),
+        });
+      }
+    } catch (error) {
+      console.warn(`Skipping legacy auth import from ${legacyPath}: ${error.message}`);
+    } finally {
+      legacyDb?.close?.();
+    }
+  }
 }
 
 function initializeDatabase() {
@@ -451,6 +1271,22 @@ function initializeDatabase() {
   ensureColumn("loans", "metadata_json", `TEXT NOT NULL DEFAULT '{}'`);
   ensureColumn("notifications", "meta_json", `TEXT NOT NULL DEFAULT '{}'`);
 
+  importLegacyAuthUsers();
+  normalizeActiveAuthUsers();
+  normalizeUniqueEmailAssignments();
+  ensureUniqueExpressionIndex(
+    "auth_users_email_unique_idx",
+    "auth_users",
+    "lower(trim(email))",
+    "email IS NOT NULL AND trim(email) <> ''"
+  );
+  ensureUniqueExpressionIndex(
+    "admin_accounts_email_unique_idx",
+    "admin_accounts",
+    "lower(trim(email))",
+    "email IS NOT NULL AND trim(email) <> ''"
+  );
+
   const existingSettings = getSetting(ADMIN_SETTINGS_KEY);
   if (!existingSettings) {
     saveSetting(ADMIN_SETTINGS_KEY, defaultAdminSettings());
@@ -511,21 +1347,43 @@ function saveSharedState(state) {
   return getSharedState();
 }
 
-function findAuthUserByPhone(phone) {
+function findAuthUserByPhone(phone, country = null) {
   if (!phone) {
     return null;
   }
 
-  const row =
-    getDatabase()
+  for (const candidate of buildPhoneLookupCandidates(phone, country)) {
+    const row =
+      getDatabase()
+        .prepare(`
+          SELECT id, phone, email, pin_hash, status, profile_json, last_login_at, created_at, updated_at
+          FROM auth_users
+          WHERE phone = ?
+        `)
+        .get(candidate) || null;
+
+    if (row) {
+      return normalizeAuthUserRow(row);
+    }
+  }
+
+  const last9 = getLastNineDigits(phone);
+  if (last9) {
+    const rows = getDatabase()
       .prepare(`
         SELECT id, phone, email, pin_hash, status, profile_json, last_login_at, created_at, updated_at
         FROM auth_users
-        WHERE phone = ?
+        WHERE substr(replace(phone, '+', ''), -9) = ?
+        ORDER BY COALESCE(last_login_at, updated_at, created_at) DESC, created_at ASC
       `)
-      .get(String(phone).trim()) || null;
+      .all(last9);
 
-  return normalizeAuthUserRow(row);
+    if (rows.length > 0) {
+      return normalizeAuthUserRow(rows[0]);
+    }
+  }
+
+  return null;
 }
 
 function findAuthUserById(userId) {
@@ -573,8 +1431,8 @@ function listAuthUsers({ search = "", status = "" } = {}) {
     });
 }
 
-function upsertAuthUser({ phone, email = null, pinHash }) {
-  const normalizedPhone = String(phone || "").trim();
+function upsertAuthUser({ phone, email = null, pinHash, country = null, allowExisting = true }) {
+  const normalizedPhone = canonicalizePhone(phone, country);
   if (!normalizedPhone) {
     throw new Error("Phone is required.");
   }
@@ -583,7 +1441,20 @@ function upsertAuthUser({ phone, email = null, pinHash }) {
     throw new Error("PIN hash is required.");
   }
 
-  const existingUser = findAuthUserByPhone(normalizedPhone);
+  const existingUser = findAuthUserByPhone(phone, country);
+  if (existingUser && !allowExisting) {
+    const error = new Error("That phone number is already registered.");
+    error.code = "AUTH_USER_EXISTS";
+    throw error;
+  }
+
+  assertUniqueProjectResources({
+    userId: existingUser?.id || null,
+    phone: normalizedPhone,
+    phoneCountry: country,
+    email,
+  });
+
   const timestamp = nowIso();
   const userId = existingUser?.id || crypto.randomUUID();
   const normalizedEmail =
@@ -594,35 +1465,43 @@ function upsertAuthUser({ phone, email = null, pinHash }) {
         : null;
   const profilePayload = JSON.stringify(existingUser?.profile || {});
 
-  getDatabase()
-    .prepare(`
-      INSERT INTO auth_users (id, phone, email, pin_hash, status, profile_json, last_login_at, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-      ON CONFLICT(phone) DO UPDATE SET
-        email = excluded.email,
-        pin_hash = excluded.pin_hash,
-        status = excluded.status,
-        profile_json = excluded.profile_json,
-        updated_at = excluded.updated_at
-    `)
-    .run(
-      userId,
-      normalizedPhone,
-      normalizedEmail,
+  if (!allowExisting) {
+    getDatabase()
+      .prepare(`
+        INSERT INTO auth_users (id, phone, email, pin_hash, status, profile_json, last_login_at, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `)
+      .run(
+        userId,
+        normalizedPhone,
+        normalizedEmail,
+        pinHash,
+        existingUser?.status || "active",
+        profilePayload,
+        existingUser?.last_login_at || null,
+        existingUser?.created_at || timestamp,
+        timestamp
+      );
+  } else {
+    saveAuthUserRecord({
+      id: userId,
+      phone: normalizedPhone,
+      email: normalizedEmail,
       pinHash,
-      existingUser?.status || "active",
-      profilePayload,
-      existingUser?.last_login_at || null,
-      existingUser?.created_at || timestamp,
-      timestamp
-    );
+      status: existingUser?.status || "active",
+      profile: existingUser?.profile || {},
+      lastLoginAt: existingUser?.last_login_at || null,
+      createdAt: existingUser?.created_at || timestamp,
+      updatedAt: timestamp,
+    });
+  }
 
-  return findAuthUserByPhone(normalizedPhone);
+  return findAuthUserById(userId);
 }
 
-function touchAuthUserLogin(phone) {
-  const normalizedPhone = String(phone || "").trim();
-  if (!normalizedPhone) {
+function touchAuthUserLogin(phone, country = null) {
+  const existingUser = findAuthUserByPhone(phone, country);
+  if (!existingUser) {
     return null;
   }
 
@@ -632,11 +1511,11 @@ function touchAuthUserLogin(phone) {
     .prepare(`
       UPDATE auth_users
       SET last_login_at = ?, updated_at = ?
-      WHERE phone = ?
+      WHERE id = ?
     `)
-    .run(timestamp, timestamp, normalizedPhone);
+    .run(timestamp, timestamp, existingUser.id);
 
-  return findAuthUserByPhone(normalizedPhone);
+  return findAuthUserById(existingUser.id);
 }
 
 function updateAuthUserProfile(userId, profileUpdates) {
@@ -649,6 +1528,16 @@ function updateAuthUserProfile(userId, profileUpdates) {
     ...(existingUser.profile || {}),
     ...((profileUpdates && typeof profileUpdates === "object") ? profileUpdates : {}),
   };
+
+  assertUniqueProjectResources({
+    userId: existingUser.id,
+    idNumber: mergedProfile.idNumber,
+    businessRegistration: mergedProfile.businessRegistration,
+    primaryWallet: mergedProfile.primaryWallet,
+    wallets: mergedProfile.wallets,
+    bankAccount: mergedProfile.bankAccount,
+    documents: mergedProfile.kycDocuments,
+  });
 
   getDatabase()
     .prepare(`
@@ -740,6 +1629,10 @@ function createAdminAccount({ username, fullName, email = null, passwordHash, ro
     throw new Error("Password hash is required.");
   }
 
+  assertUniqueProjectResources({
+    email,
+  });
+
   const timestamp = nowIso();
   const adminId = crypto.randomUUID();
 
@@ -780,6 +1673,11 @@ function updateAdminAccount(adminId, updates) {
     role: updates.role || existingAccount.role,
     status: updates.status || existingAccount.status,
   };
+
+  assertUniqueProjectResources({
+    adminId: existingAccount.id,
+    email: nextValues.email,
+  });
 
   getDatabase()
     .prepare(`
@@ -1334,7 +2232,18 @@ function createLoanApplication(input) {
   const settings = getAdminSettings();
   const timestamp = nowIso();
   const applicationId = `APP-${Date.now().toString(36).toUpperCase()}`;
+  const normalizedPhone = canonicalizePhone(input.phone);
   const documents = Array.isArray(input.documents) ? input.documents.filter(Boolean) : [];
+
+  assertUniqueProjectResources({
+    userId: input.userId,
+    phone: normalizedPhone,
+    email: input.email,
+    idNumber: input.idNumber,
+    businessRegistration: input.businessRegistration,
+    documents,
+  });
+
   const score = scoreLoanApplication(input, settings);
 
   getDatabase()
@@ -1352,7 +2261,7 @@ function createLoanApplication(input) {
       applicationId,
       input.userId,
       input.fullName,
-      input.phone,
+      normalizedPhone || input.phone,
       input.email || null,
       input.idNumber || null,
       input.dateOfBirth || null,
@@ -1965,4 +2874,6 @@ module.exports = {
   buildLoanCardFromRow,
   buildMarketingFromScore,
   defaultAdminSettings,
+  canonicalizePhone,
+  assertUniqueProjectResources,
 };

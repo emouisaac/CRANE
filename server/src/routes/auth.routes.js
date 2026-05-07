@@ -6,6 +6,7 @@ const { timingSafeEqual } = require("crypto");
 const { config } = require("../config/env");
 const {
   buildAuthUserProfile,
+  canonicalizePhone,
   consumeOtpChallenge,
   createAdminAccount,
   createOtpChallenge,
@@ -156,6 +157,10 @@ function requireMasterAdmin(req, res, next) {
   return next();
 }
 
+function isDuplicateResourceError(error) {
+  return error?.code === "AUTH_USER_EXISTS" || error?.code === "DUPLICATE_RESOURCE";
+}
+
 router.post("/register/request-otp", (req, res) => {
   const { phone, country } = req.body || {};
 
@@ -166,13 +171,14 @@ router.post("/register/request-otp", (req, res) => {
     });
   }
 
+  const normalizedPhone = canonicalizePhone(phone, country);
   const otpCode = String(Math.floor(100000 + Math.random() * 900000));
-  const challenge = createOtpChallenge(String(phone).trim(), otpCode, new Date(Date.now() + 2 * 60 * 1000).toISOString());
-  const existingUser = findAuthUserByPhone(phone);
+  const challenge = createOtpChallenge(normalizedPhone, otpCode, new Date(Date.now() + 2 * 60 * 1000).toISOString());
+  const existingUser = findAuthUserByPhone(normalizedPhone, country);
 
   return res.json({
     challengeId: challenge.id,
-    phone,
+    phone: normalizedPhone,
     country,
     returningUser: Boolean(existingUser),
     deliveryStatus: "accepted",
@@ -181,7 +187,7 @@ router.post("/register/request-otp", (req, res) => {
 });
 
 router.post("/register/verify-otp", (req, res) => {
-  const { phone, otp, deviceId } = req.body || {};
+  const { phone, otp, deviceId, country } = req.body || {};
 
   if (!phone || !otp) {
     return res.status(400).json({
@@ -190,7 +196,8 @@ router.post("/register/verify-otp", (req, res) => {
     });
   }
 
-  const result = consumeOtpChallenge(String(phone).trim(), String(otp).trim());
+  const normalizedPhone = canonicalizePhone(phone, country);
+  const result = consumeOtpChallenge(normalizedPhone, String(otp).trim());
   if (!result.ok) {
     return res.status(401).json({
       error: "Invalid or expired OTP",
@@ -199,7 +206,7 @@ router.post("/register/verify-otp", (req, res) => {
     });
   }
 
-  const existingUser = findAuthUserByPhone(phone);
+  const existingUser = findAuthUserByPhone(normalizedPhone, country);
   if (!existingUser) {
     return res.json({
       verified: true,
@@ -208,12 +215,20 @@ router.post("/register/verify-otp", (req, res) => {
     });
   }
 
-  const updatedUser = touchAuthUserLogin(phone) || existingUser;
+  const updatedUser = touchAuthUserLogin(normalizedPhone, country) || existingUser;
   return res.json(createBorrowerSession(updatedUser, deviceId));
 });
 
 router.post("/register", (req, res) => {
-  const { phone, email, pin, deviceId } = req.body || {};
+  const { phone, email, pin, deviceId, country } = req.body || {};
+  const normalizedPhone = canonicalizePhone(phone, country);
+
+  if (!normalizedPhone) {
+    return res.status(400).json({
+      error: "Phone number is required",
+      code: "PHONE_REQUIRED",
+    });
+  }
 
   if (!pin || pin.length !== 6 || !/^\d{6}$/.test(pin)) {
     return res.status(400).json({
@@ -232,17 +247,32 @@ router.post("/register", (req, res) => {
     }
   }
 
-  const user = upsertAuthUser({
-    phone,
-    email: email || null,
-    pinHash: hashSecret(pin),
-  });
+  try {
+    const user = upsertAuthUser({
+      phone: normalizedPhone,
+      email: email || null,
+      pinHash: hashSecret(pin),
+      country,
+      allowExisting: false,
+    });
 
-  return res.json(createBorrowerSession(user, deviceId));
+    return res.json(createBorrowerSession(user, deviceId));
+  } catch (error) {
+    const isDuplicateUser =
+      isDuplicateResourceError(error) ||
+      String(error.message || "").toLowerCase().includes("unique");
+
+    return res.status(isDuplicateUser ? 409 : 500).json({
+      error: isDuplicateUser
+        ? error.message || "This phone number is already registered. Please log in instead."
+        : "Registration failed. Please try again.",
+      code: isDuplicateUser ? "AUTH_USER_EXISTS" : "AUTH_REGISTER_FAILED",
+    });
+  }
 });
 
 router.post("/login", (req, res) => {
-  const { phone, pin, password, deviceId } = req.body || {};
+  const { phone, pin, password, deviceId, country } = req.body || {};
 
   if (!phone || (!pin && !password)) {
     return res.status(400).json({
@@ -251,7 +281,7 @@ router.post("/login", (req, res) => {
     });
   }
 
-  const user = findAuthUserByPhone(phone);
+  const user = findAuthUserByPhone(phone, country);
   if (!user) {
     return res.status(401).json({
       error: "User not registered. Please register first.",
@@ -274,7 +304,7 @@ router.post("/login", (req, res) => {
     });
   }
 
-  const updatedUser = touchAuthUserLogin(phone) || user;
+  const updatedUser = touchAuthUserLogin(phone, country) || user;
   return res.json(createBorrowerSession(updatedUser, deviceId));
 });
 
@@ -383,10 +413,12 @@ router.post("/admin/accounts", authenticateAdminToken, requireMasterAdmin, (req,
       account,
     });
   } catch (error) {
-    const isUniqueConstraint = String(error.message || "").toLowerCase().includes("unique");
+    const isUniqueConstraint =
+      isDuplicateResourceError(error) ||
+      String(error.message || "").toLowerCase().includes("unique");
     return res.status(isUniqueConstraint ? 409 : 500).json({
       error: isUniqueConstraint
-        ? "That admin username or email already exists"
+        ? error.message || "That admin username or email already exists"
         : "Failed to create admin account",
       code: isUniqueConstraint ? "ADMIN_ACCOUNT_EXISTS" : "ADMIN_ACCOUNT_CREATE_FAILED",
     });
@@ -423,10 +455,12 @@ router.patch("/admin/accounts/:adminId", authenticateAdminToken, requireMasterAd
       account,
     });
   } catch (error) {
-    const isUniqueConstraint = String(error.message || "").toLowerCase().includes("unique");
+    const isUniqueConstraint =
+      isDuplicateResourceError(error) ||
+      String(error.message || "").toLowerCase().includes("unique");
     return res.status(isUniqueConstraint ? 409 : 500).json({
       error: isUniqueConstraint
-        ? "That admin username or email already exists"
+        ? error.message || "That admin username or email already exists"
         : "Failed to update admin account",
       code: isUniqueConstraint ? "ADMIN_ACCOUNT_EXISTS" : "ADMIN_ACCOUNT_UPDATE_FAILED",
     });

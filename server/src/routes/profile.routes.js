@@ -23,6 +23,20 @@ function hashSecret(value) {
   return crypto.createHash("sha256").update(String(value)).digest("hex");
 }
 
+function sendProfileConflict(res, error, fallbackCode = "PROFILE_CONFLICT") {
+  if (error?.code !== "DUPLICATE_RESOURCE") {
+    return false;
+  }
+
+  res.status(409).json({
+    saved: false,
+    error: error.message || "That information is already linked to another account.",
+    code: fallbackCode,
+    field: error.field || null,
+  });
+  return true;
+}
+
 router.use(authenticate, requireBoundDevice);
 
 router.get("/", (req, res) => {
@@ -41,7 +55,15 @@ router.get("/", (req, res) => {
 });
 
 router.put("/", (req, res) => {
-  const updatedUser = updateAuthUserProfile(req.user.sub, req.body);
+  let updatedUser;
+  try {
+    updatedUser = updateAuthUserProfile(req.user.sub, req.body);
+  } catch (error) {
+    if (sendProfileConflict(res, error)) {
+      return;
+    }
+    throw error;
+  }
 
   if (!updatedUser) {
     return res.status(404).json({
@@ -188,11 +210,19 @@ router.post("/notifications/read-all", (req, res) => {
 
 router.post("/mobile-money", (req, res) => {
   const { provider, phone } = req.body || {};
-  const updatedUser = updateAuthUserProfile(req.user.sub, {
-    primaryWallet: phone || "",
-    wallets: phone ? [phone] : [],
-    walletProvider: provider || "",
-  });
+  let updatedUser;
+  try {
+    updatedUser = updateAuthUserProfile(req.user.sub, {
+      primaryWallet: phone || "",
+      wallets: phone ? [phone] : [],
+      walletProvider: provider || "",
+    });
+  } catch (error) {
+    if (sendProfileConflict(res, error, "MOBILE_MONEY_CONFLICT")) {
+      return;
+    }
+    throw error;
+  }
 
   return res.status(201).json({
     linked: true,
@@ -204,10 +234,18 @@ router.post("/mobile-money", (req, res) => {
 
 router.post("/bank-accounts", (req, res) => {
   const { bankAccount } = req.body || {};
-  const updatedUser = updateAuthUserProfile(req.user.sub, {
-    bankAccount: bankAccount || "",
-    bankLinked: Boolean(bankAccount),
-  });
+  let updatedUser;
+  try {
+    updatedUser = updateAuthUserProfile(req.user.sub, {
+      bankAccount: bankAccount || "",
+      bankLinked: Boolean(bankAccount),
+    });
+  } catch (error) {
+    if (sendProfileConflict(res, error, "BANK_ACCOUNT_CONFLICT")) {
+      return;
+    }
+    throw error;
+  }
 
   return res.status(201).json({
     linked: Boolean(bankAccount),
