@@ -641,7 +641,7 @@ function initializeChat() {
       if (isAuthenticated) {
         openChatBox();
       } else {
-        alert('Please login to access chat support');
+        openLoginModal('Please sign in first to access support chat.');
       }
     });
   }
@@ -1545,7 +1545,20 @@ function setupEventListeners() {
 
   // Footer money/loans button
   document.getElementById('footer-money-btn')?.addEventListener('click', () => {
+    if (!requireAuthFeature('loans')) return;
     switchView('loans');
+  });
+
+  // Contact Us button
+  document.getElementById('contact-us-link')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    openContactOptions();
+  });
+
+  document.getElementById('mobile-contact-us-btn')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    closeMobileMenu();
+    openContactOptions();
   });
 
   // Footer chat button
@@ -1611,7 +1624,14 @@ function setupEventListeners() {
 
   // Apply Now button
   document.getElementById('apply-offer-btn')?.addEventListener('click', () => {
+    if (!isAuthenticated) {
+      openLoginModal('Please login to continue your application.');
+      return;
+    }
+
     const offer = dashboardState.marketing.offers[marketingOfferIndex];
+    if (!offer) return;
+
     alert(`You selected: ${offer.title}\nAmount: ${currencyFormatter.format(offer.amount)}\nLet's proceed with your application!`);
   });
 
@@ -1654,7 +1674,9 @@ function setupEventListeners() {
       }
 
       e.preventDefault();
-      switchView(view);
+      if (requireAuthFeature(view)) {
+        switchView(view);
+      }
       closeMobileMenu();
     });
   });
@@ -1722,11 +1744,38 @@ function setupEventListeners() {
   document.getElementById('loans-list')?.addEventListener('click', handleLoanItemClick);
 }
 
+function requireAuthFeature(viewName) {
+  if (viewName === 'overview') {
+    return true;
+  }
+
+  if (!isAuthenticated) {
+    openLoginModal('Please sign in first to access this feature.');
+    return false;
+  }
+
+  return true;
+}
+
+function openContactOptions() {
+  const phone = '+256788408032';
+  const choice = window.prompt(
+    `Contact Crane support:\n1. Call ${phone}\n2. WhatsApp ${phone}\n\nEnter 1 or 2 to continue, or Cancel to dismiss.`
+  );
+
+  if (choice === '1') {
+    window.location.href = `tel:${phone}`;
+  } else if (choice === '2') {
+    window.open(`https://wa.me/${phone.replace(/\D/g, '')}`, '_blank');
+  }
+}
+
 function handleNavigation(event) {
+  event.preventDefault();
   const viewName = event.currentTarget?.dataset.view;
   if (!viewName) return;
 
-  event.preventDefault();
+  if (!requireAuthFeature(viewName)) return;
   switchView(viewName);
 }
 
@@ -1974,15 +2023,19 @@ function handleQuickAction(e) {
   
   switch (action) {
     case 'apply':
+      if (!requireAuthFeature('get-loan')) return;
       alert('Redirecting to loan application...');
       break;
     case 'repay':
+      if (!requireAuthFeature('repay')) return;
       switchView('repay');
       break;
     case 'topup':
+      if (!requireAuthFeature('get-loan')) return;
       alert('Top-up feature coming soon!');
       break;
     case 'early':
+      if (!requireAuthFeature('repay')) return;
       switchView('repay');
       break;
   }
@@ -1993,12 +2046,15 @@ function handleQuickBoxClick(e) {
 
   switch (quickBox) {
     case 'active':
+      if (!requireAuthFeature('loans')) return;
       switchToLoansView('active');
       break;
     case 'overdue':
+      if (!requireAuthFeature('loans')) return;
       switchToLoansView('overdue');
       break;
     case 'repay':
+      if (!requireAuthFeature('repay')) return;
       switchView('repay');
       break;
   }
@@ -2006,6 +2062,8 @@ function handleQuickBoxClick(e) {
 
 // Handle Loan Item Click
 function handleLoanItemClick(e) {
+  if (!requireAuthFeature('loans')) return;
+
   const loanItem = e.target.closest('.loan-item');
   if (loanItem) {
     const loanId = loanItem.dataset.loanId;
