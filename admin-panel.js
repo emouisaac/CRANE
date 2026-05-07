@@ -1168,12 +1168,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   const role = localStorage.getItem('userRole');
   const adminRole = localStorage.getItem('adminRole');
 
-  if (!token || role !== 'admin') {
+  if (!token || role !== 'admin' || adminRole !== 'master_admin') {
     window.location.href = 'admin-login.html';
     return;
   }
 
-  adminPanelState.adminRole = adminRole || 'admin';
+  adminPanelState.adminRole = adminRole || 'master_admin';
   initializeSiteIntro();
   setupNavigation();
   setupFilters();

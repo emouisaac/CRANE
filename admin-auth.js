@@ -87,8 +87,12 @@ async function handleAdminLogin(e) {
     localStorage.setItem('userRole', 'admin');
     localStorage.setItem('adminRole', result.role); // Store the specific admin role
 
-    // Redirect to admin dashboard
-    window.location.href = 'admin-panel.html';
+    // Redirect to the appropriate admin panel based on role
+    if (result.role === 'master_admin') {
+      window.location.href = 'admin-panel.html';
+    } else {
+      window.location.href = 'admin.html';
+    }
 
   } catch (error) {
     showError(adminElements.passwordError, error.message);
@@ -111,7 +115,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const role = localStorage.getItem('userRole');
 
   if (token && role === 'admin') {
-    // Already logged in as admin, redirect to admin dashboard
-    window.location.href = 'admin-panel.html';
+    if (adminRole === 'master_admin') {
+      window.location.href = 'admin-panel.html';
+    } else if (adminRole === 'admin') {
+      window.location.href = 'admin.html';
+    }
   }
 });
