@@ -769,12 +769,32 @@ async function handlePasswordReset() {
   alert(`Password reset initiated.\n\nToken: ${data.resetToken}\nExpires: ${formatDateTime(data.expiresAt)}`);
 }
 
+function generateAdminUsername(fullName) {
+  const normalized = String(fullName || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .split(' ')
+    .filter(Boolean)
+    .join('.');
+  const suffix = Math.floor(100 + Math.random() * 900);
+  return `${normalized || 'admin'}${suffix}`;
+}
+
 async function handleCreateAdmin(event) {
   event.preventDefault();
 
+  const fullName = document.getElementById('admin-name').value.trim();
+  const usernameInput = document.getElementById('admin-username');
+  let username = usernameInput.value.trim();
+  if (!username) {
+    username = generateAdminUsername(fullName);
+    usernameInput.value = username;
+  }
+
   const payload = {
-    fullName: document.getElementById('admin-name').value.trim(),
-    username: document.getElementById('admin-username').value.trim(),
+    fullName,
+    username,
     email: document.getElementById('admin-email').value.trim(),
     role: document.getElementById('admin-role').value,
     password: document.getElementById('admin-password').value,
@@ -785,7 +805,7 @@ async function handleCreateAdmin(event) {
     body: JSON.stringify(payload),
   });
 
-  alert(`Admin account created for ${payload.fullName}.`);
+  alert(`Admin account created for ${payload.fullName}. Username: ${payload.username}`);
   document.getElementById('create-admin-card').style.display = 'none';
   document.getElementById('create-admin-form').reset();
   await loadPortalState();
@@ -985,7 +1005,25 @@ function setupActionButtons() {
     document.getElementById('create-admin-card').style.display = 'block';
   });
   document.getElementById('new-admin-btn')?.addEventListener('click', () => {
+    if (adminPanelState.adminRole !== 'master_admin') {
+      alert('Only the master admin can create admin accounts.');
+      return;
+    }
     document.getElementById('create-admin-card').style.display = 'block';
+  });
+  document.getElementById('generate-admin-username-btn')?.addEventListener('click', () => {
+    const fullName = document.getElementById('admin-name').value.trim();
+    if (!fullName) {
+      alert('Enter the full name first to generate a username.');
+      return;
+    }
+    document.getElementById('admin-username').value = generateAdminUsername(fullName);
+  });
+  document.getElementById('admin-logout-btn')?.addEventListener('click', () => {
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('userRole');
+    localStorage.removeItem('adminRole');
+    window.location.href = 'admin-login.html';
   });
   document.getElementById('export-report-btn')?.addEventListener('click', handleSettingsUtility);
   document.getElementById('admin-panel-sync-btn')?.addEventListener('click', loadPortalState);

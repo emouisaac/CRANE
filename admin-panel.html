@@ -60,6 +60,7 @@
           </svg>
           <span class="notification-badge" id="alert-count">4</span>
         </button>
+        <button type="button" class="btn btn-danger" id="admin-logout-btn" aria-label="Logout">Logout</button>
       </div>
     </header>
 
@@ -190,8 +191,12 @@
                 <input type="text" id="admin-name" required>
               </div>
               <div class="form-group">
-                <label for="admin-username">Username *</label>
-                <input type="text" id="admin-username" autocomplete="username" required>
+                <label for="admin-username">Username</label>
+                <div class="username-input-group">
+                  <input type="text" id="admin-username" autocomplete="username" placeholder="Leave blank to auto-generate">
+                  <button type="button" class="btn btn-secondary" id="generate-admin-username-btn">Generate</button>
+                </div>
+                <small class="form-note">Leave blank to generate a secure username from the full name.</small>
               </div>
               <div class="form-group">
                 <label for="admin-email">Email Address *</label>
