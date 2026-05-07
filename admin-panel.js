@@ -148,7 +148,7 @@ function updateUIBasedOnRole(role) {
 
   const titleElement = document.getElementById('admin-title');
   if (titleElement) {
-    titleElement.textContent = isMasterAdmin ? 'Crane Master Admin' : 'Crane Admin Panel';
+    titleElement.textContent = isMasterAdmin ? 'Crane Credit Master Admin' : 'Crane Credit Admin Panel';
   }
 
   document.getElementById('nav-loans-link').style.display = 'block';
