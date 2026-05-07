@@ -50,7 +50,7 @@
             <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
             <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
           </svg>
-          <span class="notification-badge">3</span>
+          <span class="notification-badge">0</span>
         </button>
       </div>
     </header>
@@ -136,7 +136,7 @@
           <!-- Welcome Header -->
           <article class="welcome-header-card">
             <div class="welcome-text">
-              <h1>Welcome, <span id="user-name">User</span></h1>
+              <h1>Welcome, <span id="user-name">Member</span></h1>
             </div>
             <button type="button" class="refresh-btn" id="refresh-dashboard">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -157,7 +157,7 @@
             <!-- Loan Balance Content -->
             <div class="loan-balance-container">
               <div class="loan-balance-label">Loan Balance</div>
-              <div class="loan-balance-amount" id="loan-balance-amount">UGX 1,850,000</div>
+              <div class="loan-balance-amount" id="loan-balance-amount">UGX 0</div>
             </div>
           </div>
         </article>
@@ -166,7 +166,7 @@
           <article class="card second-section-card">
             <div class="section-content">
               <!-- Marketing Section -->
-              <div class="marketing-container">
+              <div class="marketing-container hidden-mock-section" aria-hidden="true">
                 <!-- Animated Ticker -->
                 <div class="marketing-ticker">
                   <div class="ticker-content" id="ticker-content">
@@ -217,6 +217,34 @@
                   <div class="stat-item repeat-stat">
                     <div class="stat-number" id="stat-repeat">68%</div>
                     <div class="stat-label">Repeat Borrowers</div>
+                  </div>
+                </div>
+              </div>
+              <div class="account-snapshot" id="account-snapshot">
+                <div class="snapshot-hero">
+                  <div>
+                    <span class="snapshot-kicker">Account snapshot</span>
+                    <h2 id="snapshot-title">No live account activity yet</h2>
+                    <p id="snapshot-message">Sign in to view current balances, due dates, and real account alerts.</p>
+                  </div>
+                  <span class="snapshot-badge" id="snapshot-badge">Awaiting sign in</span>
+                </div>
+                <div class="snapshot-grid">
+                  <div class="snapshot-item">
+                    <span class="snapshot-label">Active loans</span>
+                    <strong id="snapshot-active-loans">0</strong>
+                  </div>
+                  <div class="snapshot-item">
+                    <span class="snapshot-label">Outstanding balance</span>
+                    <strong id="snapshot-outstanding-balance">UGX 0</strong>
+                  </div>
+                  <div class="snapshot-item">
+                    <span class="snapshot-label">Next due</span>
+                    <strong id="snapshot-next-due">Not scheduled</strong>
+                  </div>
+                  <div class="snapshot-item">
+                    <span class="snapshot-label">Unread alerts</span>
+                    <strong id="snapshot-unread-alerts">0</strong>
                   </div>
                 </div>
               </div>
@@ -328,8 +356,7 @@
               <div class="form-group">
                 <label for="loan-select">Loan</label>
                 <select id="loan-select">
-                  <option>Loan L2024001</option>
-                  <option>Loan L2024002</option>
+                  <option value="">No outstanding loans</option>
                 </select>
               </div>
               <div class="form-group">
@@ -352,15 +379,15 @@
               <div class="payment-summary">
                 <div class="summary-row">
                   <span>Installment due</span>
-                  <strong>UGX 420,000</strong>
+                  <strong id="payment-installment-due">UGX 0</strong>
                 </div>
                 <div class="summary-row">
                   <span>Service fee</span>
-                  <strong>UGX 0</strong>
+                  <strong id="payment-service-fee">UGX 0</strong>
                 </div>
                 <div class="summary-row total">
                   <span>Total today</span>
-                  <strong>UGX 420,000</strong>
+                  <strong id="payment-total-today">UGX 0</strong>
                 </div>
               </div>
             </div>
@@ -375,15 +402,15 @@
             <div class="early-repay-details">
               <div class="detail-row">
                 <span>Outstanding principal</span>
-                <strong>UGX 1,185,000</strong>
+                <strong id="early-outstanding-principal">UGX 0</strong>
               </div>
               <div class="detail-row">
                 <span>Early payoff benefit</span>
-                <strong>UGX 30,000</strong>
+                <strong id="early-payoff-benefit">UGX 0</strong>
               </div>
               <div class="detail-row highlight">
                 <span>Total payoff today</span>
-                <strong>UGX 1,155,000</strong>
+                <strong id="early-total-payoff">UGX 0</strong>
               </div>
             </div>
             <button type="button" class="button button-primary full-width" id="early-repay-btn">Repay early</button>
@@ -439,33 +466,17 @@
                   <circle class="score-fill" cx="100" cy="100" r="88" fill="none" stroke-width="14" stroke-dasharray="553" stroke-dashoffset="70"></circle>
                 </svg>
                 <div class="score-center">
-                  <strong class="big-score" id="credit-score-display">742</strong>
-                  <span class="score-grade">Strong standing</span>
+                  <strong class="big-score" id="credit-score-display">N/A</strong>
+                  <span class="score-grade" id="credit-score-grade">No score yet</span>
                 </div>
               </div>
             </div>
             <div class="score-breakdown">
               <h3>Score drivers</h3>
-              <div class="breakdown-item">
-                <div class="breakdown-header">
-                  <span>Repayment consistency</span>
-                  <span class="breakdown-value">88%</span>
+              <div class="score-drivers-list" id="score-drivers-list">
+                <div class="panel-empty-state compact">
+                  Credit drivers will appear here once your live profile data is available.
                 </div>
-                <div class="breakdown-bar"><div class="breakdown-fill" style="width: 88%;"></div></div>
-              </div>
-              <div class="breakdown-item">
-                <div class="breakdown-header">
-                  <span>Debt utilization</span>
-                  <span class="breakdown-value">64%</span>
-                </div>
-                <div class="breakdown-bar"><div class="breakdown-fill" style="width: 64%;"></div></div>
-              </div>
-              <div class="breakdown-item">
-                <div class="breakdown-header">
-                  <span>History depth</span>
-                  <span class="breakdown-value">76%</span>
-                </div>
-                <div class="breakdown-bar"><div class="breakdown-fill" style="width: 76%;"></div></div>
               </div>
             </div>
           </article>
@@ -765,12 +776,12 @@
             </div>
             <div class="referral-code-display">
               <span class="code-label">Your referral code</span>
-              <strong class="code-value" id="referral-code">SWIFTLEND-JD42</strong>
-              <button type="button" class="copy-btn" id="copy-referral-code">Copy</button>
+              <strong class="code-value" id="referral-code">Unavailable</strong>
+              <button type="button" class="copy-btn" id="copy-referral-code" disabled>Copy</button>
             </div>
             <div class="referral-link-display">
               <label class="link-label" for="referral-link">Shareable link</label>
-              <input id="referral-link" type="text" value="https://swiftlend.app/invite/SWIFTLEND-JD42" readonly>
+              <input id="referral-link" type="text" value="" placeholder="Referral links will appear here when the program is enabled." readonly>
             </div>
           </article>
 
@@ -780,8 +791,8 @@
                 <h2>Earnings trend</h2>
               </div>
             </div>
-            <div class="chart-container">
-              <canvas id="earnings-chart"></canvas>
+            <div class="chart-empty-state">
+              Referral earnings will appear here after verified referrals begin borrowing.
             </div>
           </article>
 
@@ -802,27 +813,9 @@
                     <th>Status</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody id="referrals-table-body">
                   <tr>
-                    <td>Sarah K.</td>
-                    <td>Apr 15, 2024</td>
-                    <td>Level 1</td>
-                    <td>UGX 50,000</td>
-                    <td><span class="status-badge paid">Paid</span></td>
-                  </tr>
-                  <tr>
-                    <td>Mike R.</td>
-                    <td>Apr 10, 2024</td>
-                    <td>Level 1</td>
-                    <td>UGX 50,000</td>
-                    <td><span class="status-badge paid">Paid</span></td>
-                  </tr>
-                  <tr>
-                    <td>Jane D.</td>
-                    <td>Apr 5, 2024</td>
-                    <td>Level 2</td>
-                    <td>UGX 25,000</td>
-                    <td><span class="status-badge pending">Pending</span></td>
+                    <td colspan="5" class="table-empty-state">No referral activity has been recorded for this account yet.</td>
                   </tr>
                 </tbody>
               </table>
@@ -875,39 +868,8 @@
         <h3>Notifications</h3>
         <button type="button" class="close-btn" id="close-notifications">&times;</button>
       </div>
-      <div class="panel-content">
-        <div class="notification-item unread">
-          <div class="notification-icon success">&#10003;</div>
-          <div class="notification-content">
-            <p class="notification-title">Payment Received</p>
-            <p class="notification-text">Your payment of UGX 250,000 has been processed.</p>
-            <span class="notification-time">2 hours ago</span>
-          </div>
-        </div>
-        <div class="notification-item unread">
-          <div class="notification-icon warning">!</div>
-          <div class="notification-content">
-            <p class="notification-title">Due Date Reminder</p>
-            <p class="notification-text">Your loan payment is due in 5 days.</p>
-            <span class="notification-time">Yesterday</span>
-          </div>
-        </div>
-        <div class="notification-item unread">
-          <div class="notification-icon info">i</div>
-          <div class="notification-content">
-            <p class="notification-title">Credit Score Updated</p>
-            <p class="notification-text">Your credit score has increased by 15 points.</p>
-            <span class="notification-time">3 days ago</span>
-          </div>
-        </div>
-        <div class="notification-item">
-          <div class="notification-icon success">&#10003;</div>
-          <div class="notification-content">
-            <p class="notification-title">Loan Approved</p>
-            <p class="notification-text">Your loan application for UGX 1,200,000 has been approved.</p>
-            <span class="notification-time">1 week ago</span>
-          </div>
-        </div>
+      <div class="panel-content notifications-list" id="notifications-list">
+        <div class="panel-empty-state">No notifications yet. New account alerts will appear here.</div>
       </div>
     </div>
 
@@ -921,7 +883,7 @@
           <div class="payment-confirmation">
             <div class="confirm-amount">
               <span class="amount-label">Amount to Pay</span>
-              <span class="amount-value" id="confirm-amount">UGX 1,200,000</span>
+              <span class="amount-value" id="confirm-amount">UGX 0</span>
             </div>
             <div class="confirm-method">
               <span class="method-label">Payment Method</span>
@@ -945,30 +907,56 @@
       <h3>Profile</h3>
       <button type="button" class="close-btn" id="close-profile">&times;</button>
     </div>
-    <div class="panel-content">
-      <div class="profile-header">
-        <div class="profile-avatar">
-          <span id="profile-initials">U</span>
+    <div class="panel-content profile-panel-content">
+      <div class="profile-header-card">
+        <div class="profile-header">
+          <div class="profile-avatar">
+            <span id="profile-initials">M</span>
+          </div>
+          <div class="profile-info">
+            <div class="profile-title-row">
+              <h4 id="profile-name">Account holder</h4>
+              <span class="profile-status-badge" id="profile-status-badge">Unverified</span>
+            </div>
+            <p id="profile-phone">Phone not available</p>
+            <p class="profile-secondary-text" id="profile-last-login">Last activity is not available yet.</p>
+          </div>
         </div>
-        <div class="profile-info">
-          <h4 id="profile-name">User</h4>
-          <p id="profile-phone">+256 700 123456</p>
+        <div class="profile-summary-grid">
+          <div class="profile-summary-card">
+            <span class="label">Customer ID</span>
+            <strong id="profile-customer-id">--</strong>
+          </div>
+          <div class="profile-summary-card">
+            <span class="label">Member since</span>
+            <strong id="profile-member-since">--</strong>
+          </div>
+          <div class="profile-summary-card">
+            <span class="label">Credit score</span>
+            <strong id="profile-credit-score">N/A</strong>
+          </div>
         </div>
       </div>
 
-      <div class="profile-section">
+      <div class="profile-section profile-data-section">
         <h5>Account Information</h5>
-        <div class="profile-item">
-          <span class="label">Phone</span>
-          <span class="value" id="profile-phone-info">+256 700 123456</span>
-        </div>
-        <div class="profile-item">
-          <span class="label">Email</span>
-          <span class="value" id="profile-email">user@example.com</span>
-        </div>
-        <div class="profile-item">
-          <span class="label">Member Since</span>
-          <span class="value" id="profile-member-since">2024</span>
+        <div class="profile-field-grid">
+          <div class="profile-field-card">
+            <span class="label">Phone</span>
+            <span class="value" id="profile-phone-info">Not provided</span>
+          </div>
+          <div class="profile-field-card">
+            <span class="label">Email</span>
+            <span class="value" id="profile-email">Not provided</span>
+          </div>
+          <div class="profile-field-card">
+            <span class="label">Account status</span>
+            <span class="value" id="profile-account-status">Unknown</span>
+          </div>
+          <div class="profile-field-card">
+            <span class="label">Last login</span>
+            <span class="value" id="profile-last-login-info">Not available</span>
+          </div>
         </div>
       </div>
 

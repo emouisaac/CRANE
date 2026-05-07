@@ -8,6 +8,7 @@ const dashboardState = {
   notifications: [],
   chatMessages: [],
   referrals: [],
+  scoring: null,
   paymentHistory: [],
   scoreHistory: [],
   marketing: {
@@ -34,6 +35,104 @@ function setText(id, value) {
   }
 }
 
+function formatCurrency(amount = 0) {
+  const numeric = Number(amount);
+  return currencyFormatter.format(Number.isFinite(numeric) ? numeric : 0);
+}
+
+function formatDisplayValue(value, fallback = 'Not available') {
+  if (value === null || value === undefined) return fallback;
+  const normalized = String(value).trim();
+  return normalized ? normalized : fallback;
+}
+
+function formatStatusLabel(status, fallback = 'Unknown') {
+  if (!status) return fallback;
+  return String(status)
+    .split(/[_\s]+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
+}
+
+function formatDateLabel(value, fallback = 'Not available') {
+  if (!value) return fallback;
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return fallback;
+  return date.toLocaleDateString('en-UG', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+}
+
+function formatDateTimeLabel(value, fallback = 'Not available') {
+  if (!value) return fallback;
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return fallback;
+  return date.toLocaleString('en-UG', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+function formatCountdownFromDate(value, fallback = 'Not scheduled') {
+  if (!value) return fallback;
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return fallback;
+
+  const diff = date.getTime() - Date.now();
+  if (diff <= 0) return 'Due now';
+
+  const days = Math.floor(diff / (24 * 60 * 60 * 1000));
+  const hours = Math.floor((diff % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
+  if (days > 0) return `${days}d ${hours}h`;
+
+  const minutes = Math.floor((diff % (60 * 60 * 1000)) / (60 * 1000));
+  return `${hours}h ${minutes}m`;
+}
+
+function getOutstandingLoans() {
+  return Array.isArray(dashboardState.loans)
+    ? dashboardState.loans.filter((loan) => Number(loan?.remaining) > 0)
+    : [];
+}
+
+function getSelectedOutstandingLoan() {
+  const selectedId = document.getElementById('loan-select')?.value;
+  const outstandingLoans = getOutstandingLoans();
+  return outstandingLoans.find((loan) => loan.id === selectedId) || outstandingLoans[0] || null;
+}
+
+function calculateInstallmentDue(loan) {
+  if (!loan) return 0;
+  const term = Math.max(Number(loan.term) || 1, 1);
+  const amount = Number(loan.amount) || 0;
+  const remaining = Number(loan.remaining) || 0;
+  return Math.min(remaining, Math.max(Math.round(amount / term), 0));
+}
+
+function getScoreGrade(score) {
+  const numericScore = Number(score);
+  if (!Number.isFinite(numericScore)) return 'No score yet';
+  if (numericScore >= 760) return 'Excellent standing';
+  if (numericScore >= 680) return 'Strong standing';
+  if (numericScore >= 610) return 'Building momentum';
+  return 'Needs improvement';
+}
+
+function updateNotificationBadge() {
+  const badge = document.querySelector('.notification-badge');
+  if (!badge) return;
+
+  const unreadCount = dashboardState.notifications.filter((notification) => notification.unread).length;
+  badge.textContent = String(unreadCount);
+  badge.style.display = unreadCount > 0 ? 'inline-flex' : 'none';
+}
+
 function clearAuthState() {
   localStorage.removeItem('accessToken');
   localStorage.removeItem('refreshToken');
@@ -44,6 +143,10 @@ function clearAuthState() {
   dashboardState.applications = [];
   dashboardState.notifications = [];
   dashboardState.chatMessages = [];
+  dashboardState.referrals = [];
+  dashboardState.scoring = null;
+  dashboardState.paymentHistory = [];
+  dashboardState.scoreHistory = [];
   updateAuthButton();
   startIdleTimeout(); // Start idle timeout for unauthenticated users
 }
@@ -156,6 +259,9 @@ async function loadUserProfile() {
       dashboardState.referrals = Array.isArray(data.referrals)
         ? data.referrals.map((referral) => ({ ...referral }))
         : [];
+      dashboardState.scoring = data.scoring && typeof data.scoring === 'object'
+        ? { ...data.scoring }
+        : null;
       dashboardState.chatMessages = Array.isArray(data.messages)
         ? data.messages.map((message) => ({ ...message }))
         : [];
@@ -655,12 +761,18 @@ function populateProfilePanel() {
   const user = dashboardState.user;
   if (!user) return;
 
-  setText('profile-initials', user.initials);
-  setText('profile-name', user.name);
-  setText('profile-phone', user.phone || '+256 700 123456');
-  setText('profile-phone-info', user.phone || '+256 700 123456');
-  setText('profile-email', user.email || 'Not provided');
-  setText('profile-member-since', user.registeredAt ? new Date(user.registeredAt).getFullYear() : '2024');
+  setText('profile-initials', formatDisplayValue(user.initials, 'M'));
+  setText('profile-name', formatDisplayValue(user.name, 'Account holder'));
+  setText('profile-status-badge', formatStatusLabel(user.status, 'Unknown'));
+  setText('profile-phone', formatDisplayValue(user.phone, 'Phone not available'));
+  setText('profile-last-login', user.lastLoginAt ? `Last login ${formatDateTimeLabel(user.lastLoginAt)}` : 'Last activity is not available yet.');
+  setText('profile-customer-id', formatDisplayValue(user.id, '--'));
+  setText('profile-member-since', formatDateLabel(user.registeredAt, '--'));
+  setText('profile-credit-score', Number.isFinite(Number(user.creditScore)) ? String(user.creditScore) : 'N/A');
+  setText('profile-phone-info', formatDisplayValue(user.phone));
+  setText('profile-email', formatDisplayValue(user.email));
+  setText('profile-account-status', formatStatusLabel(user.status, 'Unknown'));
+  setText('profile-last-login-info', formatDateTimeLabel(user.lastLoginAt));
 }
 
 // Initialize chat functionality
@@ -1039,8 +1151,12 @@ function initializeDashboard() {
   populateLoansList();
   populateNotifications();
   populateLoanDetails('all');
+  populateRepaymentOptions();
+  populateScoreDrivers();
+  populateReferrals();
   initializeCharts();
   updateCountdown();
+  updateNotificationBadge();
   renderChatMessages();
   prefillLoanRequestForm();
 }
@@ -1123,39 +1239,193 @@ function initializeSectionWaveNet() {
 // Update Welcome Header
 function updateWelcomeHeader() {
   const userNameElement = document.getElementById('user-name');
-  if (userNameElement && dashboardState.user && dashboardState.user.name) {
-    // Show only the last name
-    const lastName = dashboardState.user.name.split(' ').pop();
-    userNameElement.textContent = lastName;
-    // Removed font size adjustment to keep consistent with "Welcome" text
+  if (!userNameElement) return;
+
+  if (dashboardState.user?.name) {
+    const lastName = dashboardState.user.name.split(' ').filter(Boolean).pop();
+    userNameElement.textContent = lastName || 'Member';
+    return;
   }
+
+  userNameElement.textContent = 'Member';
 }
 
 // Update Loan Balance Display
 function updateLoanBalance() {
   const balanceElement = document.getElementById('loan-balance-amount');
-  if (balanceElement && dashboardState.user && dashboardState.user.remainingBalance) {
-    balanceElement.textContent = currencyFormatter.format(dashboardState.user.remainingBalance);
-  }
+  if (!balanceElement) return;
+
+  balanceElement.textContent = formatCurrency(dashboardState.user?.remainingBalance || 0);
 }
 
 // Update Hero Stats
 function updateHeroStats() {
   const { user } = dashboardState;
-  if (!user) return;
+  const creditScore = user?.creditScore;
 
-  setText('total-borrowed', user.totalBorrowed ? currencyFormatter.format(user.totalBorrowed) : 'UGX 0');
-  setText('remaining-balance', user.remainingBalance ? currencyFormatter.format(user.remainingBalance) : 'UGX 0');
-  setText('credit-score-display', user.creditScore || 'N/A');
+  setText('total-borrowed', formatCurrency(user?.totalBorrowed || 0));
+  setText('remaining-balance', formatCurrency(user?.remainingBalance || 0));
+  setText('credit-score-display', Number.isFinite(Number(creditScore)) ? String(creditScore) : 'N/A');
+  setText('credit-score-grade', getScoreGrade(creditScore));
 }
 
 // Initialize Marketing Dashboard
 function initializeMarketingDashboard() {
-  updateMarketingPulse();
-  updateActiveOffer();
-  updateMarketingTicker();
-  // Removed renderOfferCountdown since we don't have automatic refreshes
-  setupMarketingRotation();
+  const activeLoans = dashboardState.loans.filter((loan) => loan.status === 'active');
+  const unreadCount = dashboardState.notifications.filter((notification) => notification.unread).length;
+  const remainingBalance = Number(dashboardState.user?.remainingBalance) || 0;
+  const nextDueLabel = formatDateLabel(dashboardState.user?.nextDueDate, 'Not scheduled');
+
+  setText('snapshot-active-loans', String(activeLoans.length));
+  setText('snapshot-outstanding-balance', formatCurrency(remainingBalance));
+  setText('snapshot-next-due', nextDueLabel);
+  setText('snapshot-unread-alerts', String(unreadCount));
+
+  if (!isAuthenticated || !dashboardState.user) {
+    setText('snapshot-title', 'No live account activity yet');
+    setText('snapshot-message', 'Sign in to view current balances, due dates, and real account alerts.');
+    setText('snapshot-badge', 'Awaiting sign in');
+    return;
+  }
+
+  if (!dashboardState.loans.length && !dashboardState.notifications.length) {
+    setText('snapshot-title', 'Your account is ready');
+    setText('snapshot-message', 'Once you borrow or receive a service update, your live dashboard activity will appear here.');
+    setText('snapshot-badge', formatStatusLabel(dashboardState.user.status, 'Active profile'));
+    return;
+  }
+
+  setText('snapshot-title', activeLoans.length ? 'Live account activity' : 'No active loans right now');
+  setText(
+    'snapshot-message',
+    activeLoans.length
+      ? 'This summary is calculated from your current loans, due dates, and notification activity.'
+      : 'Your dashboard is showing live account records, but there are no active loans on this profile right now.'
+  );
+  setText('snapshot-badge', unreadCount > 0 ? `${unreadCount} unread alert${unreadCount === 1 ? '' : 's'}` : 'Live data only');
+}
+
+function populateRepaymentOptions() {
+  const loanSelect = document.getElementById('loan-select');
+  const earlyRepayButton = document.getElementById('early-repay-btn');
+  if (!loanSelect) return;
+
+  const outstandingLoans = getOutstandingLoans();
+  const previousSelection = loanSelect.value;
+
+  if (!outstandingLoans.length) {
+    loanSelect.innerHTML = '<option value="">No outstanding loans</option>';
+    loanSelect.disabled = true;
+    if (earlyRepayButton) {
+      earlyRepayButton.disabled = true;
+    }
+    updateRepaymentSummary();
+    return;
+  }
+
+  loanSelect.innerHTML = outstandingLoans
+    .map((loan) => `<option value="${loan.id}">${loan.id} • ${formatCurrency(loan.remaining)}</option>`)
+    .join('');
+  loanSelect.disabled = false;
+
+  if (outstandingLoans.some((loan) => loan.id === previousSelection)) {
+    loanSelect.value = previousSelection;
+  } else {
+    loanSelect.value = outstandingLoans[0].id;
+  }
+
+  if (earlyRepayButton) {
+    earlyRepayButton.disabled = false;
+  }
+
+  updateRepaymentSummary();
+}
+
+function updateRepaymentSummary() {
+  const selectedLoan = getSelectedOutstandingLoan();
+  const partialAmountInput = document.getElementById('partial-amount');
+  const paymentType = document.querySelector('input[name="payment-type"]:checked')?.value || 'full';
+  const installmentDue = calculateInstallmentDue(selectedLoan);
+  const partialAmount = Math.max(0, Number(partialAmountInput?.value) || 0);
+  const remainingBalance = Number(selectedLoan?.remaining) || 0;
+  const totalToday = paymentType === 'partial'
+    ? Math.min(remainingBalance, partialAmount)
+    : installmentDue;
+
+  setText('payment-installment-due', formatCurrency(installmentDue));
+  setText('payment-service-fee', formatCurrency(0));
+  setText('payment-total-today', formatCurrency(totalToday));
+  setText('early-outstanding-principal', formatCurrency(remainingBalance));
+  setText('early-payoff-benefit', formatCurrency(0));
+  setText('early-total-payoff', formatCurrency(remainingBalance));
+
+  const confirmAmount = document.getElementById('confirm-amount');
+  if (confirmAmount) {
+    confirmAmount.textContent = formatCurrency(totalToday);
+  }
+}
+
+function populateScoreDrivers() {
+  const host = document.getElementById('score-drivers-list');
+  if (!host) return;
+
+  const drivers = Array.isArray(dashboardState.scoring?.drivers)
+    ? dashboardState.scoring.drivers.filter(Boolean)
+    : [];
+
+  if (!drivers.length) {
+    host.innerHTML = '<div class="panel-empty-state compact">Credit drivers will appear here once your live profile data is available.</div>';
+    return;
+  }
+
+  host.innerHTML = drivers
+    .map((driver) => `
+      <div class="score-driver-item">
+        <span class="score-driver-dot" aria-hidden="true"></span>
+        <p>${driver}</p>
+      </div>
+    `)
+    .join('');
+}
+
+function populateReferrals() {
+  const codeElement = document.getElementById('referral-code');
+  const linkElement = document.getElementById('referral-link');
+  const copyButton = document.getElementById('copy-referral-code');
+  const tableBody = document.getElementById('referrals-table-body');
+  const referrals = Array.isArray(dashboardState.referrals) ? dashboardState.referrals : [];
+
+  if (codeElement) {
+    codeElement.textContent = 'Unavailable';
+  }
+
+  if (linkElement) {
+    linkElement.value = '';
+  }
+
+  if (copyButton) {
+    copyButton.disabled = true;
+    copyButton.textContent = 'Copy';
+  }
+
+  if (!tableBody) return;
+
+  if (!referrals.length) {
+    tableBody.innerHTML = '<tr><td colspan="5" class="table-empty-state">No referral activity has been recorded for this account yet.</td></tr>';
+    return;
+  }
+
+  tableBody.innerHTML = referrals
+    .map((referral) => `
+      <tr>
+        <td>${formatDisplayValue(referral.name, 'Referral')}</td>
+        <td>${formatDateLabel(referral.createdAt || referral.date)}</td>
+        <td>${formatDisplayValue(referral.level, 'Level 1')}</td>
+        <td>${formatCurrency(referral.earned || 0)}</td>
+        <td><span class="status-badge ${String(referral.status || '').toLowerCase() === 'paid' ? 'paid' : 'pending'}">${formatStatusLabel(referral.status, 'Pending')}</span></td>
+      </tr>
+    `)
+    .join('');
 }
 
 // Update Marketing Pulse (live stats)
@@ -1295,15 +1565,21 @@ function populateLoansList() {
   const loansList = document.getElementById('loans-list');
   if (!loansList) return;
 
-  loansList.innerHTML = dashboardState.loans.filter(loan => loan.status === 'active').map(loan => `
+  const activeLoans = dashboardState.loans.filter((loan) => loan.status === 'active');
+  if (!activeLoans.length) {
+    loansList.innerHTML = '<div class="panel-empty-state compact">No active loans are on this account right now.</div>';
+    return;
+  }
+
+  loansList.innerHTML = activeLoans.map((loan) => `
     <div class="loan-item" data-loan-id="${loan.id}">
       <div class="loan-info">
         <span class="loan-id">${loan.id}</span>
-        <span class="loan-amount">${currencyFormatter.format(loan.amount)}</span>
+        <span class="loan-amount">${formatCurrency(loan.amount)}</span>
       </div>
       <div class="loan-status">
         <span class="status-dot ${loan.status}"></span>
-        <span class="status-text ${loan.status}">${loan.status.charAt(0).toUpperCase() + loan.status.slice(1)}</span>
+        <span class="status-text ${loan.status}">${formatStatusLabel(loan.status)}</span>
       </div>
     </div>
   `).join('');
@@ -1356,7 +1632,7 @@ function populateLoanDetails(status = 'all') {
           'No overdue loan is on this profile right now, so this tab highlights your full borrowed position.',
           [
             { label: 'Remaining balance', value: currencyFormatter.format(user.remainingBalance ?? remainingBalance) },
-            { label: 'Next due in', value: document.getElementById('next-due-countdown')?.textContent || '12d 5h' },
+            { label: 'Next due in', value: formatCountdownFromDate(user.nextDueDate, 'No due date scheduled') },
             { label: 'Credit score', value: user.creditScore ?? 'N/A' }
           ],
           'Healthy account'
@@ -1455,6 +1731,12 @@ function populateNotifications() {
   const notificationsList = document.getElementById('notifications-list');
   if (!notificationsList) return;
 
+  if (!dashboardState.notifications.length) {
+    notificationsList.innerHTML = '<div class="panel-empty-state">No notifications yet. New account alerts will appear here.</div>';
+    updateNotificationBadge();
+    return;
+  }
+
   notificationsList.innerHTML = dashboardState.notifications.map(notification => `
     <div class="notification-item ${notification.unread ? 'unread' : ''}">
       <div class="notification-icon ${notification.type}">${getNotificationIcon(notification.type)}</div>
@@ -1465,6 +1747,7 @@ function populateNotifications() {
       </div>
     </div>
   `).join('');
+  updateNotificationBadge();
 }
 
 // Get Notification Icon
@@ -1916,6 +2199,8 @@ function setupEventListeners() {
   document.querySelectorAll('input[name="payment-type"]').forEach(radio => {
     radio.addEventListener('change', handlePaymentTypeChange);
   });
+  document.getElementById('loan-select')?.addEventListener('change', updateRepaymentSummary);
+  document.getElementById('partial-amount')?.addEventListener('input', updateRepaymentSummary);
   
   // Payment methods
   document.querySelectorAll('.payment-method').forEach(method => {
@@ -2051,11 +2336,6 @@ async function handleRefreshDashboard() {
   }
 
   initializeDashboard();
-  
-  // Manually refresh marketing content
-  advanceMarketingOffer();
-  advanceMarketingTicker();
-  animateLiveStats();
 }
 
 // Switch To Loans View
@@ -2134,18 +2414,21 @@ async function markAllNotificationsRead() {
   }
   
   // Update badge
-  const badge = document.querySelector('.notification-badge');
-  if (badge) badge.style.display = 'none';
+  updateNotificationBadge();
 }
 
 // Handle Payment Type Change
 function handlePaymentTypeChange(e) {
   const partialGroup = document.getElementById('partial-amount-group');
+  if (!partialGroup) return;
+
   if (e.target.value === 'partial') {
     partialGroup.style.display = 'flex';
   } else {
     partialGroup.style.display = 'none';
   }
+
+  updateRepaymentSummary();
 }
 
 // Handle Payment Method Select
@@ -2161,7 +2444,11 @@ function handlePaymentMethodSelect(e) {
 
 // Close Payment Modal
 function closePaymentModal() {
-  document.getElementById('payment-modal')?.classList.remove('open');
+  const modal = document.getElementById('payment-modal');
+  if (!modal) return;
+
+  delete modal.dataset.paymentMode;
+  modal.classList.remove('open');
 }
 
 // Confirm Payment
@@ -2169,19 +2456,38 @@ async function confirmPayment() {
   const btn = document.getElementById('confirm-payment-btn');
   if (!btn) return;
 
-  const firstOutstandingLoan = dashboardState.loans.find((loan) => loan.remaining > 0);
-  if (!firstOutstandingLoan) {
+  const paymentModal = document.getElementById('payment-modal');
+  const selectedLoan = getSelectedOutstandingLoan();
+  if (!selectedLoan) {
     alert('There is no outstanding loan to repay right now.');
     return;
   }
 
-  const paymentAmount = Math.min(firstOutstandingLoan.remaining, 420000);
+  const paymentType = paymentModal?.dataset.paymentMode === 'early'
+    ? 'early'
+    : (document.querySelector('input[name="payment-type"]:checked')?.value || 'full');
+  const partialAmount = Math.max(0, Number(document.getElementById('partial-amount')?.value) || 0);
+
+  let paymentAmount = calculateInstallmentDue(selectedLoan);
+  if (paymentType === 'partial') {
+    paymentAmount = Math.min(Number(selectedLoan.remaining) || 0, partialAmount);
+  }
+  if (paymentType === 'early') {
+    paymentAmount = Number(selectedLoan.remaining) || 0;
+  }
+
+  if (paymentAmount <= 0) {
+    alert(paymentType === 'partial'
+      ? 'Enter a partial payment amount greater than zero.'
+      : 'There is no payable balance available for this loan.');
+    return;
+  }
 
   btn.textContent = 'Processing...';
   btn.disabled = true;
 
   try {
-    const response = await fetch(`/api/loans/${firstOutstandingLoan.id}/payments`, {
+    const response = await fetch(`/api/loans/${selectedLoan.id}/payments`, {
       method: 'POST',
       headers: getAuthenticatedHeaders(),
       body: JSON.stringify({
@@ -2210,7 +2516,7 @@ async function confirmPayment() {
 function copyReferralCode() {
   const code = document.getElementById('referral-code')?.textContent;
   const btn = document.getElementById('copy-referral-code');
-  if (!code || !btn || !navigator.clipboard) return;
+  if (!code || !btn || btn.disabled || !navigator.clipboard) return;
 
   navigator.clipboard.writeText(code).then(() => {
     btn.textContent = 'Copied!';
@@ -2282,9 +2588,11 @@ async function setupAutoDebit() {
 function handleEarlyRepayment() {
   const confirmAmount = document.getElementById('confirm-amount');
   const paymentModal = document.getElementById('payment-modal');
-  if (!confirmAmount || !paymentModal) return;
+  const selectedLoan = getSelectedOutstandingLoan();
+  if (!confirmAmount || !paymentModal || !selectedLoan) return;
 
-  confirmAmount.textContent = 'UGX 1,155,000';
+  confirmAmount.textContent = formatCurrency(selectedLoan.remaining || 0);
+  paymentModal.dataset.paymentMode = 'early';
   paymentModal.classList.add('open');
 }
 

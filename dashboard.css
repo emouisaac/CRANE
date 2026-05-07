@@ -1251,6 +1251,49 @@ body.mobile-menu-open {
   color: var(--dashboard-muted);
 }
 
+.panel-empty-state {
+  padding: 1rem 1.1rem;
+  border-radius: var(--dashboard-radius-sm);
+  background: rgba(13, 139, 99, 0.05);
+  border: 1px dashed rgba(13, 139, 99, 0.18);
+  color: var(--dashboard-muted);
+  line-height: 1.5;
+}
+
+.panel-empty-state.compact {
+  margin-top: 0.5rem;
+}
+
+.score-drivers-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.score-driver-item {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+  padding: 0.9rem 1rem;
+  border-radius: var(--dashboard-radius-sm);
+  background: var(--dashboard-bg);
+}
+
+.score-driver-dot {
+  width: 10px;
+  height: 10px;
+  margin-top: 0.35rem;
+  border-radius: 999px;
+  background: var(--dashboard-primary);
+  flex-shrink: 0;
+}
+
+.score-driver-item p {
+  margin: 0;
+  color: var(--dashboard-text);
+  line-height: 1.5;
+}
+
 /* Section Headings */
 .section-heading {
   display: flex;
@@ -2209,6 +2252,11 @@ body.mobile-menu-open {
   cursor: pointer;
 }
 
+.copy-btn:disabled {
+  background: #b8c5bf;
+  cursor: not-allowed;
+}
+
 .referral-link-display {
   display: flex;
   flex-direction: column;
@@ -2387,6 +2435,25 @@ body.mobile-menu-open {
 
 .referrals-table td {
   border-bottom: 1px solid var(--dashboard-border);
+}
+
+.table-empty-state {
+  text-align: center;
+  color: var(--dashboard-muted);
+  padding: 1rem;
+}
+
+.chart-empty-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 180px;
+  padding: 1.25rem;
+  border-radius: var(--dashboard-radius-sm);
+  background: var(--dashboard-bg);
+  color: var(--dashboard-muted);
+  text-align: center;
+  line-height: 1.6;
 }
 
 .status-badge {
