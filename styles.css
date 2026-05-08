@@ -334,6 +334,10 @@ select {
   .loan-balance-amount {
     font-size: clamp(1.25rem, 6vw, 2rem);
   }
+
+  .first-section-card {
+    min-height: 25vh;
+  }
 }
 
 .section-wave-canvas {
@@ -874,17 +878,17 @@ select {
 
   /* Marketing Mobile Styles */
   .second-section-card {
-    min-height: auto;
-    padding: 1rem;
+    min-height: 10vh;
+    padding: 0.5rem;
   }
 
   .marketing-container {
-    gap: 0.75rem;
+    gap: 0.25rem;
   }
 
   .marketing-ticker {
-    min-height: 40px;
-    padding: 0.5rem;
+    min-height: 32px;
+    padding: 0.4rem;
   }
 
   .ticker-item {
@@ -892,12 +896,12 @@ select {
   }
 
   .offer-showcase {
-    flex: 0;
+    flex: 1;
   }
 
   .offer-card {
-    padding: 1.25rem;
-    max-width: 100%;
+    padding: 1rem;
+    max-width: 1000%;
   }
 
   #offer-title {
@@ -906,14 +910,14 @@ select {
 
   .offer-amount {
     font-size: 1.25rem;
-    margin: 0.75rem 0;
+    margin: 0.5rem 0;
   }
 
   .offer-details {
     grid-template-columns: 1fr 1fr;
     gap: 0.5rem;
-    padding: 0.6rem;
-    margin: 0.75rem 0;
+    padding: 0.5rem;
+    margin: 0.5rem 0;
   }
 
   .detail-label {
@@ -926,28 +930,28 @@ select {
 
   .offer-message {
     font-size: 0.85rem;
-    margin: 0.75rem 0;
+    margin: 0.5rem 0;
   }
 
   .live-stats {
     grid-template-columns: repeat(3, 1fr);
-    gap: 0.5rem;
+    gap: 0.4rem;
   }
 
   .stat-item {
-    padding: 0.75rem 0.5rem;
+    padding: 0.6rem 0.4rem;
   }
 
   .stat-number {
-    font-size: 1.25rem;
+    font-size: 1.1rem;
   }
 
   .stat-label {
-    font-size: 0.7rem;
+    font-size: 0.65rem;
   }
 
   .btn-apply-now {
-    padding: 0.65rem 1rem;
+    padding: 0.6rem 0.8rem;
     font-size: 0.9rem;
   }
 }

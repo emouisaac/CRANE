@@ -250,6 +250,11 @@
                 </select>
               </div>
               <div class="form-group">
+                <label for="edit-admin-password">Change Password (leave blank to keep current)</label>
+                <input type="password" id="edit-admin-password" autocomplete="new-password" placeholder="Optional: new password">
+                <small class="form-note">Minimum 6 characters. Leave blank to keep current password.</small>
+              </div>
+              <div class="form-group">
                 <label for="edit-admin-status">Status</label>
                 <select id="edit-admin-status">
                   <option value="active">Active</option>
@@ -259,7 +264,7 @@
               </div>
               <div class="form-actions">
                 <button type="submit" class="btn btn-primary">Save Changes</button>
-                <button type="button" class="btn btn-danger" id="delete-admin-btn">Delete Admin</button>
+                <button type="button" class="btn btn-warning" id="delete-admin-btn">Suspend / Reactivate</button>
                 <button type="button" class="btn btn-secondary" onclick="document.getElementById('edit-admin-card').style.display='none'">Cancel</button>
               </div>
             </form>

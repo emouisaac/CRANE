@@ -1617,6 +1617,15 @@ function findAdminAccountById(adminId) {
   return normalizeAdminAccountRow(row);
 }
 
+function generateShortAdminId() {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let id = '';
+  for (let i = 0; i < 6; i++) {
+    id += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return id;
+}
+
 function createAdminAccount({ username, fullName, email = null, passwordHash, role = "loan_officer", status = "active" }) {
   const normalizedUsername = String(username || "").trim();
   const normalizedName = String(fullName || "").trim();
@@ -1638,7 +1647,7 @@ function createAdminAccount({ username, fullName, email = null, passwordHash, ro
   });
 
   const timestamp = nowIso();
-  const adminId = crypto.randomUUID();
+  const adminId = generateShortAdminId();
 
   getDatabase()
     .prepare(`

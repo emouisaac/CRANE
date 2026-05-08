@@ -867,30 +867,74 @@ async function handleEditAdmin(event) {
   event.preventDefault();
   if (!adminPanelState.selectedAdminId) return;
 
-  await apiRequest(`/api/auth/admin/accounts/${adminPanelState.selectedAdminId}`, {
-    method: 'PATCH',
-    body: JSON.stringify({
-      role: document.getElementById('edit-admin-role').value,
-      status: document.getElementById('edit-admin-status').value,
-    }),
-  });
+  const newPassword = document.getElementById('edit-admin-password').value.trim();
+  
+  // Validate password if provided
+  if (newPassword && newPassword.length < 6) {
+    alert('New password must be at least 6 characters');
+    return;
+  }
 
-  alert('Admin account updated successfully.');
-  document.getElementById('edit-admin-card').style.display = 'none';
-  await loadPortalState();
+  const updates = {
+    role: document.getElementById('edit-admin-role').value,
+    status: document.getElementById('edit-admin-status').value,
+  };
+
+  // Only include password if provided
+  if (newPassword) {
+    updates.password = newPassword;
+  }
+
+  try {
+    await apiRequest(`/api/auth/admin/accounts/${adminPanelState.selectedAdminId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(updates),
+    });
+
+    const statusMsg = updates.password 
+      ? `Admin account updated and password changed successfully.`
+      : `Admin account updated successfully.`;
+    
+    alert(statusMsg);
+    document.getElementById('edit-admin-card').style.display = 'none';
+    document.getElementById('edit-admin-password').value = '';
+    await loadPortalState();
+  } catch (error) {
+    alert(`Error updating admin: ${error.message}`);
+  }
 }
 
 async function handleDeleteAdmin() {
   if (!adminPanelState.selectedAdminId) return;
-  if (!window.confirm('Suspend this admin account?')) return;
+  
+  const admin = (getPortalState().admin.adminUsers || []).find((item) => item.id === adminPanelState.selectedAdminId);
+  if (!admin) return;
 
-  await apiRequest(`/api/auth/admin/accounts/${adminPanelState.selectedAdminId}`, {
-    method: 'DELETE',
-  });
+  const currentStatus = admin.status;
+  const actionText = currentStatus === 'suspended' ? 'reactivate' : 'suspend';
+  const confirmMsg = currentStatus === 'suspended' 
+    ? `Reactivate admin account for ${admin.name}? They will regain access.`
+    : `Suspend admin account for ${admin.name}? They will lose access immediately.`;
 
-  alert('Admin account suspended.');
-  document.getElementById('edit-admin-card').style.display = 'none';
-  await loadPortalState();
+  if (!window.confirm(confirmMsg)) return;
+
+  try {
+    const newStatus = currentStatus === 'suspended' ? 'active' : 'suspended';
+    await apiRequest(`/api/auth/admin/accounts/${adminPanelState.selectedAdminId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status: newStatus }),
+    });
+
+    const successMsg = currentStatus === 'suspended' 
+      ? `Admin account ${admin.name} has been reactivated.`
+      : `Admin account ${admin.name} has been suspended.`;
+    
+    alert(successMsg);
+    document.getElementById('edit-admin-card').style.display = 'none';
+    await loadPortalState();
+  } catch (error) {
+    alert(`Error updating account: ${error.message}`);
+  }
 }
 
 function selectCustomer(customerId) {

@@ -199,6 +199,12 @@ function showLoginPrompt() {
   }
 }
 
+function requireLogin(actionMessage = 'Please sign in first to continue with your Crane account.') {
+  if (isAuthenticated) return true;
+  openLoginModal(actionMessage);
+  return false;
+}
+
 // Initialize login modal functionality
 function initializeLoginModal() {
   closeLoginModal();
@@ -1611,8 +1617,11 @@ function setupEventListeners() {
 
   // Apply Now button
   document.getElementById('apply-offer-btn')?.addEventListener('click', () => {
-    const offer = dashboardState.marketing.offers[marketingOfferIndex];
-    alert(`You selected: ${offer.title}\nAmount: ${currencyFormatter.format(offer.amount)}\nLet's proceed with your application!`);
+    if (!requireLogin('Please sign in to apply for this offer.')) return;
+    switchView('get-loan');
+    setTimeout(() => {
+      document.getElementById('loan-request-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 50);
   });
 
   // Navigation
@@ -1727,11 +1736,17 @@ function handleNavigation(event) {
   if (!viewName) return;
 
   event.preventDefault();
+  if (!requireLogin()) return;
   switchView(viewName);
 }
 
 // Switch View
 function switchView(viewName) {
+  if (!isAuthenticated) {
+    showLoginPrompt();
+    return;
+  }
+
   // Update nav links
   document.querySelectorAll('.nav-link').forEach(link => {
     const isActive = link.dataset.view === viewName;
@@ -1872,6 +1887,8 @@ function closePaymentModal() {
 
 // Confirm Payment
 function confirmPayment() {
+  if (!requireLogin('Please sign in to confirm payment.')) return;
+
   // Simulate payment processing
   const btn = document.getElementById('confirm-payment-btn');
   if (!btn) return;
@@ -1908,6 +1925,8 @@ function confirmPayment() {
 
 // Copy Referral Code
 function copyReferralCode() {
+  if (!requireLogin('Please sign in to use your referral code.')) return;
+
   const code = document.getElementById('referral-code')?.textContent;
   const btn = document.getElementById('copy-referral-code');
   if (!code || !btn || !navigator.clipboard) return;
@@ -1947,6 +1966,8 @@ function handlePeriodChange(e) {
 
 // Setup Auto-Debit
 function setupAutoDebit() {
+  if (!requireLogin('Please sign in to set up auto-debit.')) return;
+
   const agree = document.getElementById('autodebit-agree');
   if (!agree) return;
 
@@ -1960,6 +1981,8 @@ function setupAutoDebit() {
 
 // Handle Early Repayment
 function handleEarlyRepayment() {
+  if (!requireLogin('Please sign in to access early repayment options.')) return;
+
   const confirmAmount = document.getElementById('confirm-amount');
   const paymentModal = document.getElementById('payment-modal');
   if (!confirmAmount || !paymentModal) return;
@@ -1970,6 +1993,8 @@ function handleEarlyRepayment() {
 
 // Handle Quick Action
 function handleQuickAction(e) {
+  if (!requireLogin('Please sign in to use dashboard quick actions.')) return;
+
   const action = e.currentTarget.dataset.action;
   
   switch (action) {
@@ -1989,6 +2014,8 @@ function handleQuickAction(e) {
 }
 
 function handleQuickBoxClick(e) {
+  if (!requireLogin('Please sign in to access loan details.')) return;
+
   const quickBox = e.currentTarget.dataset.quickBox;
 
   switch (quickBox) {
@@ -2006,6 +2033,8 @@ function handleQuickBoxClick(e) {
 
 // Handle Loan Item Click
 function handleLoanItemClick(e) {
+  if (!requireLogin('Please sign in to view loan details.')) return;
+
   const loanItem = e.target.closest('.loan-item');
   if (loanItem) {
     const loanId = loanItem.dataset.loanId;
