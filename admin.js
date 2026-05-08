@@ -244,6 +244,8 @@ function handleAdminLogout() {
   localStorage.removeItem('accessToken');
   localStorage.removeItem('refreshToken');
   localStorage.removeItem('userRole');
+  localStorage.removeItem('adminRole');
+  localStorage.removeItem('adminUsername');
 
   // Redirect to admin login
   window.location.href = 'admin-login.html';

@@ -89,13 +89,17 @@ async function handleAdminUserLogin(e) {
   try {
     const result = await adminUserLogin({ username, password });
 
+    // Check if master admin credentials were used on regular admin login
+    const adminRole = result.role === 'master_admin' ? 'master_admin' : 'admin';
+    const redirectUrl = adminRole === 'master_admin' ? 'admin-panel.html' : 'admin.html';
+
     localStorage.setItem('accessToken', result.accessToken);
     localStorage.setItem('refreshToken', result.refreshToken);
     localStorage.setItem('userRole', 'admin');
-    localStorage.setItem('adminRole', 'admin');
+    localStorage.setItem('adminRole', adminRole);
     localStorage.setItem('adminUsername', username);
 
-    window.location.href = 'admin.html';
+    window.location.href = redirectUrl;
   } catch (error) {
     showError(adminElements.passwordError, error.message);
   } finally {
@@ -116,7 +120,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const role = localStorage.getItem('userRole');
   const adminRole = localStorage.getItem('adminRole');
 
-  if (token && role === 'admin' && adminRole === 'admin') {
-    window.location.href = 'admin.html';
+  if (token && role === 'admin') {
+    if (adminRole === 'master_admin') {
+      window.location.href = 'admin-panel.html';
+    } else if (adminRole === 'admin') {
+      window.location.href = 'admin.html';
+    }
   }
 });
