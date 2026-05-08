@@ -47,6 +47,9 @@ const config = {
   // Admin credentials
   adminUsername: process.env.ADMIN_USERNAME || "admin",
   adminPassword: process.env.ADMIN_PASSWORD || "CraneMaster2024!",
+  masterAdminUsername: process.env.MASTER_ADMIN_USERNAME || "master_admin",
+  masterAdminPassword:
+    process.env.MASTER_ADMIN_PASSWORD || process.env.ADMIN_PASSWORD || "CraneMaster2024!",
 };
 
 module.exports = { config };

@@ -16,6 +16,18 @@
       metadata: {
         knownPhones: [],
       },
+      admin: {
+        applications: [],
+        adminUsers: [],
+        riskAlerts: [],
+        auditLogs: [],
+        settings: {},
+      },
+      loans: [],
+      customers: [],
+      notifications: [],
+      referrals: [],
+      user: {},
     };
   }
 
@@ -33,6 +45,18 @@
       metadata: {
         knownPhones,
       },
+      admin: {
+        applications: Array.isArray(incoming.admin?.applications) ? clone(incoming.admin.applications) : [],
+        adminUsers: Array.isArray(incoming.admin?.adminUsers) ? clone(incoming.admin.adminUsers) : [],
+        riskAlerts: Array.isArray(incoming.admin?.riskAlerts) ? clone(incoming.admin.riskAlerts) : [],
+        auditLogs: Array.isArray(incoming.admin?.auditLogs) ? clone(incoming.admin.auditLogs) : [],
+        settings: typeof incoming.admin?.settings === 'object' && incoming.admin?.settings ? clone(incoming.admin.settings) : {},
+      },
+      loans: Array.isArray(incoming.loans) ? clone(incoming.loans) : [],
+      customers: Array.isArray(incoming.customers) ? clone(incoming.customers) : [],
+      notifications: Array.isArray(incoming.notifications) ? clone(incoming.notifications) : [],
+      referrals: Array.isArray(incoming.referrals) ? clone(incoming.referrals) : [],
+      user: typeof incoming.user === 'object' && incoming.user ? clone(incoming.user) : {},
     };
   }
 

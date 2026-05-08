@@ -1,23 +1,29 @@
-// Admin Authentication
+// Admin Authentication - Regular Admin Users
+
 const adminElements = {
   loginForm: document.getElementById('admin-login-form'),
-  username: document.getElementById('admin-username'),
-  password: document.getElementById('admin-password'),
-  submitBtn: document.getElementById('admin-login-submit-btn'),
-  spinner: document.getElementById('admin-login-spinner'),
+  loginUsername: document.getElementById('admin-username'),
+  loginPassword: document.getElementById('admin-password'),
+  loginSubmitBtn: document.getElementById('admin-login-submit-btn'),
+  loginSpinner: document.getElementById('admin-login-spinner'),
+  usernameError: document.getElementById('admin-username-error'),
   passwordError: document.getElementById('admin-password-error'),
-  backToApp: document.getElementById('back-to-app')
+  backToAppButtons: Array.from(document.querySelectorAll('.back-to-app')),
 };
 
 // Utility functions
 function showError(element, message) {
-  element.textContent = message;
-  element.style.display = 'block';
+  if (element) {
+    element.textContent = message;
+    element.style.display = 'block';
+  }
 }
 
 function hideError(element) {
-  element.textContent = '';
-  element.style.display = 'none';
+  if (element) {
+    element.textContent = '';
+    element.style.display = 'none';
+  }
 }
 
 function setLoading(button, spinner, loading) {
@@ -48,25 +54,26 @@ async function apiRequest(endpoint, options = {}) {
   return data;
 }
 
-async function adminLogin({ username, password }) {
+async function adminUserLogin({ username, password }) {
   return apiRequest('/admin/login', {
     body: JSON.stringify({
       username,
       password,
-      deviceId: 'admin_device_' + Date.now()
+      adminType: 'admin',
+      deviceId: 'admin_device_' + Date.now(),
     }),
   });
 }
 
 // Form handlers
-async function handleAdminLogin(e) {
+async function handleAdminUserLogin(e) {
   e.preventDefault();
 
-  const username = adminElements.username.value.trim();
-  const password = adminElements.password.value.trim();
+  const username = adminElements.loginUsername.value.trim();
+  const password = adminElements.loginPassword.value.trim();
 
   if (!username) {
-    showError(adminElements.passwordError, 'Please enter your username');
+    showError(adminElements.usernameError, 'Please enter your username');
     return;
   }
 
@@ -75,29 +82,24 @@ async function handleAdminLogin(e) {
     return;
   }
 
+  hideError(adminElements.usernameError);
   hideError(adminElements.passwordError);
-  setLoading(adminElements.submitBtn, adminElements.spinner, true);
+  setLoading(adminElements.loginSubmitBtn, adminElements.loginSpinner, true);
 
   try {
-    const result = await adminLogin({ username, password });
+    const result = await adminUserLogin({ username, password });
 
-    // Store admin tokens and role
     localStorage.setItem('accessToken', result.accessToken);
     localStorage.setItem('refreshToken', result.refreshToken);
     localStorage.setItem('userRole', 'admin');
-    localStorage.setItem('adminRole', result.role); // Store the specific admin role
+    localStorage.setItem('adminRole', 'admin');
+    localStorage.setItem('adminUsername', username);
 
-    // Redirect to the appropriate admin panel based on role
-    if (result.role === 'master_admin') {
-      window.location.href = 'admin-panel.html';
-    } else {
-      window.location.href = 'admin.html';
-    }
-
+    window.location.href = 'admin.html';
   } catch (error) {
     showError(adminElements.passwordError, error.message);
   } finally {
-    setLoading(adminElements.submitBtn, adminElements.spinner, false);
+    setLoading(adminElements.loginSubmitBtn, adminElements.loginSpinner, false);
   }
 }
 
@@ -107,18 +109,14 @@ function handleBackToApp() {
 
 // Event listeners
 document.addEventListener('DOMContentLoaded', () => {
-  adminElements.loginForm.addEventListener('submit', handleAdminLogin);
-  adminElements.backToApp.addEventListener('click', handleBackToApp);
+  adminElements.loginForm.addEventListener('submit', handleAdminUserLogin);
+  adminElements.backToAppButtons.forEach((button) => button.addEventListener('click', handleBackToApp));
 
-  // Check if already logged in as admin
   const token = localStorage.getItem('accessToken');
   const role = localStorage.getItem('userRole');
+  const adminRole = localStorage.getItem('adminRole');
 
-  if (token && role === 'admin') {
-    if (adminRole === 'master_admin') {
-      window.location.href = 'admin-panel.html';
-    } else if (adminRole === 'admin') {
-      window.location.href = 'admin.html';
-    }
+  if (token && role === 'admin' && adminRole === 'admin') {
+    window.location.href = 'admin.html';
   }
 });

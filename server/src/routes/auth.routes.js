@@ -323,7 +323,7 @@ router.post("/admin/login", (req, res) => {
   const { username, password, deviceId, loginType, role } = req.body || {};
   const normalizedUsername = String(username || "").trim();
   const wantsMasterAdmin =
-    normalizedUsername.toLowerCase() === "master_admin" ||
+    normalizedUsername.toLowerCase() === config.masterAdminUsername.toLowerCase() ||
     loginType === "master_admin" ||
     role === "master_admin";
 
@@ -335,7 +335,21 @@ router.post("/admin/login", (req, res) => {
   }
 
   if (wantsMasterAdmin) {
-    if (password !== config.adminPassword) {
+    if (!normalizedUsername) {
+      return res.status(400).json({
+        error: "Master admin username is required",
+        code: "ADMIN_USERNAME_REQUIRED",
+      });
+    }
+
+    if (normalizedUsername.toLowerCase() !== config.masterAdminUsername.toLowerCase()) {
+      return res.status(401).json({
+        error: "Invalid master admin credentials",
+        code: "MASTER_ADMIN_AUTH_FAILED",
+      });
+    }
+
+    if (password !== config.masterAdminPassword) {
       return res.status(401).json({
         error: "Invalid master admin credentials",
         code: "MASTER_ADMIN_AUTH_FAILED",
@@ -347,7 +361,7 @@ router.post("/admin/login", (req, res) => {
         subject: "master_admin",
         deviceId,
         role: "master_admin",
-        username: "master_admin",
+        username: config.masterAdminUsername,
       })
     );
   }

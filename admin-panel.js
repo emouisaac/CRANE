@@ -84,12 +84,51 @@ function getPortalState() {
   return adminPanelState.portalData;
 }
 
+function buildSharedStateSnapshot() {
+  const state = getPortalState();
+  const loans = Array.isArray(state.loans) ? state.loans : [];
+  const adminPayload = state.admin || {};
+  const totalRemainingBalance = loans.reduce((sum, loan) => sum + (Number(loan.remaining ?? loan.remainingBalance) || 0), 0);
+
+  return {
+    metadata: window.CraneSharedState?.read()?.metadata || { knownPhones: [] },
+    admin: {
+      applications: Array.isArray(adminPayload.loanApplications) ? adminPayload.loanApplications : [],
+      adminUsers: Array.isArray(adminPayload.adminUsers) ? adminPayload.adminUsers : [],
+      riskAlerts: Array.isArray(adminPayload.riskAlerts) ? adminPayload.riskAlerts : [],
+      auditLogs: Array.isArray(adminPayload.auditLogs) ? adminPayload.auditLogs : [],
+      settings: typeof adminPayload.settings === 'object' && adminPayload.settings ? adminPayload.settings : {},
+    },
+    loans,
+    customers: Array.isArray(state.customers) ? state.customers : [],
+    notifications: [],
+    referrals: [],
+    user: {
+      remainingBalance: totalRemainingBalance,
+    },
+  };
+}
+
+async function syncSharedPortalState() {
+  if (!window.CraneSharedState?.write) {
+    return;
+  }
+
+  try {
+    const snapshot = buildSharedStateSnapshot();
+    await window.CraneSharedState.write(snapshot);
+  } catch (error) {
+    console.warn('Could not synchronize master admin portal state with shared state:', error);
+  }
+}
+
 async function loadPortalState() {
   const payload = await apiRequest('/api/admin/portal-state');
   adminPanelState.adminRole = payload.role || adminPanelState.adminRole;
   adminPanelState.portalData = payload.state || adminPanelState.portalData;
   updateUIBasedOnRole(adminPanelState.adminRole);
   renderCurrentView();
+  await syncSharedPortalState();
 }
 
 function setupIdleDetection() {
@@ -938,6 +977,21 @@ function setupNavigation() {
     });
   });
 
+  document.querySelectorAll('.metric-card[data-view]').forEach((card) => {
+    card.addEventListener('click', () => {
+      const view = card.dataset.view;
+      const filter = card.dataset.filter;
+      if (view === 'loans' && filter) {
+        adminPanelState.filters.loanStatus = filter;
+        const loanStatusFilter = document.getElementById('loan-status-filter');
+        if (loanStatusFilter) {
+          loanStatusFilter.value = filter;
+        }
+      }
+      switchAdminView(view);
+    });
+  });
+
   document.querySelectorAll('.footer-box[data-view]').forEach((button) => {
     button.addEventListener('click', () => switchAdminView(button.dataset.view));
   });
@@ -1169,7 +1223,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const adminRole = localStorage.getItem('adminRole');
 
   if (!token || role !== 'admin' || adminRole !== 'master_admin') {
-    window.location.href = 'admin-login.html';
+    window.location.href = 'master-admin-login.html';
     return;
   }
 

@@ -42,17 +42,17 @@ function getAdminAuthState() {
     token,
     role,
     adminRole,
-    isAdmin: Boolean(
-      token &&
-      role === 'admin' &&
-      adminRole &&
-      ['admin', 'master_admin'].includes(adminRole)
-    )
+    isAdmin: Boolean(token && role === 'admin' && adminRole === 'admin')
   };
 }
 
 function requireAdminLogin() {
   const auth = getAdminAuthState();
+
+  if (auth.adminRole === 'master_admin') {
+    window.location.href = 'admin-panel.html';
+    return false;
+  }
 
   if (!auth.isAdmin) {
     localStorage.removeItem('accessToken');

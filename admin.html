@@ -16,7 +16,10 @@
     const token = localStorage.getItem('accessToken');
     const role = localStorage.getItem('userRole');
     const adminRole = localStorage.getItem('adminRole');
-    if (!token || role !== 'admin' || !adminRole || !['admin', 'master_admin'].includes(adminRole)) {
+
+    if (token && role === 'admin' && adminRole === 'master_admin') {
+      window.location.replace('admin-panel.html');
+    } else if (!token || role !== 'admin' || adminRole !== 'admin') {
       window.location.replace('admin-login.html');
     }
   </script>

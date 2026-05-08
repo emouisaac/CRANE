@@ -15,36 +15,6 @@ const dashboardState = {
   }
 };
 
-// Define protected and allowed views for unauthenticated users
-const ALLOWED_UNAUTHENTICATED_VIEWS = ['overview']; // Dashboard only
-const PROTECTED_VIEWS = ['loans', 'repay', 'score', 'get-loan', 'referrals', 'insights'];
-
-// Check if a view requires authentication
-function isProtectedView(viewName) {
-  return PROTECTED_VIEWS.includes(viewName);
-}
-
-// Function to show login required message
-function showLoginRequired() {
-  const loginRequired = document.getElementById('login-required-message');
-  if (loginRequired) {
-    loginRequired.style.display = 'block';
-    setTimeout(() => {
-      loginRequired.style.display = 'none';
-    }, 3000);
-  }
-  
-  // Open login modal
-  const loginModal = document.getElementById('login-modal');
-  if (loginModal) {
-    loginModal.style.display = 'flex';
-    const loginForm = document.getElementById('login-form');
-    const registerForm = document.getElementById('register-form');
-    if (loginForm) loginForm.classList.add('active');
-    if (registerForm) registerForm.classList.remove('active');
-    updateAuthHeader('login');
-  }
-}
 
 const dashboardSharedStore = window.CraneSharedState;
 
@@ -60,34 +30,6 @@ function setText(id, value) {
   if (element) {
     element.textContent = value;
   }
-}
-
-function formatDisplayValue(value, fallback = 'Not available') {
-  if (value === null || value === undefined) return fallback;
-  const normalized = String(value).trim();
-  return normalized || fallback;
-}
-
-function formatStatusLabel(value, fallback = 'Unknown') {
-  if (!value) return fallback;
-  return String(value)
-    .split(/[_\s]+/)
-    .filter(Boolean)
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(' ');
-}
-
-function formatDateTimeLabel(value, fallback = 'Not available') {
-  if (!value) return fallback;
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return fallback;
-  return date.toLocaleString('en-UG', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
 }
 
 function clearAuthState() {
@@ -128,32 +70,6 @@ function closeLoginModal() {
   setLoginRequiredMessage('');
 }
 
-function hideAccountSnapshot() {
-  const accountSnapshot = document.getElementById('account-snapshot');
-  if (accountSnapshot) {
-    accountSnapshot.style.display = 'none';
-  }
-  // Show marketing content for authenticated users
-  const marketingContainer = document.querySelector('.marketing-container');
-  if (marketingContainer) {
-    marketingContainer.classList.remove('hidden-mock-section');
-    marketingContainer.removeAttribute('aria-hidden');
-  }
-}
-
-function showAccountSnapshot() {
-  const accountSnapshot = document.getElementById('account-snapshot');
-  if (accountSnapshot) {
-    accountSnapshot.style.display = 'flex';
-  }
-  // Hide marketing content for unauthenticated users
-  const marketingContainer = document.querySelector('.marketing-container');
-  if (marketingContainer) {
-    marketingContainer.classList.add('hidden-mock-section');
-    marketingContainer.setAttribute('aria-hidden', 'true');
-  }
-}
-
 function setLoginRequiredMessage(message = '') {
   const note = document.getElementById('login-required-note');
   if (!note) return;
@@ -177,86 +93,6 @@ function openLoginModal(message = '') {
   }
   updateAuthHeader('login');
   setLoginRequiredMessage(message);
-}
-
-function openContactModal() {
-  const modal = document.getElementById('contact-modal-overlay');
-  if (modal) {
-    modal.classList.add('active');
-  }
-}
-
-function closeContactModal() {
-  const modal = document.getElementById('contact-modal-overlay');
-  if (modal) {
-    modal.classList.remove('active');
-  }
-}
-
-function setupContactModal() {
-  const modal = document.getElementById('contact-modal-overlay');
-  const closeBtn = document.getElementById('contact-modal-close');
-  const desktopLink = document.getElementById('contact-us-link');
-  const mobileLink = document.getElementById('mobile-contact-us-btn');
-  const callBtn = document.getElementById('call-now-btn');
-  const whatsappBtn = document.getElementById('whatsapp-btn');
-  const emailBtn = document.getElementById('email-btn');
-
-  desktopLink?.addEventListener('click', (event) => {
-    event.preventDefault();
-    openContactModal();
-  });
-
-  mobileLink?.addEventListener('click', (event) => {
-    event.preventDefault();
-    closeMobileMenu();
-    openContactModal();
-  });
-
-  closeBtn?.addEventListener('click', closeContactModal);
-  modal?.addEventListener('click', (event) => {
-    if (event.target === modal) {
-      closeContactModal();
-    }
-  });
-
-  callBtn?.addEventListener('click', () => {
-    const phone = document.getElementById('call-number')?.textContent?.replace(/\s+/g, '') || '+256788408032';
-    window.location.href = `tel:${phone}`;
-  });
-
-  whatsappBtn?.addEventListener('click', () => {
-    const phone = document.getElementById('whatsapp-number')?.textContent?.replace(/\D/g, '') || '256788408032';
-    window.open(`https://wa.me/${phone}`, '_blank', 'noopener');
-  });
-
-  emailBtn?.addEventListener('click', () => {
-    const email = document.getElementById('email-address')?.textContent?.trim() || 'support@craneloans.com';
-    window.location.href = `mailto:${email}`;
-  });
-}
-
-function initializePasswordToggles() {
-  document.querySelectorAll('.password-toggle').forEach((toggleButton) => {
-    if (toggleButton.dataset.bound === 'true') {
-      return;
-    }
-
-    toggleButton.dataset.bound = 'true';
-    toggleButton.addEventListener('click', () => {
-      const targetId = toggleButton.dataset.target;
-      const input = targetId ? document.getElementById(targetId) : null;
-      if (!input) {
-        return;
-      }
-
-      const showingValue = input.type === 'text';
-      input.type = showingValue ? 'password' : 'text';
-      toggleButton.textContent = showingValue ? 'Show' : 'Hide';
-      toggleButton.setAttribute('aria-pressed', String(!showingValue));
-      toggleButton.setAttribute('aria-label', `${showingValue ? 'Show' : 'Hide'} ${input.id.replace(/-/g, ' ')}`);
-    });
-  });
 }
 
 let marketingOfferIndex = 0;
@@ -298,12 +134,9 @@ async function loadUserProfile() {
         name: data.profile.fullName || 'User',
         initials: data.profile.fullName ? data.profile.fullName.split(' ').map(n => n[0]).join('').toUpperCase() : 'U',
         phone: data.profile.phone,
-        email: data.profile.email || '',
         status: data.profile.status,
         registeredAt: data.profile.registeredAt,
         lastLoginAt: data.profile.lastLoginAt,
-        notificationPreferences: data.profile.notificationPreferences || {},
-        security: data.profile.security || {},
       };
       return true;
     }
@@ -369,24 +202,18 @@ function showLoginPrompt() {
 // Initialize login modal functionality
 function initializeLoginModal() {
   closeLoginModal();
-  initializePasswordToggles();
   const loginModal = document.getElementById('login-modal');
   const loginModalClose = document.getElementById('login-modal-close');
   const loginForm = document.getElementById('login-form');
   const registerForm = document.getElementById('register-form');
   const switchToRegister = document.getElementById('switch-to-register');
   const switchToLogin = document.getElementById('switch-to-login');
-  const forgotPinLink = document.getElementById('forgot-pin-link');
 
   // Mobile login button
   const mobileLoginBtn = document.getElementById('mobile-login-btn');
   if (mobileLoginBtn) {
     mobileLoginBtn.addEventListener('click', (e) => {
       e.preventDefault();
-      if (isAuthenticated) {
-        handleLogout(e);
-        return;
-      }
       if (loginModal) {
         loginModal.style.display = 'flex';
         // Reset to login form
@@ -402,10 +229,6 @@ function initializeLoginModal() {
   if (desktopLoginBtn) {
     desktopLoginBtn.addEventListener('click', (e) => {
       e.preventDefault();
-      if (isAuthenticated) {
-        handleLogout(e);
-        return;
-      }
       if (loginModal) {
         loginModal.style.display = 'flex';
         // Reset to login form
@@ -453,28 +276,20 @@ function initializeLoginModal() {
     });
   }
 
-  if (forgotPinLink) {
-    forgotPinLink.addEventListener('click', (e) => {
-      e.preventDefault();
-      alert('For security, PIN changes require your current PIN after signing in. Please log in first, then open Profile > Change PIN.');
-    });
-  }
-
   // Login form submission
   if (loginForm) {
     loginForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       
       const countryCode = document.getElementById('login-country').value;
-      const phoneInput = document.getElementById('login-phone').value;
-      const phoneNumber = normalizeAuthPhone(phoneInput, countryCode);
+      const phoneNumber = document.getElementById('login-phone').value;
       const pin = document.getElementById('login-pin').value;
       
       // Clear previous errors
       clearFormErrors();
       
       // Basic validation
-      if (!isValidAuthPhone(phoneInput, countryCode) || !phoneNumber) {
+      if (!phoneNumber || phoneNumber.length < 9) {
         showFormError('login-phone-error', 'Please enter a valid phone number');
         return;
       }
@@ -496,7 +311,7 @@ function initializeLoginModal() {
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ phone: phoneNumber, pin, deviceId, country: countryCode }),
+          body: JSON.stringify({ phone: phoneNumber, pin, deviceId }),
         });
         
         const data = await response.json();
@@ -512,7 +327,6 @@ function initializeLoginModal() {
           if (loaded) {
             updateAuthButton();
             closeLoginModal();
-            hideAccountSnapshot(); // Hide snapshot for authenticated users
             initializeDashboard();
             stopIdleTimeout(); // Stop idle timeout for authenticated users
           } else {
@@ -536,9 +350,7 @@ function initializeLoginModal() {
       e.preventDefault();
       
       const countryCode = document.getElementById('register-country').value;
-      const fullName = document.getElementById('register-full-name').value.trim();
-      const phoneInput = document.getElementById('register-phone').value;
-      const phoneNumber = normalizeAuthPhone(phoneInput, countryCode);
+      const phoneNumber = document.getElementById('register-phone').value;
       const email = document.getElementById('register-email').value;
       const pin = document.getElementById('register-pin').value;
       const confirmPin = document.getElementById('register-pin-confirm').value;
@@ -547,12 +359,7 @@ function initializeLoginModal() {
       clearFormErrors();
       
       // Validation
-      if (!fullName) {
-        showFormError('register-name-error', 'Please enter your full name');
-        return;
-      }
-
-      if (!isValidAuthPhone(phoneInput, countryCode) || !phoneNumber) {
+      if (!phoneNumber || phoneNumber.length < 9) {
         showFormError('register-phone-error', 'Please enter a valid phone number');
         return;
       }
@@ -584,7 +391,7 @@ function initializeLoginModal() {
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ fullName, phone: phoneNumber, email: email || undefined, pin, deviceId, country: countryCode }),
+          body: JSON.stringify({ phone: phoneNumber, email: email || undefined, pin, deviceId }),
         });
         
         const data = await response.json();
@@ -600,7 +407,6 @@ function initializeLoginModal() {
           if (loaded) {
             updateAuthButton();
             closeLoginModal();
-            hideAccountSnapshot(); // Hide snapshot for authenticated users
             initializeDashboard();
             stopIdleTimeout(); // Stop idle timeout for authenticated users
           } else {
@@ -672,178 +478,14 @@ function isValidEmail(email) {
   return emailRegex.test(email);
 }
 
-const authPhoneConfig = {
-  UG: {
-    dialCode: '256',
-    validate: (digits) => /^0?7\d{8}$/.test(digits),
-  },
-  KE: {
-    dialCode: '254',
-    validate: (digits) => /^0?(?:1|7)\d{8}$/.test(digits),
-  },
-  TZ: {
-    dialCode: '255',
-    validate: (digits) => /^0?[67]\d{8}$/.test(digits),
-  },
-  NG: {
-    dialCode: '234',
-    validate: (digits) => /^0?[7-9]\d{9}$/.test(digits),
-  },
-};
-
-function getPhoneDigits(value) {
-  return String(value || '').replace(/\D/g, '').replace(/^00/, '');
-}
-
-function normalizeAuthPhone(value, country = 'UG') {
-  const config = authPhoneConfig[country] || authPhoneConfig.UG;
-  let digits = getPhoneDigits(value);
-  if (!digits) return '';
-
-  if (digits.startsWith(config.dialCode)) {
-    digits = digits.slice(config.dialCode.length);
-  }
-
-  digits = digits.replace(/^0+/, '');
-  return digits ? `+${config.dialCode}${digits}` : '';
-}
-
-function isValidAuthPhone(value, country = 'UG') {
-  const config = authPhoneConfig[country] || authPhoneConfig.UG;
-  const digits = getPhoneDigits(value);
-  if (!digits) return false;
-
-  if (digits.startsWith(config.dialCode)) {
-    return config.validate(digits.slice(config.dialCode.length));
-  }
-
-  return config.validate(digits);
-}
-
-function getAuthenticatedHeaders() {
-  const token = localStorage.getItem('accessToken');
-  const deviceId = localStorage.getItem('deviceId') || '';
-  return {
-    'Authorization': `Bearer ${token}`,
-    'Content-Type': 'application/json',
-    'x-device-id': deviceId,
-  };
-}
-
-function collectLoanApplicationDocuments() {
-  const documentInputs = [
-    { id: 'id-front', key: 'id_front' },
-    { id: 'id-back', key: 'id_back' },
-    { id: 'income-proof', key: 'income_proof' },
-    { id: 'bank-statement', key: 'bank_statement' },
-    { id: 'selfie-photo', key: 'selfie_photo' },
-    { id: 'additional-documents', key: 'additional_documents' },
-  ];
-
-  return documentInputs.flatMap(({ id, key }) => {
-    const input = document.getElementById(id);
-    if (!input?.files?.length) {
-      return [];
-    }
-
-    return Array.from(input.files).map((file, index) => `${key}:${index + 1}:${file.name}:${file.size}`);
-  });
-}
-
-function setupLoanRequestForm() {
-  const form = document.getElementById('loan-request-form');
-  const feedback = document.getElementById('loan-request-feedback');
-  if (!form || !feedback || form.dataset.bound === 'true') {
-    return;
-  }
-
-  form.dataset.bound = 'true';
-
-  form.addEventListener('submit', async (event) => {
-    event.preventDefault();
-
-    if (!isAuthenticated) {
-      feedback.textContent = 'Please sign in first before submitting a loan application.';
-      feedback.className = 'submission-feedback is-active error';
-      openLoginModal('Please sign in first before submitting a loan application.');
-      return;
-    }
-
-    const applicantPhoneInput = document.getElementById('applicant-phone');
-    const normalizedPhone = normalizeAuthPhone(applicantPhoneInput?.value || '', 'UG');
-    if (!normalizedPhone) {
-      feedback.textContent = 'Enter a valid applicant phone number.';
-      feedback.className = 'submission-feedback is-active error';
-      applicantPhoneInput?.focus();
-      return;
-    }
-
-    const payload = {
-      fullName: document.getElementById('applicant-name')?.value.trim() || '',
-      phone: normalizedPhone,
-      email: document.getElementById('applicant-email')?.value.trim() || '',
-      idNumber: document.getElementById('applicant-id-number')?.value.trim() || '',
-      dateOfBirth: document.getElementById('applicant-dob')?.value || '',
-      district: document.getElementById('applicant-district')?.value || '',
-      subcounty: document.getElementById('applicant-subcounty')?.value || '',
-      village: document.getElementById('applicant-village')?.value.trim() || '',
-      category: document.getElementById('applicant-category')?.value || '',
-      amount: Number(document.getElementById('loan-amount')?.value || 0),
-      termMonths: Number(document.getElementById('loan-term')?.value || 0),
-      purpose: document.getElementById('loan-purpose')?.value || '',
-      employerName: document.getElementById('employer-name')?.value.trim() || '',
-      positionTitle: document.getElementById('position-title')?.value.trim() || '',
-      employmentTenure: document.getElementById('employment-tenure')?.value.trim() || '',
-      businessName: document.getElementById('business-name')?.value.trim() || '',
-      businessType: document.getElementById('business-type')?.value.trim() || '',
-      businessRegistration: document.getElementById('business-registration')?.value.trim() || '',
-      monthlyIncome: Number(document.getElementById('monthly-income')?.value || 0),
-      otherIncome: Number(document.getElementById('other-income')?.value || 0),
-      existingObligations: document.getElementById('existing-obligations')?.value.trim() || '',
-      documents: collectLoanApplicationDocuments(),
-    };
-
-    feedback.textContent = 'Submitting your application...';
-    feedback.className = 'submission-feedback is-active info';
-
-    try {
-      const response = await fetch('/api/loans/applications', {
-        method: 'POST',
-        headers: getAuthenticatedHeaders(),
-        body: JSON.stringify(payload),
-      });
-
-      const data = await response.json();
-      if (!response.ok) {
-        feedback.textContent = data.error || 'We could not submit your application right now.';
-        feedback.className = 'submission-feedback is-active error';
-        return;
-      }
-
-      feedback.textContent = `Application ${data.application?.id || ''} submitted successfully.`;
-      feedback.className = 'submission-feedback is-active success';
-      form.reset();
-      await loadUserProfile();
-      initializeDashboard();
-      switchView('loans');
-    } catch (error) {
-      console.error('Loan application submission failed:', error);
-      feedback.textContent = 'We could not submit your application right now.';
-      feedback.className = 'submission-feedback is-active error';
-    }
-  });
-}
-
 // Update login/logout button based on authentication state
 function updateAuthButton() {
   const mobileLoginBtn = document.getElementById('mobile-login-btn');
   const desktopLoginBtn = document.getElementById('desktop-login-btn');
   const user = dashboardState.user;
-  
-  // Update nav link disabled states based on authentication
-  updateNavLinkStates();
 
   if (isAuthenticated && user && user.phone) {
+    // Show logout button
     if (mobileLoginBtn) {
       mobileLoginBtn.innerHTML = `
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -853,14 +495,19 @@ function updateAuthButton() {
         </svg>
         <span>Logout</span>
       `;
-      mobileLoginBtn.setAttribute('aria-label', 'Logout');
+      mobileLoginBtn.id = 'mobile-logout-btn';
+      mobileLoginBtn.removeEventListener('click', handleMobileLoginClick);
+      mobileLoginBtn.addEventListener('click', handleLogout);
     }
     
     if (desktopLoginBtn) {
       desktopLoginBtn.textContent = 'Logout';
-      desktopLoginBtn.setAttribute('aria-label', 'Logout');
+      desktopLoginBtn.id = 'desktop-logout-btn';
+      desktopLoginBtn.removeEventListener('click', handleDesktopLoginClick);
+      desktopLoginBtn.addEventListener('click', handleLogout);
     }
   } else {
+    // Show login button
     if (mobileLoginBtn) {
       mobileLoginBtn.innerHTML = `
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -870,64 +517,20 @@ function updateAuthButton() {
         </svg>
         <span>Login</span>
       `;
-      mobileLoginBtn.setAttribute('aria-label', 'Login');
+      mobileLoginBtn.id = 'mobile-login-btn';
+      mobileLoginBtn.addEventListener('click', handleMobileLoginClick);
     }
     
     if (desktopLoginBtn) {
       desktopLoginBtn.textContent = 'Login';
-      desktopLoginBtn.setAttribute('aria-label', 'Login');
+      desktopLoginBtn.id = 'desktop-login-btn';
+      desktopLoginBtn.addEventListener('click', handleDesktopLoginClick);
     }
   }
-}
-
-// Update nav link disabled states based on authentication
-function updateNavLinkStates() {
-  // Update desktop nav links
-  document.querySelectorAll('.nav-link').forEach(link => {
-    const view = link.dataset.view;
-    const isProtected = isProtectedView(view);
-    const isDisabled = isProtected && !isAuthenticated;
-    
-    if (isDisabled) {
-      link.style.opacity = '0.5';
-      link.style.cursor = 'not-allowed';
-      link.style.pointerEvents = 'none';
-      link.title = 'Please login to access this feature';
-    } else {
-      link.style.opacity = '1';
-      link.style.cursor = 'pointer';
-      link.style.pointerEvents = 'auto';
-      link.title = '';
-    }
-  });
-  
-  // Update sidebar menu items
-  document.querySelectorAll('.menu-item').forEach(item => {
-    const view = item.dataset.view;
-    const isProtected = isProtectedView(view);
-    const isDisabled = isProtected && !isAuthenticated;
-    
-    if (isDisabled) {
-      item.style.opacity = '0.5';
-      item.style.cursor = 'not-allowed';
-      item.style.pointerEvents = 'none';
-      item.title = 'Please login to access this feature';
-    } else {
-      item.style.opacity = '1';
-      item.style.cursor = 'pointer';
-      item.style.pointerEvents = 'auto';
-      item.title = '';
-    }
-  });
 }
 
 function handleMobileLoginClick(e) {
   e.preventDefault();
-  if (isAuthenticated) {
-    handleLogout(e);
-    return;
-  }
-
   const loginModal = document.getElementById('login-modal');
   if (loginModal) {
     loginModal.style.display = 'flex';
@@ -941,11 +544,6 @@ function handleMobileLoginClick(e) {
 
 function handleDesktopLoginClick(e) {
   e.preventDefault();
-  if (isAuthenticated) {
-    handleLogout(e);
-    return;
-  }
-
   const loginModal = document.getElementById('login-modal');
   if (loginModal) {
     loginModal.style.display = 'flex';
@@ -957,38 +555,16 @@ function handleDesktopLoginClick(e) {
   }
 }
 
-async function handleLogout(e) {
+// Handle logout
+function handleLogout(e) {
   if (e && e.preventDefault) {
     e.preventDefault();
   }
 
-  const token = localStorage.getItem('accessToken');
-  const headers = token
-    ? {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      }
-    : null;
-
-  if (headers) {
-    try {
-      await fetch('/api/auth/logout', {
-        method: 'POST',
-        headers,
-      });
-    } catch (error) {
-      console.error('Logout request failed:', error);
-    }
-  }
-
   clearAuthState();
   closeChatBox();
-  closeProfilePanel();
-  closeContactModal();
-  document.getElementById('notification-panel')?.classList.remove('open');
-  closeMobileMenu();
-  switchView('overview');
   openLoginModal();
+  alert('You have been logged out');
 }
 
 // Open chat box
@@ -1024,122 +600,17 @@ function closeProfilePanel() {
   }
 }
 
-async function saveProfilePreferences(updates, successMessage) {
-  const response = await fetch('/api/profile', {
-    method: 'PUT',
-    headers: getAuthenticatedHeaders(),
-    body: JSON.stringify(updates),
-  });
-
-  const data = await response.json();
-  if (!response.ok) {
-    throw new Error(data.error || 'We could not save your settings right now.');
-  }
-
-  await loadUserProfile();
-  populateProfilePanel();
-  if (successMessage) {
-    alert(successMessage);
-  }
-}
-
-async function handleChangePin() {
-  if (!isAuthenticated) {
-    openLoginModal('Please sign in first to change your PIN.');
-    return;
-  }
-
-  const currentPin = window.prompt('Enter your current 6-digit PIN:');
-  if (currentPin === null) return;
-
-  const newPin = window.prompt('Enter your new 6-digit PIN:');
-  if (newPin === null) return;
-
-  const confirmPin = window.prompt('Confirm your new 6-digit PIN:');
-  if (confirmPin === null) return;
-
-  if (!/^\d{6}$/.test(currentPin) || !/^\d{6}$/.test(newPin)) {
-    alert('Both the current PIN and new PIN must be 6 digits.');
-    return;
-  }
-
-  if (newPin !== confirmPin) {
-    alert('The new PIN confirmation does not match.');
-    return;
-  }
-
-  const response = await fetch('/api/profile/change-pin', {
-    method: 'POST',
-    headers: getAuthenticatedHeaders(),
-    body: JSON.stringify({ currentPin, newPin }),
-  });
-
-  const data = await response.json();
-  if (!response.ok) {
-    throw new Error(data.error || 'We could not change your PIN right now.');
-  }
-
-  alert('Your PIN was changed successfully.');
-}
-
-async function handleSecuritySettings() {
-  if (!isAuthenticated || !dashboardState.user) {
-    openLoginModal('Please sign in first to manage security settings.');
-    return;
-  }
-
-  const currentSecurity = dashboardState.user.security || {};
-  const nextSecurity = {
-    biometricEnabled: window.confirm(`Biometric login is currently ${currentSecurity.biometricEnabled ? 'ON' : 'OFF'}. Click OK to enable it or Cancel to turn it off.`),
-    deviceBindingEnabled: window.confirm(`Device binding is currently ${currentSecurity.deviceBindingEnabled !== false ? 'ON' : 'OFF'}. Click OK to keep it enabled or Cancel to turn it off.`),
-    autoDebitEnabled: window.confirm(`Auto debit is currently ${currentSecurity.autoDebitEnabled ? 'ON' : 'OFF'}. Click OK to enable it or Cancel to turn it off.`),
-  };
-
-  await saveProfilePreferences({ security: nextSecurity }, 'Security settings updated.');
-}
-
-async function handleNotificationPreferences() {
-  if (!isAuthenticated || !dashboardState.user) {
-    openLoginModal('Please sign in first to manage notification preferences.');
-    return;
-  }
-
-  const currentPrefs = dashboardState.user.notificationPreferences || {};
-  const nextPrefs = {
-    sms: window.confirm(`SMS notifications are currently ${currentPrefs.sms !== false ? 'ON' : 'OFF'}. Click OK to enable them or Cancel to turn them off.`),
-    email: window.confirm(`Email notifications are currently ${currentPrefs.email !== false ? 'ON' : 'OFF'}. Click OK to enable them or Cancel to turn them off.`),
-    marketing: window.confirm(`Marketing messages are currently ${currentPrefs.marketing ? 'ON' : 'OFF'}. Click OK to enable them or Cancel to turn them off.`),
-  };
-
-  await saveProfilePreferences({ notificationPreferences: nextPrefs }, 'Notification preferences updated.');
-}
-
-function handleHelpSupport() {
-  closeProfilePanel();
-  openContactModal();
-}
-
-function handleTermsOfUse() {
-  window.location.href = 'terms.html';
-}
-
 // Populate profile panel with user data
 function populateProfilePanel() {
   const user = dashboardState.user;
   if (!user) return;
 
   setText('profile-initials', user.initials);
-  setText('profile-name', formatDisplayValue(user.name, 'Account holder'));
-  setText('profile-status-badge', formatStatusLabel(user.status, 'Unknown'));
-  setText('profile-phone', formatDisplayValue(user.phone, 'Phone not available'));
-  setText('profile-last-login', user.lastLoginAt ? `Last login ${formatDateTimeLabel(user.lastLoginAt)}` : 'Last activity is not available yet.');
-  setText('profile-customer-id', formatDisplayValue(user.id, '--'));
-  setText('profile-member-since', user.registeredAt ? new Date(user.registeredAt).getFullYear() : '--');
-  setText('profile-credit-score', 'N/A');
-  setText('profile-phone-info', formatDisplayValue(user.phone));
-  setText('profile-email', formatDisplayValue(user.email));
-  setText('profile-account-status', formatStatusLabel(user.status, 'Unknown'));
-  setText('profile-last-login-info', formatDateTimeLabel(user.lastLoginAt));
+  setText('profile-name', user.name);
+  setText('profile-phone', user.phone || '+256 700 123456');
+  setText('profile-phone-info', user.phone || '+256 700 123456');
+  setText('profile-email', 'N/A'); // No email sharing as per requirements
+  setText('profile-member-since', user.registeredAt ? new Date(user.registeredAt).getFullYear() : '2024');
 }
 
 // Initialize chat functionality
@@ -1244,13 +715,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     const valid = await loadUserProfile();
     if (!valid) {
       isAuthenticated = false;
-      showAccountSnapshot(); // Show snapshot for unauthenticated users
     } else {
       closeLoginModal();
-      hideAccountSnapshot(); // Hide snapshot for authenticated users
     }
-  } else {
-    showAccountSnapshot(); // Show snapshot for unauthenticated users
   }
 
   if (!isAuthenticated) {
@@ -1271,9 +738,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   initializeDashboard();
   initializeSectionWaveNet();
   setupEventListeners();
-  updateNavLinkStates(); // Apply access control to nav items
-  setupLoanRequestForm();
-  setupContactModal();
   startRealTimeUpdates();
   setupIdleDetection();
 
@@ -2071,6 +1535,8 @@ function updateCountdown() {
 
 // Setup Event Listeners
 function setupEventListeners() {
+  // Logout button
+  document.getElementById('logout-btn')?.addEventListener('click', handleLogout);
 
   // Home footer button
   document.getElementById('home-nav-btn')?.addEventListener('click', () => {
@@ -2079,10 +1545,6 @@ function setupEventListeners() {
 
   // Footer money/loans button
   document.getElementById('footer-money-btn')?.addEventListener('click', () => {
-    if (!isAuthenticated) {
-      showLoginRequired();
-      return;
-    }
     switchView('loans');
   });
 
@@ -2121,32 +1583,23 @@ function setupEventListeners() {
 
   // Profile menu items
   document.getElementById('change-pin-btn')?.addEventListener('click', () => {
-    handleChangePin().catch((error) => {
-      console.error('Change PIN failed:', error);
-      alert(error.message || 'We could not change your PIN right now.');
-    });
+    alert('Change PIN feature would be implemented here.');
   });
   
   document.getElementById('security-settings-btn')?.addEventListener('click', () => {
-    handleSecuritySettings().catch((error) => {
-      console.error('Security settings update failed:', error);
-      alert(error.message || 'We could not save your security settings right now.');
-    });
+    alert('Security settings would be implemented here.');
   });
   
   document.getElementById('notification-prefs-btn')?.addEventListener('click', () => {
-    handleNotificationPreferences().catch((error) => {
-      console.error('Notification preferences update failed:', error);
-      alert(error.message || 'We could not save your notification preferences right now.');
-    });
+    alert('Notification preferences would be implemented here.');
   });
   
   document.getElementById('help-btn')?.addEventListener('click', () => {
-    handleHelpSupport();
+    alert('Help & Support would be implemented here.');
   });
   
   document.getElementById('terms-btn')?.addEventListener('click', () => {
-    handleTermsOfUse();
+    alert('Terms & Conditions would be implemented here.');
   });
   
   document.getElementById('profile-logout-btn')?.addEventListener('click', handleLogout);
@@ -2201,14 +1654,6 @@ function setupEventListeners() {
       }
 
       e.preventDefault();
-      
-      // Check if view is protected and user is not authenticated
-      if (isProtectedView(view) && !isAuthenticated) {
-        showLoginRequired();
-        closeMobileMenu();
-        return;
-      }
-      
       switchView(view);
       closeMobileMenu();
     });
@@ -2243,27 +1688,9 @@ function setupEventListeners() {
   document.getElementById('refresh-dashboard')?.addEventListener('click', handleRefreshDashboard);
   
   // View all loans
-  document.getElementById('view-all-loans')?.addEventListener('click', () => {
-    if (!isAuthenticated) {
-      showLoginRequired();
-      return;
-    }
-    switchToLoansView('all');
-  });
-  document.getElementById('view-loan-options')?.addEventListener('click', () => {
-    if (!isAuthenticated) {
-      showLoginRequired();
-      return;
-    }
-    switchToLoansView('all');
-  });
-  document.getElementById('view-more-insights')?.addEventListener('click', () => {
-    if (!isAuthenticated) {
-      showLoginRequired();
-      return;
-    }
-    switchView('insights');
-  });
+  document.getElementById('view-all-loans')?.addEventListener('click', () => switchToLoansView('all'));
+  document.getElementById('view-loan-options')?.addEventListener('click', () => switchToLoansView('all'));
+  document.getElementById('view-more-insights')?.addEventListener('click', () => switchView('insights'));
   
   // Loan status pills
   document.querySelectorAll('.status-pill').forEach(pill => {
@@ -2300,13 +1727,6 @@ function handleNavigation(event) {
   if (!viewName) return;
 
   event.preventDefault();
-  
-  // Check if view is protected and user is not authenticated
-  if (isProtectedView(viewName) && !isAuthenticated) {
-    showLoginRequired();
-    return;
-  }
-  
   switchView(viewName);
 }
 
@@ -2573,24 +1993,12 @@ function handleQuickBoxClick(e) {
 
   switch (quickBox) {
     case 'active':
-      if (!isAuthenticated) {
-        showLoginRequired();
-        return;
-      }
       switchToLoansView('active');
       break;
     case 'overdue':
-      if (!isAuthenticated) {
-        showLoginRequired();
-        return;
-      }
       switchToLoansView('overdue');
       break;
     case 'repay':
-      if (!isAuthenticated) {
-        showLoginRequired();
-        return;
-      }
       switchView('repay');
       break;
   }
@@ -2601,10 +2009,6 @@ function handleLoanItemClick(e) {
   const loanItem = e.target.closest('.loan-item');
   if (loanItem) {
     const loanId = loanItem.dataset.loanId;
-    if (!isAuthenticated) {
-      showLoginRequired();
-      return;
-    }
     console.log('Viewing loan details:', loanId);
     switchToLoansView('active');
   }
