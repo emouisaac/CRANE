@@ -39,6 +39,7 @@ function clearAuthState() {
   isAuthenticated = false;
   dashboardState.user = null;
   updateAuthButton();
+  updateAccountSnapshot();
   startIdleTimeout(); // Start idle timeout for unauthenticated users
 }
 
@@ -203,6 +204,169 @@ function requireLogin(actionMessage = 'Please sign in first to continue with you
   if (isAuthenticated) return true;
   openLoginModal(actionMessage);
   return false;
+}
+
+function getLoanApplicationFormPayload() {
+  const fieldValue = (id) => String(document.getElementById(id)?.value || '').trim();
+
+  const documents = [];
+  const documentInputs = [
+    { id: 'id-front', label: 'ID front' },
+    { id: 'id-back', label: 'ID back' },
+    { id: 'income-proof', label: 'Income proof' },
+    { id: 'bank-statement', label: 'Bank statement' },
+    { id: 'selfie-photo', label: 'Selfie photo' },
+    { id: 'additional-documents', label: 'Additional document' },
+  ];
+
+  documentInputs.forEach(({ id, label }) => {
+    const input = document.getElementById(id);
+    if (input?.files?.length) {
+      Array.from(input.files).forEach((file) => {
+        if (file && file.name) {
+          documents.push(`${label}: ${file.name}`);
+        }
+      });
+    }
+  });
+
+  return {
+    fullName: fieldValue('applicant-name'),
+    phone: fieldValue('applicant-phone'),
+    email: fieldValue('applicant-email'),
+    idNumber: fieldValue('applicant-id-number'),
+    dateOfBirth: fieldValue('applicant-dob'),
+    district: fieldValue('applicant-district'),
+    subcounty: fieldValue('applicant-subcounty'),
+    village: fieldValue('applicant-village'),
+    category: fieldValue('applicant-category'),
+    amount: Number(fieldValue('loan-amount')),
+    termMonths: Number(fieldValue('loan-term')),
+    purpose: fieldValue('loan-purpose'),
+    employerName: fieldValue('employer-name'),
+    positionTitle: fieldValue('position-title'),
+    employmentTenure: fieldValue('employment-tenure'),
+    businessName: fieldValue('business-name'),
+    businessType: fieldValue('business-type'),
+    businessRegistration: fieldValue('business-registration'),
+    monthlyIncome: Number(fieldValue('monthly-income')),
+    otherIncome: Number(fieldValue('other-income')),
+    existingObligations: fieldValue('existing-obligations'),
+    documents,
+  };
+}
+
+async function postLoanApplication(payload) {
+  const token = localStorage.getItem('accessToken');
+  const deviceId = localStorage.getItem('deviceId');
+
+  const response = await fetch('/api/loans/applications', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+      'x-device-id': deviceId || '',
+    },
+    body: JSON.stringify(payload),
+  });
+
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(body.error || 'Failed to submit the loan application.');
+  }
+
+  return body;
+}
+
+async function syncApplicationToSharedState(application) {
+  if (!dashboardSharedStore?.update) return;
+
+  await dashboardSharedStore.update((state) => {
+    state.admin = state.admin || {};
+    state.admin.applications = Array.isArray(state.admin.applications) ? state.admin.applications : [];
+    const existing = state.admin.applications.find((item) => item.id === application.id);
+    if (!existing) {
+      state.admin.applications.unshift(application);
+    }
+
+    state.notifications = Array.isArray(state.notifications) ? state.notifications : [];
+    state.notifications.unshift({
+      id: `notif-${Date.now()}`,
+      unread: true,
+      type: 'info',
+      title: 'New loan application submitted',
+      message: `Application ${application.id} was submitted and is pending review.`,
+      createdAt: new Date().toISOString(),
+    });
+
+    state.metadata = state.metadata || {};
+    state.metadata.knownPhones = Array.isArray(state.metadata.knownPhones)
+      ? Array.from(new Set([...(state.metadata.knownPhones || []), application.phone].filter(Boolean)))
+      : application.phone ? [application.phone] : [];
+    return state;
+  });
+}
+
+async function handleLoanRequestSubmit(event) {
+  event.preventDefault();
+
+  if (!requireLogin()) return;
+
+  const form = event.currentTarget;
+  if (!form || !form.checkValidity()) {
+    form.reportValidity();
+    return;
+  }
+
+  const submitBtn = form.querySelector('button[type="submit"]');
+  const feedback = document.getElementById('loan-request-feedback');
+  const originalText = submitBtn?.textContent || 'Submit request';
+
+  try {
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Submitting...';
+    }
+    if (feedback) {
+      feedback.textContent = 'Submitting your application now...';
+    }
+
+    const payload = getLoanApplicationFormPayload();
+    const response = await postLoanApplication(payload);
+
+    const application = {
+      id: response.application?.id || `APP-${Date.now().toString(36).toUpperCase()}`,
+      borrower: payload.fullName,
+      user: payload.fullName,
+      phone: payload.phone,
+      amount: Number(payload.amount) || 0,
+      term: Number(payload.termMonths) || 0,
+      purpose: payload.purpose,
+      status: response.application?.status || 'pending',
+      score: Number(response.application?.score) || 0,
+      requestedAt: response.application?.requestedAt || new Date().toISOString(),
+    };
+
+    await syncApplicationToSharedState(application);
+
+    form.reset();
+    if (feedback) {
+      feedback.textContent = 'Your application has been submitted successfully. Admin review will begin shortly.';
+    }
+    if (submitBtn) {
+      submitBtn.textContent = 'Submitted';
+    }
+  } catch (error) {
+    if (feedback) {
+      feedback.textContent = String(error.message || 'Unable to submit application. Try again later.');
+    }
+    console.error('Loan request submit failed:', error);
+  } finally {
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = originalText;
+    }
+  }
 }
 
 // Initialize login modal functionality
@@ -817,6 +981,7 @@ function initializeDashboard() {
   updateWelcomeHeader();
   updateLoanBalance();
   updateHeroStats();
+  updateAccountSnapshot();
   initializeMarketingDashboard();
   populateLoansList();
   populateNotifications();
@@ -990,6 +1155,53 @@ function updateHeroStats() {
   setText('total-borrowed', user.totalBorrowed ? currencyFormatter.format(user.totalBorrowed) : 'UGX 0');
   setText('remaining-balance', user.remainingBalance ? currencyFormatter.format(user.remainingBalance) : 'UGX 0');
   setText('credit-score-display', user.creditScore || 'N/A');
+}
+
+function updateAccountSnapshot() {
+  const title = document.getElementById('snapshot-title');
+  const message = document.getElementById('snapshot-message');
+  const badge = document.getElementById('snapshot-badge');
+  const loansCount = Array.isArray(dashboardState.loans) ? dashboardState.loans.length : 0;
+  const unreadAlerts = Array.isArray(dashboardState.notifications)
+    ? dashboardState.notifications.filter((notification) => notification.unread).length
+    : 0;
+  const outstandingBalance = dashboardState.user?.remainingBalance ?? dashboardState.loans.reduce((sum, loan) => sum + (loan.remaining || 0), 0);
+  const nextDueLoan = dashboardState.loans
+    .filter((loan) => loan.status === 'active' && loan.dueDate)
+    .sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate))[0];
+  const nextDue = nextDueLoan && nextDueLoan.dueDate
+    ? `${Math.max(0, Math.ceil((new Date(nextDueLoan.dueDate) - Date.now()) / (1000 * 60 * 60 * 24)))}d`
+    : 'Not scheduled';
+
+  if (!isAuthenticated) {
+    if (title) title.textContent = 'No live account activity yet';
+    if (message) message.textContent = 'Sign in to view current balances, due dates, and real account alerts.';
+    if (badge) badge.textContent = 'Awaiting sign in';
+    setText('snapshot-active-loans', '0');
+    setText('snapshot-outstanding-balance', 'UGX 0');
+    setText('snapshot-next-due', 'Not scheduled');
+    setText('snapshot-unread-alerts', '0');
+    return;
+  }
+
+  if (title) {
+    title.textContent = loansCount > 0
+      ? `${loansCount} active loan${loansCount === 1 ? '' : 's'}`
+      : 'No active loans yet';
+  }
+  if (message) {
+    message.textContent = loansCount > 0
+      ? 'Your snapshot is up to date with the latest loan balances and upcoming due dates.'
+      : 'Apply for a Crane loan to see your account snapshot update in real time.';
+  }
+  if (badge) {
+    badge.textContent = loansCount > 0 ? 'Live' : 'Ready';
+  }
+
+  setText('snapshot-active-loans', String(loansCount));
+  setText('snapshot-outstanding-balance', currencyFormatter.format(outstandingBalance || 0));
+  setText('snapshot-next-due', nextDue);
+  setText('snapshot-unread-alerts', String(unreadAlerts));
 }
 
 // Initialize Marketing Dashboard
@@ -1623,6 +1835,8 @@ function setupEventListeners() {
       document.getElementById('loan-request-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }, 50);
   });
+
+  document.getElementById('loan-request-form')?.addEventListener('submit', handleLoanRequestSubmit);
 
   // Navigation
   document.querySelectorAll('.nav-link').forEach(link => {

@@ -127,6 +127,17 @@ function initializeAdminConsole() {
   sharedStore?.subscribe(() => {
     refreshAdminConsole();
   });
+  window.addEventListener('storage', (event) => {
+    if (event.key === sharedStore?.STORAGE_KEY) {
+      sharedStore?.hydrate()
+        .then(() => {
+          refreshAdminConsole();
+        })
+        .catch((error) => {
+          console.error('Failed to refresh admin shared state after storage event:', error);
+        });
+    }
+  });
   sharedStore?.hydrate()
     .then(() => {
       refreshAdminConsole();

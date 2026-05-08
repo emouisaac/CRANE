@@ -72,6 +72,12 @@
     });
 
     window.dispatchEvent(new CustomEvent(STORE_EVENT, { detail: snapshot }));
+
+    try {
+      window.localStorage.setItem(STORAGE_KEY, String(Date.now()));
+    } catch (error) {
+      // Ignore localStorage write failures in restricted environments.
+    }
   }
 
   async function requestSharedState(url, options = {}) {

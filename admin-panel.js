@@ -1278,6 +1278,16 @@ document.addEventListener('DOMContentLoaded', async () => {
   setupActionButtons();
   setupIdleDetection();
 
+  window.addEventListener('storage', async (event) => {
+    if (event.key === window.CraneSharedState?.STORAGE_KEY) {
+      try {
+        await loadPortalState();
+      } catch (error) {
+        console.error('Failed to refresh portal state after shared state change:', error);
+      }
+    }
+  });
+
   try {
     await loadPortalState();
   } catch (error) {
