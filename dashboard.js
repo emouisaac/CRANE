@@ -911,13 +911,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   startRealTimeUpdates();
   setupIdleDetection();
 
-  window.addEventListener('storage', (event) => {
-    if (event.key === dashboardSharedStore?.STORAGE_KEY) {
-      hydrateDashboardFromSharedState();
-      initializeDashboard();
-    }
-  });
-
   // Cleanup on page unload
   window.addEventListener('beforeunload', () => {
     stopIdleTimeout();
