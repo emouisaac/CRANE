@@ -458,6 +458,16 @@ async function handleApiRequest(req, res, url, pathname) {
     return;
   }
 
+  if (pathname.startsWith("/api/admin/borrowers/") && pathname.endsWith("/pin") && req.method === "PATCH") {
+    const session = requireSession(req, "admin");
+    const borrowerId = pathname.split("/")[4];
+    const body = await readJson(req);
+    updateBorrowerPinByAdmin(session, borrowerId, body);
+    broadcastRoleRefresh(["borrower"]);
+    sendJson(res, 200, { ok: true });
+    return;
+  }
+
   if (pathname === "/api/super-admin/login" && req.method === "POST") {
     const body = await readJson(req);
     assertSuperAdminCredentials(body);
@@ -491,6 +501,16 @@ async function handleApiRequest(req, res, url, pathname) {
     const admin = createAdmin(session, body);
     broadcastRoleRefresh(["admin", "super_admin"]);
     sendJson(res, 201, { ok: true, admin: sanitizeAdmin(admin) });
+    return;
+  }
+
+  if (pathname.startsWith("/api/super-admin/admins/") && pathname.endsWith("/pin") && req.method === "PATCH") {
+    const session = requireSession(req, "super_admin");
+    const adminId = pathname.split("/")[4];
+    const body = await readJson(req);
+    updateAdminPinBySuperAdmin(session, adminId, body);
+    broadcastRoleRefresh(["admin"]);
+    sendJson(res, 200, { ok: true });
     return;
   }
 
@@ -1069,6 +1089,25 @@ function updateAdminStatus(session, adminId, body) {
   createNotification("admin", String(adminId), "Admin account updated", `Your admin account is now ${humanizeStatus(status)}.`, status === "active" ? "success" : "warning");
 }
 
+function updateAdminPinBySuperAdmin(session, adminId, body) {
+  const admin = db.prepare("SELECT * FROM admins WHERE id = ?").get(Number(adminId));
+  if (!admin) {
+    throw createHttpError(404, "Admin account not found.");
+  }
+
+  const pin = String(body.pin || body.pinCode || body.pin_code || body.password || "").trim();
+  if (!/^\d{6}$/.test(pin)) {
+    throw createHttpError(400, "Admin PIN must be exactly 6 digits.");
+  }
+
+  db.prepare("UPDATE admins SET pin_hash = ? WHERE id = ?").run(hashSecret(pin), Number(adminId));
+  db.prepare("DELETE FROM sessions WHERE actor_role = 'admin' AND actor_id = ?").run(String(adminId));
+  logActivity("super_admin", session.actorId, session.actorName, "reset admin PIN", "admin", String(adminId), {
+    username: admin.username
+  });
+  createNotification("admin", String(adminId), "Admin PIN reset", "Your admin PIN was updated by the super admin. Sign in again using the new PIN.", "warning");
+}
+
 function deleteAdmin(session, adminId) {
   const admin = db.prepare("SELECT * FROM admins WHERE id = ?").get(Number(adminId));
   if (!admin) {
@@ -1080,6 +1119,26 @@ function deleteAdmin(session, adminId) {
   logActivity("super_admin", session.actorId, session.actorName, "deleted admin account", "admin", String(adminId), {
     username: admin.username
   });
+}
+
+function updateBorrowerPinByAdmin(session, borrowerId, body) {
+  const borrower = db.prepare("SELECT * FROM borrowers WHERE id = ?").get(Number(borrowerId));
+  if (!borrower) {
+    throw createHttpError(404, "Borrower account not found.");
+  }
+
+  const pin = String(body.pin || body.pinCode || body.pin_code || body.password || "").trim();
+  if (!/^\d{6}$/.test(pin)) {
+    throw createHttpError(400, "Borrower PIN must be exactly 6 digits.");
+  }
+
+  db.prepare("UPDATE borrowers SET pin_hash = ? WHERE id = ?").run(hashSecret(pin), Number(borrowerId));
+  db.prepare("DELETE FROM sessions WHERE actor_role = 'borrower' AND actor_id = ?").run(String(borrowerId));
+  logActivity("admin", session.actorId, session.actorName, "reset borrower PIN", "borrower", String(borrowerId), {
+    borrowerName: borrower.full_name
+  });
+  createNotification("borrower", String(borrowerId), "Account PIN updated", "Your account PIN was updated by the admin team. Sign in again using the new PIN.", "warning");
+  addSupportMessage(Number(borrowerId), "system", "system", `Your account PIN was updated by ${session.actorName}. If you did not expect this change, contact support immediately.`);
 }
 
 function decideApplicationBySuperAdmin(session, applicationId, body) {

@@ -285,7 +285,23 @@
             `).join("")
           : `<div class="empty-block">No approved loans are attached to this borrower yet.</div>`}
       </div>
+      <div class="detail-stack">
+        <strong>Reset borrower PIN</strong>
+        <div class="detail-subtext">Set a new 6-digit PIN for the customer's next sign-in.</div>
+        <div class="portal-field">
+          <label for="borrower-pin-reset-${selected.id}">New borrower PIN</label>
+          <input id="borrower-pin-reset-${selected.id}" class="portal-input" type="password" maxlength="6" inputmode="numeric" pattern="[0-9]{6}" placeholder="Enter new 6-digit PIN" data-borrower-pin-input-id="${selected.id}">
+        </div>
+        <div class="button-row">
+          <button type="button" class="chip-btn" data-borrower-pin-reset-id="${selected.id}">Update Borrower PIN</button>
+        </div>
+        <div class="portal-success" data-borrower-pin-feedback-id="${selected.id}"></div>
+      </div>
     `;
+
+    dom.borrowerDetail.querySelector(`[data-borrower-pin-reset-id="${selected.id}"]`)?.addEventListener("click", () => {
+      resetBorrowerPin(selected.id);
+    });
   }
 
   function renderSupport() {
@@ -384,6 +400,31 @@
     }
   }
 
+  async function resetBorrowerPin(borrowerId) {
+    const input = dom.borrowerDetail.querySelector(`[data-borrower-pin-input-id="${borrowerId}"]`);
+    const feedback = dom.borrowerDetail.querySelector(`[data-borrower-pin-feedback-id="${borrowerId}"]`);
+    const pin = input?.value.trim() || "";
+
+    if (!/^\d{6}$/.test(pin)) {
+      setFeedbackState(feedback, "Enter a new 6-digit numeric PIN for this borrower.", true);
+      input?.focus();
+      return;
+    }
+
+    try {
+      await api(`/api/admin/borrowers/${borrowerId}/pin`, {
+        method: "PATCH",
+        body: { pin }
+      });
+      if (input) {
+        input.value = "";
+      }
+      setFeedbackState(feedback, "Borrower PIN updated. The customer must sign in again with the new PIN.");
+    } catch (error) {
+      setFeedbackState(feedback, error.message, true);
+    }
+  }
+
   async function logout() {
     await api("/api/admin/logout", { method: "POST" });
     window.location.href = "admin-login.html";
@@ -444,6 +485,16 @@
       .replace(/>/g, "&gt;")
       .replace(/"/g, "&quot;")
       .replace(/'/g, "&#39;");
+  }
+
+  function setFeedbackState(element, message, isError = false) {
+    if (!element) {
+      return;
+    }
+
+    element.textContent = message;
+    element.classList.toggle("portal-error", isError);
+    element.classList.toggle("portal-success", !isError);
   }
 
   function toCamel(value) {

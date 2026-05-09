@@ -229,7 +229,17 @@
             </div>
             <div class="detail-label">@${escapeHtml(admin.username)} • ${escapeHtml(admin.email || "No email")}</div>
             <div class="detail-label">Created ${formatDate(admin.createdAt)} by ${escapeHtml(admin.createdBy || "system")}</div>
+            <div class="detail-stack">
+              <strong>Reset admin PIN</strong>
+              <div class="detail-subtext">Set a new 6-digit sign-in PIN for this admin account.</div>
+              <div class="portal-field">
+                <label for="admin-pin-reset-${admin.id}">New admin PIN</label>
+                <input id="admin-pin-reset-${admin.id}" class="portal-input" type="password" maxlength="6" inputmode="numeric" pattern="[0-9]{6}" placeholder="Enter new 6-digit PIN" data-admin-pin-input-id="${admin.id}">
+              </div>
+              <div class="portal-success" data-admin-pin-feedback-id="${admin.id}"></div>
+            </div>
             <div class="button-row">
+              <button type="button" class="chip-btn" data-admin-pin-reset-id="${admin.id}">Update PIN</button>
               <button type="button" class="chip-btn" data-admin-status-id="${admin.id}" data-next-status="${admin.status === "active" ? "suspended" : "active"}">
                 ${admin.status === "active" ? "Suspend" : "Reactivate"}
               </button>
@@ -241,6 +251,10 @@
 
     dom.adminAccountList.querySelectorAll("[data-admin-status-id]").forEach((button) => {
       button.addEventListener("click", () => updateAdminStatus(button.dataset.adminStatusId, button.dataset.nextStatus));
+    });
+
+    dom.adminAccountList.querySelectorAll("[data-admin-pin-reset-id]").forEach((button) => {
+      button.addEventListener("click", () => resetAdminPin(button.dataset.adminPinResetId));
     });
 
     dom.adminAccountList.querySelectorAll("[data-admin-delete-id]").forEach((button) => {
@@ -376,6 +390,31 @@
       await loadDashboard();
     } catch (error) {
       window.alert(error.message);
+    }
+  }
+
+  async function resetAdminPin(adminId) {
+    const input = dom.adminAccountList.querySelector(`[data-admin-pin-input-id="${adminId}"]`);
+    const feedback = dom.adminAccountList.querySelector(`[data-admin-pin-feedback-id="${adminId}"]`);
+    const pin = input?.value.trim() || "";
+
+    if (!/^\d{6}$/.test(pin)) {
+      setFeedbackState(feedback, "Enter a new 6-digit numeric PIN for this admin.", true);
+      input?.focus();
+      return;
+    }
+
+    try {
+      await api(`/api/super-admin/admins/${adminId}/pin`, {
+        method: "PATCH",
+        body: { pin }
+      });
+      if (input) {
+        input.value = "";
+      }
+      setFeedbackState(feedback, "Admin PIN updated. The admin must sign in again with the new PIN.");
+    } catch (error) {
+      setFeedbackState(feedback, error.message, true);
     }
   }
 
