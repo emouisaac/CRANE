@@ -1399,6 +1399,9 @@ function initializeDatabase() {
   ensureColumn("loans", "metadata_json", `TEXT NOT NULL DEFAULT '{}'`);
   ensureColumn("notifications", "meta_json", `TEXT NOT NULL DEFAULT '{}'`);
 
+  // Ensure audit_logs table has actor_name column
+  ensureColumn("audit_logs", "actor_name", "TEXT");
+
   importLegacyAuthUsers();
   importLegacyAdminAccounts();
   normalizeActiveAuthUsers();
