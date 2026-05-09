@@ -18,10 +18,10 @@
 
   <div class="app-shell portal-shell">
     <header class="dashboard-header">
-      <a href="index.html" class="header-brand" aria-label="Return to Crane Credit home">
+      <button type="button" class="header-brand" id="super-header-brand-btn" aria-label="Go to overview">
         <div class="logo-icon"><img src="img/black crane.png" alt=""></div>
         <span>Crane Credit</span>
-      </a>
+      </button>
       <nav class="header-nav portal-nav">
         <button type="button" class="nav-link active" data-super-view="overview">Overview</button>
         <button type="button" class="nav-link" data-super-view="decisions">Loan Decisions</button>
@@ -29,11 +29,27 @@
         <button type="button" class="nav-link" data-super-view="live-content">Live Content</button>
         <button type="button" class="nav-link" data-super-view="audit">Audit</button>
       </nav>
-      <div class="portal-header-copy">
-        <strong id="super-admin-name-display">Super Admin</strong>
-        <span class="muted-copy">Master control surface</span>
+      <div class="header-actions">
+        <button type="button" class="mobile-search-btn" id="super-quick-view-btn" aria-label="Open decisions">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 3l7 4v5c0 5-3.5 8.5-7 9-3.5-.5-7-4-7-9V7l7-4z"></path>
+            <path d="M9.5 12.5l1.5 1.5 3.5-4"></path>
+          </svg>
+        </button>
+        <button type="button" class="icon-btn" id="super-notification-btn" aria-label="Open notifications">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+            <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+          </svg>
+          <span class="notification-badge" id="super-notification-badge">0</span>
+        </button>
       </div>
     </header>
+
+    <div class="portal-header-copy">
+      <strong id="super-admin-name-display">Super Admin</strong>
+      <span class="muted-copy">Master control surface</span>
+    </div>
 
     <main>
       <section class="portal-view active" id="super-overview-view">
@@ -331,13 +347,58 @@
 
     <footer class="footer-card portal-footer">
       <div class="footer-grid">
-        <button type="button" class="footer-box portal-footer-btn active" data-super-view="overview">Overview</button>
-        <button type="button" class="footer-box portal-footer-btn" data-super-view="decisions">Decisions</button>
-        <button type="button" class="footer-box portal-footer-btn" data-super-view="admins">Admins</button>
-        <button type="button" class="footer-box portal-footer-btn" data-super-view="live-content">Content</button>
-        <button type="button" class="footer-box portal-footer-btn logout" id="super-admin-logout-btn">Logout</button>
+        <button type="button" class="footer-box portal-footer-btn active" data-super-view="overview" aria-label="Overview">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <rect x="3" y="3" width="7" height="7"></rect>
+            <rect x="14" y="3" width="7" height="7"></rect>
+            <rect x="14" y="14" width="7" height="7"></rect>
+            <rect x="3" y="14" width="7" height="7"></rect>
+          </svg>
+          <span class="footer-label">Overview</span>
+        </button>
+        <button type="button" class="footer-box portal-footer-btn" data-super-view="decisions" aria-label="Loan decisions">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M12 3l7 4v5c0 5-3.5 8.5-7 9-3.5-.5-7-4-7-9V7l7-4z"></path>
+            <path d="M9.5 12.5l1.5 1.5 3.5-4"></path>
+          </svg>
+          <span class="footer-label">Decisions</span>
+        </button>
+        <button type="button" class="footer-box portal-footer-btn" data-super-view="admins" aria-label="Admin accounts">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M16 21v-1a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v1"></path>
+            <circle cx="8.5" cy="7" r="4"></circle>
+            <path d="M20 8v6"></path>
+            <path d="M23 11h-6"></path>
+          </svg>
+          <span class="footer-label">Admins</span>
+        </button>
+        <button type="button" class="footer-box portal-footer-btn" data-super-view="live-content" aria-label="Live content">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M22 2L11 13"></path>
+            <path d="M22 2l-7 20-4-9-9-4 20-7z"></path>
+          </svg>
+          <span class="footer-label">Content</span>
+        </button>
+        <button type="button" class="footer-box portal-footer-btn logout" id="super-admin-logout-btn" aria-label="Logout">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path>
+            <path d="M10 17l5-5-5-5"></path>
+            <path d="M15 12H3"></path>
+          </svg>
+          <span class="footer-label">Logout</span>
+        </button>
       </div>
     </footer>
+
+    <div class="notification-panel" id="super-notification-panel">
+      <div class="panel-header">
+        <h3>Notifications</h3>
+        <button type="button" class="close-btn" id="super-close-notifications">&times;</button>
+      </div>
+      <div class="panel-content notifications-list" id="super-notification-list">
+        <div class="panel-empty-state">No notifications yet.</div>
+      </div>
+    </div>
   </div>
 
   <script src="super-admin.js?v=20260509b"></script>

@@ -24,7 +24,9 @@
       "admin-application-detail", "review-amount", "review-rate", "review-installment", "review-payout", "review-note",
       "review-feedback", "action-under-review", "action-needs-docs", "action-send-super", "action-reject", "borrower-list",
       "borrower-detail", "support-thread-list", "support-thread-title", "support-thread-subtitle", "support-message-list",
-      "support-reply-form", "support-reply-input", "support-feedback", "admin-logout-btn"
+      "support-reply-form", "support-reply-input", "support-feedback", "admin-logout-btn", "admin-header-brand-btn",
+      "admin-quick-view-btn", "admin-notification-btn", "admin-notification-badge", "admin-notification-panel",
+      "admin-close-notifications", "admin-notification-list"
     ];
 
     ids.forEach((id) => {
@@ -53,6 +55,14 @@
     dom.actionReject?.addEventListener("click", () => submitReview("rejected_by_admin"));
     dom.supportReplyForm?.addEventListener("submit", submitSupportReply);
     dom.adminLogoutBtn?.addEventListener("click", logout);
+    dom.adminHeaderBrandBtn?.addEventListener("click", () => setView("overview"));
+    dom.adminQuickViewBtn?.addEventListener("click", () => setView("support"));
+    dom.adminNotificationBtn?.addEventListener("click", () => {
+      dom.adminNotificationPanel?.classList.add("active");
+    });
+    dom.adminCloseNotifications?.addEventListener("click", () => {
+      dom.adminNotificationPanel?.classList.remove("active");
+    });
   }
 
   async function loadDashboard() {
@@ -90,7 +100,24 @@
     renderApplications();
     renderBorrowers();
     renderSupport();
+    renderNotifications();
     setView(state.currentView);
+  }
+
+  function renderNotifications() {
+    const notifications = state.dashboard.notifications || [];
+    dom.adminNotificationBadge.textContent = String(notifications.length);
+    dom.adminNotificationList.innerHTML = notifications.length
+      ? notifications.map((item) => `
+          <article class="notification-item">
+            <div class="notification-top">
+              <strong>${escapeHtml(item.title)}</strong>
+              <span class="detail-label">${formatDateTime(item.createdAt)}</span>
+            </div>
+            <div class="detail-subtext">${escapeHtml(item.message)}</div>
+          </article>
+        `).join("")
+      : `<div class="panel-empty-state">No notifications yet.</div>`;
   }
 
   function renderMetrics() {

@@ -3,6 +3,21 @@
   const usernameInput = document.getElementById("super-admin-username");
   const passwordInput = document.getElementById("super-admin-password");
   const errorBox = document.getElementById("super-admin-login-error");
+  const brandButton = document.getElementById("super-login-brand-btn");
+  const homeButton = document.getElementById("super-login-home-btn");
+  const adminButton = document.getElementById("super-login-admin-btn");
+
+  brandButton?.addEventListener("click", () => {
+    window.location.href = "index.html";
+  });
+
+  homeButton?.addEventListener("click", () => {
+    window.location.href = "index.html";
+  });
+
+  adminButton?.addEventListener("click", () => {
+    window.location.href = "admin-login.html";
+  });
 
   document.addEventListener("DOMContentLoaded", async () => {
     try {

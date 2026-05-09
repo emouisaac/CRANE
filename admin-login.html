@@ -18,13 +18,31 @@
 
   <div class="app-shell portal-login-shell">
     <header class="dashboard-header">
-      <a href="index.html" class="header-brand" aria-label="Return to Crane Credit home">
+      <button type="button" class="header-brand" id="admin-login-brand-btn" aria-label="Go to home">
         <div class="logo-icon"><img src="img/black crane.png" alt=""></div>
         <span>Crane Credit</span>
-      </a>
-      <div class="portal-header-copy">
-        <strong>Admin access</strong>
-        <span class="muted-copy">Loan operations sign-in</span>
+      </button>
+      <nav class="header-nav">
+        <a href="index.html" class="nav-link">Home</a>
+        <a href="index.html" class="nav-link">Borrower</a>
+        <a href="terms.html" class="nav-link">Terms</a>
+        <a href="privacy.html" class="nav-link">Privacy</a>
+        <a href="admin-login.html" class="nav-link active">Admin Login</a>
+      </nav>
+      <div class="header-actions">
+        <button type="button" class="mobile-search-btn" id="admin-login-home-btn" aria-label="Go to borrower home">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 10.5 12 3l9 7.5"></path>
+            <path d="M5 9.5V21h14V9.5"></path>
+          </svg>
+        </button>
+        <button type="button" class="icon-btn" id="admin-login-support-btn" aria-label="Open terms and privacy">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="9"></circle>
+            <path d="M9.09 9a3 3 0 0 1 5.82 1c0 2-3 3-3 3"></path>
+            <path d="M12 17h.01"></path>
+          </svg>
+        </button>
       </div>
     </header>
 
@@ -83,10 +101,42 @@
 
     <footer class="footer-card portal-footer">
       <div class="footer-grid">
-        <a href="index.html" class="footer-box portal-footer-btn active">Home</a>
-        <a href="terms.html" class="footer-box portal-footer-btn">Terms</a>
-        <a href="privacy.html" class="footer-box portal-footer-btn">Privacy</a>
-        <a href="index.html" class="footer-box portal-footer-btn">Borrower</a>
+        <a href="index.html" class="footer-box portal-footer-btn" aria-label="Home">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M3 10.5 12 3l9 7.5"></path>
+            <path d="M5 9.5V21h14V9.5"></path>
+          </svg>
+          <span class="footer-label">Home</span>
+        </a>
+        <a href="terms.html" class="footer-box portal-footer-btn" aria-label="Terms">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M14 3h5a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-5"></path>
+            <path d="M9 17l-5-5 5-5"></path>
+            <path d="M4 12h12"></path>
+          </svg>
+          <span class="footer-label">Terms</span>
+        </a>
+        <a href="privacy.html" class="footer-box portal-footer-btn" aria-label="Privacy">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+          </svg>
+          <span class="footer-label">Privacy</span>
+        </a>
+        <a href="index.html" class="footer-box portal-footer-btn" aria-label="Borrower dashboard">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <rect x="2" y="6" width="20" height="12" rx="2"></rect>
+            <circle cx="12" cy="12" r="2.5"></circle>
+            <path d="M6 12h.01M18 12h.01"></path>
+          </svg>
+          <span class="footer-label">Borrower</span>
+        </a>
+        <a href="admin-login.html" class="footer-box portal-footer-btn active" aria-label="Admin login">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <circle cx="12" cy="8" r="4"></circle>
+            <path d="M4 21a8 8 0 0 1 16 0"></path>
+          </svg>
+          <span class="footer-label">Admin</span>
+        </a>
       </div>
     </footer>
   </div>

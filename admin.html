@@ -18,21 +18,36 @@
 
   <div class="app-shell portal-shell">
     <header class="dashboard-header">
-      <a href="index.html" class="header-brand" aria-label="Return to Crane Credit home">
+      <button type="button" class="header-brand" id="admin-header-brand-btn" aria-label="Go to overview">
         <div class="logo-icon"><img src="img/black crane.png" alt=""></div>
         <span>Crane Credit</span>
-      </a>
+      </button>
       <nav class="header-nav portal-nav">
         <button type="button" class="nav-link active" data-admin-view="overview">Overview</button>
         <button type="button" class="nav-link" data-admin-view="applications">Applications</button>
         <button type="button" class="nav-link" data-admin-view="borrowers">Borrowers</button>
         <button type="button" class="nav-link" data-admin-view="support">Support</button>
       </nav>
-      <div class="portal-header-copy">
-        <strong id="admin-name-display">Admin Workspace</strong>
-        <span class="muted-copy">Real-time loan operations</span>
+      <div class="header-actions">
+        <button type="button" class="mobile-search-btn" id="admin-quick-view-btn" aria-label="Open support">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"></path>
+          </svg>
+        </button>
+        <button type="button" class="icon-btn" id="admin-notification-btn" aria-label="Open notifications">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+            <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+          </svg>
+          <span class="notification-badge" id="admin-notification-badge">0</span>
+        </button>
       </div>
     </header>
+
+    <div class="portal-header-copy">
+      <strong id="admin-name-display">Admin Workspace</strong>
+      <span class="muted-copy">Real-time loan operations</span>
+    </div>
 
     <main>
       <section class="portal-view active" id="admin-overview-view">
@@ -213,13 +228,58 @@
 
     <footer class="footer-card portal-footer">
       <div class="footer-grid">
-        <button type="button" class="footer-box portal-footer-btn active" data-admin-view="overview">Overview</button>
-        <button type="button" class="footer-box portal-footer-btn" data-admin-view="applications">Applications</button>
-        <button type="button" class="footer-box portal-footer-btn" data-admin-view="borrowers">Borrowers</button>
-        <button type="button" class="footer-box portal-footer-btn" data-admin-view="support">Support</button>
-        <button type="button" class="footer-box portal-footer-btn logout" id="admin-logout-btn">Logout</button>
+        <button type="button" class="footer-box portal-footer-btn active" data-admin-view="overview" aria-label="Overview">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <rect x="3" y="3" width="7" height="7"></rect>
+            <rect x="14" y="3" width="7" height="7"></rect>
+            <rect x="14" y="14" width="7" height="7"></rect>
+            <rect x="3" y="14" width="7" height="7"></rect>
+          </svg>
+          <span class="footer-label">Overview</span>
+        </button>
+        <button type="button" class="footer-box portal-footer-btn" data-admin-view="applications" aria-label="Applications">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <rect x="2" y="6" width="20" height="12" rx="2"></rect>
+            <circle cx="12" cy="12" r="2.5"></circle>
+            <path d="M6 12h.01M18 12h.01"></path>
+          </svg>
+          <span class="footer-label">Applications</span>
+        </button>
+        <button type="button" class="footer-box portal-footer-btn" data-admin-view="borrowers" aria-label="Borrowers">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M16 21v-1a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v1"></path>
+            <circle cx="8.5" cy="7" r="4"></circle>
+            <path d="M20 8v6"></path>
+            <path d="M23 11h-6"></path>
+          </svg>
+          <span class="footer-label">Borrowers</span>
+        </button>
+        <button type="button" class="footer-box portal-footer-btn" data-admin-view="support" aria-label="Support">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"></path>
+          </svg>
+          <span class="footer-label">Support</span>
+        </button>
+        <button type="button" class="footer-box portal-footer-btn logout" id="admin-logout-btn" aria-label="Logout">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path>
+            <path d="M10 17l5-5-5-5"></path>
+            <path d="M15 12H3"></path>
+          </svg>
+          <span class="footer-label">Logout</span>
+        </button>
       </div>
     </footer>
+
+    <div class="notification-panel" id="admin-notification-panel">
+      <div class="panel-header">
+        <h3>Notifications</h3>
+        <button type="button" class="close-btn" id="admin-close-notifications">&times;</button>
+      </div>
+      <div class="panel-content notifications-list" id="admin-notification-list">
+        <div class="panel-empty-state">No notifications yet.</div>
+      </div>
+    </div>
   </div>
 
   <script src="admin.js?v=20260509b"></script>
