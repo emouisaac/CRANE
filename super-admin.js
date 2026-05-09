@@ -323,24 +323,47 @@
 
   async function createAdmin(event) {
     event.preventDefault();
-    dom.adminCreateFeedback.textContent = "";
+    setFeedbackState(dom.adminCreateFeedback, "");
+    const fullName = dom.newAdminName.value.trim();
+    const username = dom.newAdminUsername.value.trim();
+    const email = dom.newAdminEmail.value.trim();
+    const phone = dom.newAdminPhone.value.trim();
+    const pin = dom.newAdminPin.value.trim();
+
+    if (!fullName) {
+      setFeedbackState(dom.adminCreateFeedback, "Enter the admin's full name.", true);
+      dom.newAdminName.focus();
+      return;
+    }
+
+    if (!username) {
+      setFeedbackState(dom.adminCreateFeedback, "Enter a username for this admin.", true);
+      dom.newAdminUsername.focus();
+      return;
+    }
+
+    if (!/^\d{6}$/.test(pin)) {
+      setFeedbackState(dom.adminCreateFeedback, "Enter a 6-digit numeric PIN.", true);
+      dom.newAdminPin.focus();
+      return;
+    }
 
     try {
       await api("/api/super-admin/admins", {
         method: "POST",
         body: {
-          fullName: dom.newAdminName.value,
-          username: dom.newAdminUsername.value,
-          email: dom.newAdminEmail.value,
-          phone: dom.newAdminPhone.value,
-          pin: dom.newAdminPin.value
+          fullName,
+          username,
+          email,
+          phone,
+          pin
         }
       });
       dom.createAdminForm.reset();
-      dom.adminCreateFeedback.textContent = "Admin account created successfully.";
+      setFeedbackState(dom.adminCreateFeedback, "Admin account created successfully.");
       await loadDashboard();
     } catch (error) {
-      dom.adminCreateFeedback.textContent = error.message;
+      setFeedbackState(dom.adminCreateFeedback, error.message, true);
     }
   }
 
@@ -484,5 +507,15 @@
 
   function toCamel(value) {
     return String(value).replace(/-([a-z])/g, (_, letter) => letter.toUpperCase());
+  }
+
+  function setFeedbackState(element, message, isError = false) {
+    if (!element) {
+      return;
+    }
+
+    element.textContent = message;
+    element.classList.toggle("portal-error", isError);
+    element.classList.toggle("portal-success", !isError);
   }
 })();

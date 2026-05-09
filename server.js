@@ -1021,11 +1021,11 @@ function reviewApplicationByAdmin(session, applicationId, body) {
 }
 
 function createAdmin(session, body) {
-  const fullName = String(body.fullName || "").trim();
-  const username = String(body.username || "").trim();
-  const email = String(body.email || "").trim();
-  const phone = String(body.phone || "").trim();
-  const pin = String(body.pin || "");
+  const fullName = String(body.fullName || body.full_name || body.name || "").trim();
+  const username = String(body.username || body.userName || body.adminUsername || "").trim();
+  const email = String(body.email || body.emailAddress || body.email_address || "").trim();
+  const phone = String(body.phone || body.phoneNumber || body.phone_number || "").trim();
+  const pin = String(body.pin || body.pinCode || body.pin_code || "").trim();
 
   if (!fullName || !username || !/^\d{6}$/.test(pin)) {
     throw createHttpError(400, "Admin full name, username, and 6-digit PIN are required.");

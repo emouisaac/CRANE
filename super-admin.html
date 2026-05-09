@@ -200,7 +200,7 @@
               </div>
               <div class="portal-field">
                 <label for="new-admin-pin">Initial 6-digit PIN</label>
-                <input id="new-admin-pin" class="portal-input" type="password" maxlength="6" placeholder="Create PIN" required>
+                <input id="new-admin-pin" class="portal-input" type="password" maxlength="6" inputmode="numeric" pattern="[0-9]{6}" placeholder="Create PIN" required>
               </div>
               <div id="admin-create-feedback" class="portal-success"></div>
               <button type="submit" class="portal-submit">Create Admin Account</button>
