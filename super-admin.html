@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Crane Credit | Super Admin Workspace</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+  <link rel="icon" href="img/Crane Credit.png" type="image/png">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="dashboard.css">
+  <link rel="stylesheet" href="admin-suite.css">
+</head>
+<body class="portal-page intro-complete">
+  <div class="page-glow page-glow-left"></div>
+  <div class="page-glow page-glow-right"></div>
+
+  <div class="app-shell portal-shell">
+    <header class="dashboard-header">
+      <a href="index.html" class="header-brand" aria-label="Return to Crane Credit home">
+        <div class="logo-icon"><img src="img/black crane.png" alt=""></div>
+        <span>Crane Credit</span>
+      </a>
+      <nav class="header-nav portal-nav">
+        <button type="button" class="nav-link active" data-super-view="overview">Overview</button>
+        <button type="button" class="nav-link" data-super-view="decisions">Loan Decisions</button>
+        <button type="button" class="nav-link" data-super-view="admins">Admin Control</button>
+        <button type="button" class="nav-link" data-super-view="live-content">Live Content</button>
+        <button type="button" class="nav-link" data-super-view="audit">Audit</button>
+      </nav>
+      <div class="portal-header-copy">
+        <strong id="super-admin-name-display">Super Admin</strong>
+        <span class="muted-copy">Master control surface</span>
+      </div>
+    </header>
+
+    <main>
+      <section class="portal-view active" id="super-overview-view">
+        <div class="portal-metrics">
+          <article class="metric-card">
+            <span class="metric-label">Admin accounts</span>
+            <strong class="metric-value" id="super-metric-admins">0</strong>
+            <span class="metric-meta">Total issued operations accounts</span>
+          </article>
+          <article class="metric-card">
+            <span class="metric-label">Active admins</span>
+            <strong class="metric-value" id="super-metric-active-admins">0</strong>
+            <span class="metric-meta">Currently able to sign in</span>
+          </article>
+          <article class="metric-card">
+            <span class="metric-label">Suspended admins</span>
+            <strong class="metric-value" id="super-metric-suspended-admins">0</strong>
+            <span class="metric-meta">Temporarily disabled accounts</span>
+          </article>
+          <article class="metric-card">
+            <span class="metric-label">Pending decisions</span>
+            <strong class="metric-value" id="super-metric-decisions">0</strong>
+            <span class="metric-meta">Loans waiting for final approval</span>
+          </article>
+          <article class="metric-card">
+            <span class="metric-label">Active borrowers</span>
+            <strong class="metric-value" id="super-metric-borrowers">0</strong>
+            <span class="metric-meta">Borrower accounts in the live system</span>
+          </article>
+        </div>
+
+        <div class="portal-grid three-up">
+          <article class="workspace-card">
+            <div class="workspace-header">
+              <div>
+                <h3>Awaiting decisions</h3>
+                <p class="detail-subtext">Escalated applications ready for final approval or rejection.</p>
+              </div>
+            </div>
+            <div class="stack-list" id="super-overview-decision-feed"></div>
+          </article>
+          <article class="workspace-card">
+            <div class="workspace-header">
+              <div>
+                <h3>Live notifications</h3>
+                <p class="detail-subtext">System messages relevant to the master control tier.</p>
+              </div>
+            </div>
+            <div class="notification-feed" id="super-notification-feed"></div>
+          </article>
+          <article class="workspace-card">
+            <div class="workspace-header">
+              <div>
+                <h3>Audit highlights</h3>
+                <p class="detail-subtext">Recent decisions, broadcasts, and account governance activity.</p>
+              </div>
+            </div>
+            <div class="activity-feed" id="super-overview-audit-feed"></div>
+          </article>
+        </div>
+      </section>
+
+      <section class="portal-view" id="super-decisions-view">
+        <div class="portal-grid split">
+          <article class="list-card">
+            <div class="workspace-header">
+              <div>
+                <h3>Decision queue</h3>
+                <p class="detail-subtext">Admin-reviewed applications requesting final authorization.</p>
+              </div>
+            </div>
+            <div class="stack-list" id="decision-application-list"></div>
+          </article>
+
+          <article class="detail-card">
+            <div class="detail-header">
+              <div>
+                <h3>Loan decision</h3>
+                <p class="detail-subtext">Approve with final terms or reject with a clear note.</p>
+              </div>
+            </div>
+            <div id="decision-application-detail" class="detail-stack"></div>
+            <div class="detail-notes">
+              <div class="two-up">
+                <div class="portal-field">
+                  <label for="decision-amount">Approved amount</label>
+                  <input id="decision-amount" class="portal-input" type="number" placeholder="UGX amount">
+                </div>
+                <div class="portal-field">
+                  <label for="decision-rate">Monthly rate (%)</label>
+                  <input id="decision-rate" class="portal-input" type="number" step="0.1" placeholder="1.6">
+                </div>
+              </div>
+              <div class="two-up">
+                <div class="portal-field">
+                  <label for="decision-installment">Installment amount</label>
+                  <input id="decision-installment" class="portal-input" type="number" placeholder="Monthly installment">
+                </div>
+                <div class="portal-field">
+                  <label for="decision-term">Term months</label>
+                  <input id="decision-term" class="portal-input" type="number" placeholder="Loan term">
+                </div>
+              </div>
+              <div class="portal-field">
+                <label for="decision-note">Decision note</label>
+                <textarea id="decision-note" class="portal-textarea" placeholder="Record final reasoning, policy checks, or borrower instructions."></textarea>
+              </div>
+              <div id="decision-feedback" class="portal-success"></div>
+              <div class="button-row">
+                <button type="button" class="action-btn" id="decision-approve">Approve Loan</button>
+                <button type="button" class="action-btn danger" id="decision-reject">Reject Loan</button>
+              </div>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="portal-view" id="super-admins-view">
+        <div class="portal-grid split">
+          <article class="detail-card">
+            <div class="detail-header">
+              <div>
+                <h3>Create admin account</h3>
+                <p class="detail-subtext">New admin credentials are database-backed and can sign in immediately.</p>
+              </div>
+            </div>
+            <form id="create-admin-form" class="portal-form">
+              <div class="two-up">
+                <div class="portal-field">
+                  <label for="new-admin-name">Full name</label>
+                  <input id="new-admin-name" class="portal-input" type="text" placeholder="e.g. Sarah Nansubuga" required>
+                </div>
+                <div class="portal-field">
+                  <label for="new-admin-username">Username</label>
+                  <input id="new-admin-username" class="portal-input" type="text" placeholder="e.g. sarah_ops" required>
+                </div>
+              </div>
+              <div class="two-up">
+                <div class="portal-field">
+                  <label for="new-admin-email">Email</label>
+                  <input id="new-admin-email" class="portal-input" type="email" placeholder="name@crane.local">
+                </div>
+                <div class="portal-field">
+                  <label for="new-admin-phone">Phone</label>
+                  <input id="new-admin-phone" class="portal-input" type="text" placeholder="+256 7XX XXX XXX">
+                </div>
+              </div>
+              <div class="portal-field">
+                <label for="new-admin-pin">Initial 6-digit PIN</label>
+                <input id="new-admin-pin" class="portal-input" type="password" maxlength="6" placeholder="Create PIN" required>
+              </div>
+              <div id="admin-create-feedback" class="portal-success"></div>
+              <button type="submit" class="portal-submit">Create Admin Account</button>
+            </form>
+          </article>
+
+          <article class="list-card">
+            <div class="workspace-header">
+              <div>
+                <h3>Admin accounts</h3>
+                <p class="detail-subtext">Suspend, reactivate, or delete admins in real time.</p>
+              </div>
+            </div>
+            <div class="stack-list" id="admin-account-list"></div>
+          </article>
+        </div>
+      </section>
+
+      <section class="portal-view" id="super-live-content-view">
+        <div class="portal-grid split">
+          <article class="detail-card">
+            <div class="detail-header">
+              <div>
+                <h3>Borrower-facing content</h3>
+                <p class="detail-subtext">Update ticker lines, active offer messaging, and support contacts on `index.html` without changing its layout.</p>
+              </div>
+            </div>
+            <form id="public-content-form" class="portal-form">
+              <div class="portal-field">
+                <label for="ticker-one">Ticker line one</label>
+                <input id="ticker-one" class="portal-input" type="text">
+              </div>
+              <div class="portal-field">
+                <label for="ticker-two">Ticker line two</label>
+                <input id="ticker-two" class="portal-input" type="text">
+              </div>
+              <div class="portal-field">
+                <label for="ticker-three">Ticker line three</label>
+                <input id="ticker-three" class="portal-input" type="text">
+              </div>
+              <div class="two-up">
+                <div class="portal-field">
+                  <label for="offer-title-input">Offer title</label>
+                  <input id="offer-title-input" class="portal-input" type="text">
+                </div>
+                <div class="portal-field">
+                  <label for="offer-amount-input">Offer amount</label>
+                  <input id="offer-amount-input" class="portal-input" type="number">
+                </div>
+              </div>
+              <div class="two-up">
+                <div class="portal-field">
+                  <label for="offer-rate-input">Offer rate (%)</label>
+                  <input id="offer-rate-input" class="portal-input" type="number" step="0.1">
+                </div>
+                <div class="portal-field">
+                  <label for="offer-installment-input">Installment</label>
+                  <input id="offer-installment-input" class="portal-input" type="number">
+                </div>
+              </div>
+              <div class="two-up">
+                <div class="portal-field">
+                  <label for="offer-payout-input">Payout ETA</label>
+                  <input id="offer-payout-input" class="portal-input" type="text">
+                </div>
+                <div class="portal-field">
+                  <label for="offer-message-input">Offer message</label>
+                  <input id="offer-message-input" class="portal-input" type="text">
+                </div>
+              </div>
+              <div class="two-up">
+                <div class="portal-field">
+                  <label for="contact-phone-input">Call number</label>
+                  <input id="contact-phone-input" class="portal-input" type="text">
+                </div>
+                <div class="portal-field">
+                  <label for="contact-whatsapp-input">WhatsApp number</label>
+                  <input id="contact-whatsapp-input" class="portal-input" type="text">
+                </div>
+              </div>
+              <div class="portal-field">
+                <label for="contact-email-input">Support email</label>
+                <input id="contact-email-input" class="portal-input" type="email">
+              </div>
+              <div id="public-content-feedback" class="portal-success"></div>
+              <button type="submit" class="portal-submit">Publish Live Update</button>
+            </form>
+          </article>
+
+          <article class="detail-card">
+            <div class="detail-header">
+              <div>
+                <h3>Broadcast announcement</h3>
+                <p class="detail-subtext">Push a new notification to borrowers, admins, or both.</p>
+              </div>
+            </div>
+            <form id="announcement-form" class="portal-form">
+              <div class="portal-field">
+                <label for="announcement-title">Announcement title</label>
+                <input id="announcement-title" class="portal-input" type="text" placeholder="e.g. Verification update">
+              </div>
+              <div class="portal-field">
+                <label for="announcement-target">Target audience</label>
+                <select id="announcement-target" class="portal-select">
+                  <option value="borrower">Borrowers</option>
+                  <option value="admin">Admins</option>
+                  <option value="super_admin">Super admins</option>
+                </select>
+              </div>
+              <div class="portal-field">
+                <label for="announcement-message">Message</label>
+                <textarea id="announcement-message" class="portal-textarea" placeholder="Share a precise operational update."></textarea>
+              </div>
+              <div id="announcement-feedback" class="portal-success"></div>
+              <button type="submit" class="portal-submit">Send Announcement</button>
+            </form>
+          </article>
+        </div>
+      </section>
+
+      <section class="portal-view" id="super-audit-view">
+        <div class="portal-grid split">
+          <article class="workspace-card">
+            <div class="workspace-header">
+              <div>
+                <h3>Recent audit log</h3>
+                <p class="detail-subtext">Actions across approvals, broadcasts, and account governance.</p>
+              </div>
+            </div>
+            <div class="activity-feed" id="audit-log-list"></div>
+          </article>
+
+          <article class="workspace-card">
+            <div class="workspace-header">
+              <div>
+                <h3>Master notifications</h3>
+                <p class="detail-subtext">Messages addressed to the super admin role.</p>
+              </div>
+            </div>
+            <div class="notification-feed" id="super-audit-notification-feed"></div>
+          </article>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer-card portal-footer">
+      <div class="footer-grid">
+        <button type="button" class="footer-box portal-footer-btn active" data-super-view="overview">Overview</button>
+        <button type="button" class="footer-box portal-footer-btn" data-super-view="decisions">Decisions</button>
+        <button type="button" class="footer-box portal-footer-btn" data-super-view="admins">Admins</button>
+        <button type="button" class="footer-box portal-footer-btn" data-super-view="live-content">Content</button>
+        <button type="button" class="footer-box portal-footer-btn logout" id="super-admin-logout-btn">Logout</button>
+      </div>
+    </footer>
+  </div>
+
+  <script src="super-admin.js"></script>
+</body>
+</html>

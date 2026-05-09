@@ -4,172 +4,93 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Crane Credit | Admin Login</title>
-  <meta name="description" content="Secure admin login for Crane Credit management system">
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="icon" href="img/Crane Credit.png" type="image/png">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+  <link rel="icon" href="img/Crane Credit.png" type="image/png">
   <link rel="stylesheet" href="styles.css">
-  <style>
-    /* Admin login specific styles for better balance */
-    body {
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 1rem;
-      background: var(--surface);
-      margin: 0;
-    }
-
-    .admin-auth-container {
-      width: 100%;
-      max-width: 480px; /* Slightly wider than regular auth container */
-      min-height: 500px; /* Ensure minimum height for balance */
-      background: var(--surface-strong);
-      border-radius: var(--radius-xl);
-      box-shadow: var(--shadow);
-      overflow: hidden;
-      display: flex;
-      flex-direction: column;
-    }
-
-    .admin-auth-header {
-      text-align: center;
-      padding: 3rem 2rem 2rem; /* More padding for balance */
-      border-bottom: 1px solid var(--line);
-      flex-shrink: 0;
-    }
-
-    .admin-auth-form-container {
-      padding: 3rem 2rem; /* More padding for balance */
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-    }
-
-    .admin-auth-footer {
-      padding: 2rem;
-      text-align: center;
-      border-top: 1px solid var(--line);
-      flex-shrink: 0;
-    }
-
-    .admin-auth-form-container .auth-form {
-      margin: 0;
-    }
-
-    .admin-auth-form-container .auth-links {
-      margin-top: 1.5rem;
-      text-align: center;
-    }
-
-    .admin-auth-form-container .auth-link {
-      background: transparent;
-      border: none;
-      color: var(--primary);
-      cursor: pointer;
-      font-size: 0.95rem;
-      text-decoration: underline;
-      padding: 0;
-    }
-
-    /* Mobile responsive for admin login */
-    @media (max-width: 480px) {
-      body {
-        padding: 0.5rem;
-      }
-
-      .admin-auth-container {
-        margin: 0;
-        min-height: auto;
-        max-width: none;
-      }
-
-      .admin-auth-header {
-        padding: 2rem 1.5rem 1.5rem;
-      }
-
-      .admin-auth-form-container {
-        padding: 2rem 1.5rem;
-      }
-
-      .admin-auth-footer {
-        padding: 1.5rem;
-      }
-    }
-
-    /* Larger screens balance */
-    @media (min-width: 768px) {
-      .admin-auth-container {
-        max-width: 520px;
-      }
-
-      .admin-auth-form-container {
-        padding: 4rem 3rem;
-      }
-    }
-  </style>
+  <link rel="stylesheet" href="dashboard.css">
+  <link rel="stylesheet" href="admin-suite.css">
 </head>
-<body>
-  <div class="admin-auth-container">
-    <div class="admin-auth-header">
-      <div class="auth-logo">
-        <img src="img/black crane.png" alt="Crane Credit" class="auth-logo-img">
-        <span class="auth-logo-text">Crane Credit</span>
+<body class="portal-page intro-complete">
+  <div class="page-glow page-glow-left"></div>
+  <div class="page-glow page-glow-right"></div>
+
+  <div class="app-shell portal-login-shell">
+    <header class="dashboard-header">
+      <a href="index.html" class="header-brand" aria-label="Return to Crane Credit home">
+        <div class="logo-icon"><img src="img/black crane.png" alt=""></div>
+        <span>Crane Credit</span>
+      </a>
+      <div class="portal-header-copy">
+        <strong>Admin access</strong>
+        <span class="muted-copy">Loan operations sign-in</span>
       </div>
-      <h1 class="auth-title">Admin Access</h1>
-      <p class="auth-subtitle">Regular admin login only. Master admin users should sign in through the master admin page.</p>
-    </div>
+    </header>
 
-    <div class="admin-auth-form-container">
-      <form id="admin-login-form" class="auth-form active">
-        <div class="form-group">
-          <label for="admin-username" class="form-label">Username</label>
-          <input
-            type="text"
-            id="admin-username"
-            class="form-input"
-            placeholder="Enter username"
-            autocomplete="username"
-            required
-          >
-          <div id="admin-username-error" class="form-error"></div>
+    <main class="portal-login-main">
+      <section class="portal-login-hero">
+        <span class="portal-kicker">Operations workspace</span>
+        <h1>Review borrower requests with live control over the public dashboard.</h1>
+        <p>Admin accounts are issued by the super admin only. Once signed in, you can inspect application documents, monitor borrower activity, reply to support threads, and escalate ready loans for final approval.</p>
+        <div class="portal-login-points">
+          <article class="portal-login-point">
+            <div class="badge info">01</div>
+            <div>
+              <strong>Verify documents clearly</strong>
+              <div class="muted-copy">Inspect every uploaded identity, income, and selfie document from the same pipeline borrowers use.</div>
+            </div>
+          </article>
+          <article class="portal-login-point">
+            <div class="badge success">02</div>
+            <div>
+              <strong>Escalate ready loans</strong>
+              <div class="muted-copy">Send strong applications to the super admin with recommended amounts, rates, and notes.</div>
+            </div>
+          </article>
+          <article class="portal-login-point">
+            <div class="badge warning">03</div>
+            <div>
+              <strong>Keep support in sync</strong>
+              <div class="muted-copy">Reply to borrower conversations and watch updates flow across panels in real time.</div>
+            </div>
+          </article>
         </div>
+      </section>
 
-        <div class="form-group">
-          <label for="admin-password" class="form-label">Password</label>
-          <input
-            type="password"
-            id="admin-password"
-            class="form-input"
-            placeholder="Enter password"
-            autocomplete="current-password"
-            required
-          >
-          <div id="admin-password-error" class="form-error"></div>
+      <section class="portal-login-form-card">
+        <div class="portal-section-title">
+          <div>
+            <h2>Admin sign in</h2>
+            <p class="muted-copy">Use the credentials created for you by the super admin.</p>
+          </div>
         </div>
+        <form id="admin-login-form" class="portal-form">
+          <div class="portal-field">
+            <label for="admin-username">Username</label>
+            <input id="admin-username" class="portal-input" type="text" placeholder="e.g. operations_kampala" required>
+          </div>
+          <div class="portal-field">
+            <label for="admin-pin">6-digit PIN</label>
+            <input id="admin-pin" class="portal-input" type="password" inputmode="numeric" maxlength="6" placeholder="Enter your PIN" required>
+          </div>
+          <div id="admin-login-error" class="portal-error"></div>
+          <button type="submit" class="portal-submit">Enter Admin Workspace</button>
+        </form>
+        <p class="portal-copy">If you do not yet have an admin account, request one from the Crane super admin team.</p>
+      </section>
+    </main>
 
-        <button type="submit" class="btn btn-primary auth-submit-btn" id="admin-login-submit-btn">
-          <span class="btn-text">Access Admin Console</span>
-          <div class="btn-spinner" id="admin-login-spinner"></div>
-        </button>
-
-        <div class="auth-links">
-          <button type="button" class="auth-link back-to-app">Back to App</button>
-        </div>
-      </form>
-    </div>
-
-    <div class="admin-auth-footer">
-      <p class="auth-footer-text">
-        Admin access is restricted to authorized personnel only.
-      </p>
-    </div>
+    <footer class="footer-card portal-footer">
+      <div class="footer-grid">
+        <a href="index.html" class="footer-box portal-footer-btn active">Home</a>
+        <a href="terms.html" class="footer-box portal-footer-btn">Terms</a>
+        <a href="privacy.html" class="footer-box portal-footer-btn">Privacy</a>
+        <a href="index.html" class="footer-box portal-footer-btn">Borrower</a>
+      </div>
+    </footer>
   </div>
 
-  <script src="admin-session.js"></script>
-  <script src="admin-auth.js"></script>
+  <script src="admin-login.js"></script>
 </body>
 </html>

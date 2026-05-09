@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Crane Credit | Super Admin Login</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+  <link rel="icon" href="img/Crane Credit.png" type="image/png">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="dashboard.css">
+  <link rel="stylesheet" href="admin-suite.css">
+</head>
+<body class="portal-page intro-complete">
+  <div class="page-glow page-glow-left"></div>
+  <div class="page-glow page-glow-right"></div>
+
+  <div class="app-shell portal-login-shell">
+    <header class="dashboard-header">
+      <a href="index.html" class="header-brand" aria-label="Return to Crane Credit home">
+        <div class="logo-icon"><img src="img/black crane.png" alt=""></div>
+        <span>Crane Credit</span>
+      </a>
+      <div class="portal-header-copy">
+        <strong>Super admin access</strong>
+        <span class="muted-copy">Environment-backed credentials</span>
+      </div>
+    </header>
+
+    <main class="portal-login-main">
+      <section class="portal-login-hero">
+        <span class="portal-kicker">Master control</span>
+        <h1>Control admin accounts, final loan decisions, and live public messaging from one place.</h1>
+        <p>This workspace signs in with the protected credentials stored in `.env`. From here you can create admins, suspend or delete access, approve escalated loans, and push borrower-facing updates instantly.</p>
+        <div class="portal-login-points">
+          <article class="portal-login-point">
+            <div class="badge success">01</div>
+            <div>
+              <strong>Create and govern admins</strong>
+              <div class="muted-copy">Issue new operations accounts, suspend compromised access, or retire unused admins cleanly.</div>
+            </div>
+          </article>
+          <article class="portal-login-point">
+            <div class="badge warning">02</div>
+            <div>
+              <strong>Approve loans at the final gate</strong>
+              <div class="muted-copy">Review admin recommendations alongside documents and borrower details before disbursement.</div>
+            </div>
+          </article>
+          <article class="portal-login-point">
+            <div class="badge info">03</div>
+            <div>
+              <strong>Publish real-time platform updates</strong>
+              <div class="muted-copy">Adjust offer messaging, contact details, and broadcast announcements across the borrower interface.</div>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="portal-login-form-card">
+        <div class="portal-section-title">
+          <div>
+            <h2>Super admin sign in</h2>
+            <p class="muted-copy">Use the secure master credentials configured in the server environment.</p>
+          </div>
+        </div>
+        <form id="super-admin-login-form" class="portal-form">
+          <div class="portal-field">
+            <label for="super-admin-username">Username</label>
+            <input id="super-admin-username" class="portal-input" type="text" placeholder="Master username" required>
+          </div>
+          <div class="portal-field">
+            <label for="super-admin-password">Password</label>
+            <input id="super-admin-password" class="portal-input" type="password" placeholder="Master password" required>
+          </div>
+          <div id="super-admin-login-error" class="portal-error"></div>
+          <button type="submit" class="portal-submit">Enter Super Admin Workspace</button>
+        </form>
+        <p class="portal-copy">This form is separate from admin login and is intended only for master access.</p>
+      </section>
+    </main>
+
+    <footer class="footer-card portal-footer">
+      <div class="footer-grid">
+        <a href="index.html" class="footer-box portal-footer-btn">Home</a>
+        <a href="admin-login.html" class="footer-box portal-footer-btn">Admin</a>
+        <a href="terms.html" class="footer-box portal-footer-btn">Terms</a>
+        <a href="privacy.html" class="footer-box portal-footer-btn">Privacy</a>
+        <a href="super-admin-login.html" class="footer-box portal-footer-btn active">Master</a>
+      </div>
+    </footer>
+  </div>
+
+  <script src="super-admin-login.js"></script>
+</body>
+</html>

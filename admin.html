@@ -3,446 +3,225 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Crane Credit | Admin Console</title>
-  <meta name="description" content="Crane Credit operations console aligned with the borrower dashboard experience">
-  <link rel="icon" href="img/Crane Credit.png" type="image/png">
+  <title>Crane Credit | Admin Workspace</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+  <link rel="icon" href="img/Crane Credit.png" type="image/png">
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="dashboard.css">
-  <link rel="stylesheet" href="admin.css">
-  <script src="admin-session.js"></script>
-  <script>
-    window.CraneAdminSession?.ensurePanelAccess('admin', 'replace');
-  </script>
+  <link rel="stylesheet" href="admin-suite.css">
 </head>
-<body class="intro-loading">
-  <div class="site-intro" id="site-intro" aria-hidden="true">
-    <img src="img/black crane.png" alt="Crane logo" class="site-intro-logo">
-  </div>
-
+<body class="portal-page intro-complete">
   <div class="page-glow page-glow-left"></div>
   <div class="page-glow page-glow-right"></div>
 
-  <div class="app-shell">
-    <header class="dashboard-header admin-header-shell">
-      <button type="button" class="header-brand" id="admin-home-btn" aria-label="Go to admin overview">
+  <div class="app-shell portal-shell">
+    <header class="dashboard-header">
+      <a href="index.html" class="header-brand" aria-label="Return to Crane Credit home">
         <div class="logo-icon"><img src="img/black crane.png" alt=""></div>
-        <span>Crane Admin</span>
-      </button>
-      <nav class="header-nav">
-        <a href="#" class="nav-link active" data-view="overview">Overview</a>
-        <a href="#" class="nav-link" data-view="borrowers">Borrowers</a>
-        <a href="#" class="nav-link" data-view="loans">Loans</a>
-        <a href="#" class="nav-link" data-view="collections">Collections</a>
-        <a href="#" class="nav-link" data-view="referrals">Referrals</a>
-        <a href="#" class="nav-link" data-view="audit">Audit</a>
-        <a href="/" class="nav-link">Back to App</a>
+        <span>Crane Credit</span>
+      </a>
+      <nav class="header-nav portal-nav">
+        <button type="button" class="nav-link active" data-admin-view="overview">Overview</button>
+        <button type="button" class="nav-link" data-admin-view="applications">Applications</button>
+        <button type="button" class="nav-link" data-admin-view="borrowers">Borrowers</button>
+        <button type="button" class="nav-link" data-admin-view="support">Support</button>
       </nav>
-      <div class="header-actions">
-        <button type="button" class="mobile-search-btn" id="admin-mobile-menu-toggle" aria-label="Open admin navigation">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="4" y1="6" x2="20" y2="6"></line>
-            <line x1="4" y1="12" x2="20" y2="12"></line>
-            <line x1="4" y1="18" x2="20" y2="18"></line>
-          </svg>
-        </button>
-        <button type="button" class="icon-btn" id="admin-sync-btn" aria-label="Sync shared data">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M23 4v6h-6"></path>
-            <path d="M1 20v-6h6"></path>
-            <path d="M3.51 9a9 9 0 0 1 14.13-3.36L23 10"></path>
-            <path d="M20.49 15a9 9 0 0 1-14.13 3.36L1 14"></path>
-          </svg>
-        </button>
-        <button type="button" class="icon-btn" id="admin-notification-btn" aria-label="Open admin alerts">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
-            <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
-          </svg>
-          <span class="notification-badge" id="admin-alert-count">3</span>
-        </button>
+      <div class="portal-header-copy">
+        <strong id="admin-name-display">Admin Workspace</strong>
+        <span class="muted-copy">Real-time loan operations</span>
       </div>
     </header>
 
-    <div class="sidebar-overlay" id="admin-sidebar-overlay"></div>
-
-    <aside class="dashboard-sidebar admin-sidebar" id="admin-sidebar">
-      <div class="sidebar-header">
-        <div class="logo-icon"><img src="img/black crane.png" alt=""></div>
-        <span>Crane Credit Admin</span>
-      </div>
-      <nav class="sidebar-menu">
-        <a href="#" class="menu-item active" data-view="overview">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <rect x="3" y="3" width="7" height="7"></rect>
-            <rect x="14" y="3" width="7" height="7"></rect>
-            <rect x="14" y="14" width="7" height="7"></rect>
-            <rect x="3" y="14" width="7" height="7"></rect>
-          </svg>
-          <span>Overview</span>
-        </a>
-        <a href="#" class="menu-item" data-view="borrowers">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M16 21v-1a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v1"></path>
-            <circle cx="8.5" cy="7" r="4"></circle>
-          </svg>
-          <span>Borrowers</span>
-        </a>
-        <a href="#" class="menu-item" data-view="loans">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
-            <line x1="1" y1="10" x2="23" y2="10"></line>
-          </svg>
-          <span>Loans</span>
-        </a>
-        <a href="#" class="menu-item" data-view="collections">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M23 4v6h-6"></path>
-            <path d="M1 20v-6h6"></path>
-            <path d="M3.51 9a9 9 0 0 1 14.13-3.36L23 10"></path>
-            <path d="M20.49 15a9 9 0 0 1-14.13 3.36L1 14"></path>
-          </svg>
-          <span>Collections</span>
-        </a>
-        <a href="#" class="menu-item" data-view="referrals">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M16 21v-1a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v1"></path>
-            <circle cx="8.5" cy="7" r="4"></circle>
-            <line x1="20" y1="8" x2="20" y2="14"></line>
-            <line x1="23" y1="11" x2="17" y2="11"></line>
-          </svg>
-          <span>Referrals</span>
-        </a>
-        <a href="#" class="menu-item" data-view="audit">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-            <polyline points="14 2 14 8 20 8"></polyline>
-            <line x1="16" y1="13" x2="8" y2="13"></line>
-            <line x1="16" y1="17" x2="8" y2="17"></line>
-          </svg>
-          <span>Audit</span>
-        </a>
-        <a href="/" class="menu-item">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path>
-            <path d="M10 17l5-5-5-5"></path>
-            <path d="M15 12H3"></path>
-          </svg>
-          <span>Back to App</span>
-        </a>
-      </nav>
-    </aside>
-
-    <main class="dashboard-content admin-console">
-      <section class="view-section active" id="overview-view">
-        <div class="dashboard-grid admin-grid">
-          <article class="welcome-header-card admin-overview-hero">
-            <div class="welcome-text">
-              <h1>Admin Console</h1>
-             </div>
-            <button type="button" class="refresh-btn" id="admin-refresh-btn">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M23 4v6h-6"></path>
-                <path d="M1 20v-6h6"></path>
-                <path d="M3.51 9a9 9 0 0 1 14.13-3.36L23 10"></path>
-                <path d="M20.49 15a9 9 0 0 1-14.13 3.36L1 14"></path>
-              </svg>
-              <span>Sync Console</span>
-            </button>
+    <main>
+      <section class="portal-view active" id="admin-overview-view">
+        <div class="portal-metrics">
+          <article class="metric-card">
+            <span class="metric-label">Pending applications</span>
+            <strong class="metric-value" id="metric-pending">0</strong>
+            <span class="metric-meta">Fresh borrower submissions</span>
           </article>
-
-          <article class="card first-section-card admin-balance-card">
-            <div class="section-content">
-              <canvas class="section-wave-canvas" id="admin-wave-canvas" aria-hidden="true"></canvas>
-              <img src="img/black crane.png" alt="Crane icon" class="section-corner-image">
-              <div class="loan-balance-container">
-                <div class="loan-balance-label">Outstanding Book</div>
-                <div class="loan-balance-amount" id="admin-outstanding-book">UGX 0</div>
-              </div>
-            </div>
+          <article class="metric-card">
+            <span class="metric-label">In review</span>
+            <strong class="metric-value" id="metric-review">0</strong>
+            <span class="metric-meta">Actively being processed</span>
           </article>
-
-          <article class="card second-section-card admin-operations-card">
-            <div class="section-content">
-              <div class="marketing-container">
-                <div class="marketing-ticker">
-                  <div class="ticker-content" id="admin-ticker-content"></div>
-                </div>
-                <div class="offer-showcase">
-                  <div class="offer-card admin-focus-card">
-                    <div class="offer-header">
-                      <span class="offer-label">Operations Focus</span>
-                      <span class="pulse-badge">LIVE</span>
-                    </div>
-                    <h3 id="admin-focus-title">Portfolio Review</h3>
-                    <div class="offer-amount" id="admin-focus-amount">UGX 0</div>
-                    <div class="offer-details admin-focus-grid">
-                      <div class="detail-row">
-                        <span class="detail-label">Active</span>
-                        <span class="detail-value" id="admin-focus-active">0</span>
-                      </div>
-                      <div class="detail-row">
-                        <span class="detail-label">Overdue</span>
-                        <span class="detail-value" id="admin-focus-overdue">0</span>
-                      </div>
-                      <div class="detail-row">
-                        <span class="detail-label">Completed</span>
-                        <span class="detail-value" id="admin-focus-completed">0</span>
-                      </div>
-                    </div>
-                    <p class="offer-message" id="admin-focus-message">Shared borrower and operations state is ready.</p>
-                    <button type="button" class="btn-apply-now" id="admin-open-loans-btn">Open Loan Desk</button>
-                  </div>
-                </div>
-                <div class="live-stats">
-                  <div class="stat-item approved-stat">
-                    <div class="stat-number" id="admin-stat-review">0</div>
-                    <div class="stat-label">In Review</div>
-                  </div>
-                  <div class="stat-item approval-stat">
-                    <div class="stat-number" id="admin-stat-risk">0</div>
-                    <div class="stat-label">Risk Flags</div>
-                  </div>
-                  <div class="stat-item repeat-stat">
-                    <div class="stat-number" id="admin-stat-alerts">0</div>
-                    <div class="stat-label">Unread Alerts</div>
-                  </div>
-                </div>
-              </div>
-            </div>
+          <article class="metric-card">
+            <span class="metric-label">Awaiting super admin</span>
+            <strong class="metric-value" id="metric-awaiting">0</strong>
+            <span class="metric-meta">Escalated for final approval</span>
           </article>
-
-          <article class="card three-flex-card">
-            <div class="flex-row">
-              <button type="button" class="flex-box" data-admin-box="review" aria-label="Open review queue">
-                <div class="flex-box-icon" aria-hidden="true">
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="12" cy="12" r="9"></circle>
-                    <path d="m9 12 2 2 4-4"></path>
-                  </svg>
-                </div>
-                <span class="flex-box-label">Pending Review</span>
-              </button>
-              <button type="button" class="flex-box" data-admin-box="overdue" aria-label="Open overdue loans">
-                <div class="flex-box-icon" aria-hidden="true">
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="12" cy="12" r="9"></circle>
-                    <path d="M12 7v5l3 2"></path>
-                  </svg>
-                </div>
-                <span class="flex-box-label">Over Due</span>
-              </button>
-              <button type="button" class="flex-box" data-admin-box="repayments" aria-label="Open collections">
-                <div class="flex-box-icon" aria-hidden="true">
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M23 4v6h-6"></path>
-                    <path d="M1 20v-6h6"></path>
-                    <path d="M3.51 9a9 9 0 0 1 14.13-3.36L23 10"></path>
-                    <path d="M20.49 15a9 9 0 0 1-14.13 3.36L1 14"></path>
-                  </svg>
-                </div>
-                <span class="flex-box-label">Repayments</span>
-              </button>
-            </div>
+          <article class="metric-card">
+            <span class="metric-label">Active borrowers</span>
+            <strong class="metric-value" id="metric-borrowers">0</strong>
+            <span class="metric-meta">Live borrower accounts</span>
           </article>
+          <article class="metric-card">
+            <span class="metric-label">Support threads</span>
+            <strong class="metric-value" id="metric-support">0</strong>
+            <span class="metric-meta">Conversations needing attention</span>
+          </article>
+        </div>
 
-          <article class="card admin-list-card admin-review-card">
-            <div class="section-heading">
+        <div class="portal-grid three-up">
+          <article class="workspace-card">
+            <div class="workspace-header">
               <div>
-                <h2>Review Queue</h2>
+                <h3>Application queue</h3>
+                <p class="detail-subtext">Freshest requests and their current stage.</p>
               </div>
-              <button type="button" class="text-button" id="admin-view-borrowers-btn">Borrowers</button>
             </div>
-            <div class="admin-stack-list" id="admin-applications-list"></div>
+            <div class="stack-list" id="overview-application-feed"></div>
           </article>
 
-          <article class="card admin-list-card">
-            <div class="section-heading">
+          <article class="workspace-card">
+            <div class="workspace-header">
               <div>
-                <h2>Shared Borrower Snapshot</h2>
+                <h3>Notifications</h3>
+                <p class="detail-subtext">Updates addressed to the admin team.</p>
               </div>
             </div>
-            <div class="admin-stack-list" id="admin-borrower-pulse"></div>
+            <div class="notification-feed" id="overview-notification-feed"></div>
           </article>
 
-          <article class="card admin-list-card">
-            <div class="section-heading">
+          <article class="workspace-card">
+            <div class="workspace-header">
               <div>
-                <h2>Risk Alerts</h2>
+                <h3>Recent activity</h3>
+                <p class="detail-subtext">Live decisions, borrower changes, and repayments.</p>
               </div>
             </div>
-            <div class="admin-stack-list" id="admin-risk-alerts-list"></div>
+            <div class="activity-feed" id="overview-activity-feed"></div>
           </article>
         </div>
       </section>
 
-      <section class="view-section" id="borrowers-view">
-        <div class="dashboard-grid admin-grid">
-          <article class="card admin-panel-card">
-            <div class="section-heading">
+      <section class="portal-view" id="admin-applications-view">
+        <div class="portal-grid split">
+          <article class="list-card">
+            <div class="workspace-header">
               <div>
-                <h2>Borrowers</h2>
+                <h3>Application list</h3>
+                <p class="detail-subtext">Inspect loan requests and open a full review pane.</p>
               </div>
-              <input class="admin-search-input" id="borrower-search" type="text" placeholder="Search borrower or loan">
             </div>
-            <div class="admin-stack-list" id="admin-borrowers-list"></div>
+            <div class="stack-list" id="admin-application-list"></div>
+          </article>
+
+          <article class="detail-card">
+            <div class="detail-header">
+              <div>
+                <h3>Application detail</h3>
+                <p class="detail-subtext">Documents, borrower profile, recommended terms, and escalation actions.</p>
+              </div>
+            </div>
+            <div id="admin-application-detail" class="detail-stack"></div>
+            <div class="detail-notes">
+              <div class="two-up">
+                <div class="portal-field">
+                  <label for="review-amount">Recommended amount</label>
+                  <input id="review-amount" class="portal-input" type="number" placeholder="UGX amount">
+                </div>
+                <div class="portal-field">
+                  <label for="review-rate">Monthly rate (%)</label>
+                  <input id="review-rate" class="portal-input" type="number" step="0.1" placeholder="1.8">
+                </div>
+              </div>
+              <div class="two-up">
+                <div class="portal-field">
+                  <label for="review-installment">Installment amount</label>
+                  <input id="review-installment" class="portal-input" type="number" placeholder="Monthly installment">
+                </div>
+                <div class="portal-field">
+                  <label for="review-payout">Payout ETA</label>
+                  <input id="review-payout" class="portal-input" type="text" placeholder="e.g. Same day">
+                </div>
+              </div>
+              <div class="portal-field">
+                <label for="review-note">Admin note</label>
+                <textarea id="review-note" class="portal-textarea" placeholder="Record your decision context, missing information, or recommendation."></textarea>
+              </div>
+              <div id="review-feedback" class="portal-success"></div>
+              <div class="button-row">
+                <button type="button" class="action-btn secondary" id="action-under-review">Mark Under Review</button>
+                <button type="button" class="action-btn warning" id="action-needs-docs">Request More Documents</button>
+                <button type="button" class="action-btn" id="action-send-super">Request Super Approval</button>
+                <button type="button" class="action-btn danger" id="action-reject">Reject Application</button>
+              </div>
+            </div>
           </article>
         </div>
       </section>
 
-      <section class="view-section" id="loans-view">
-        <div class="dashboard-grid admin-grid">
-          <article class="card admin-panel-card">
-            <div class="section-heading">
+      <section class="portal-view" id="admin-borrowers-view">
+        <div class="portal-grid split">
+          <article class="list-card">
+            <div class="workspace-header">
               <div>
-                <h2>Loan Desk</h2>
+                <h3>Borrower list</h3>
+                <p class="detail-subtext">Live account summaries coming from the same database as the public dashboard.</p>
               </div>
-              <select id="admin-loan-filter" class="admin-filter-select">
-                <option value="all">All Loans</option>
-                <option value="active">Active</option>
-                <option value="overdue">Overdue</option>
-                <option value="completed">Completed</option>
-              </select>
             </div>
-            <div class="admin-stack-list" id="admin-loans-list"></div>
+            <div class="stack-list" id="borrower-list"></div>
+          </article>
+
+          <article class="detail-card">
+            <div class="detail-header">
+              <div>
+                <h3>Borrower detail</h3>
+                <p class="detail-subtext">Profile, score, active loans, and most recent application activity.</p>
+              </div>
+            </div>
+            <div id="borrower-detail" class="detail-stack"></div>
           </article>
         </div>
       </section>
 
-      <section class="view-section" id="collections-view">
-        <div class="dashboard-grid admin-grid">
-          <article class="card admin-panel-card">
-            <div class="section-heading">
+      <section class="portal-view" id="admin-support-view">
+        <div class="portal-grid split">
+          <article class="list-card">
+            <div class="workspace-header">
               <div>
-                <h2>Collections</h2>
+                <h3>Support threads</h3>
+                <p class="detail-subtext">Borrower messages that need an operations response.</p>
               </div>
             </div>
-            <div class="admin-collections-grid" id="admin-collections-summary"></div>
-            <div class="admin-stack-list" id="admin-collections-list"></div>
+            <div class="stack-list" id="support-thread-list"></div>
           </article>
-        </div>
-      </section>
 
-      <section class="view-section" id="referrals-view">
-        <div class="dashboard-grid admin-grid">
-          <article class="card admin-panel-card">
-            <div class="section-heading">
+          <article class="detail-card">
+            <div class="detail-header">
               <div>
-                <h2>Referral Ledger</h2>
+                <h3 id="support-thread-title">Support conversation</h3>
+                <p id="support-thread-subtitle" class="detail-subtext">Select a thread to view borrower messages and reply.</p>
               </div>
             </div>
-            <div class="admin-stack-list" id="admin-referrals-list"></div>
-          </article>
-        </div>
-      </section>
-
-      <section class="view-section" id="audit-view">
-        <div class="dashboard-grid admin-grid">
-          <article class="card admin-panel-card">
-            <div class="section-heading">
-              <div>
-                <h2>Audit Trail</h2>
+            <div id="support-message-list" class="message-stack"></div>
+            <form id="support-reply-form" class="portal-form">
+              <div class="portal-field">
+                <label for="support-reply-input">Reply</label>
+                <textarea id="support-reply-input" class="portal-textarea" placeholder="Send a clear response to the borrower."></textarea>
               </div>
-            </div>
-            <div class="admin-stack-list" id="admin-audit-list"></div>
+              <div id="support-feedback" class="portal-success"></div>
+              <button type="submit" class="portal-submit">Send Reply</button>
+            </form>
           </article>
         </div>
       </section>
     </main>
 
-    <footer class="footer-card admin-footer">
+    <footer class="footer-card portal-footer">
       <div class="footer-grid">
-        <button type="button" class="footer-box" id="admin-footer-menu" aria-label="Toggle menu">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="4" y1="6" x2="20" y2="6"></line>
-            <line x1="4" y1="12" x2="20" y2="12"></line>
-            <line x1="4" y1="18" x2="20" y2="18"></line>
-          </svg>
-        </button>
-        <button type="button" class="footer-box" data-footer-view="borrowers" aria-label="Borrowers">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M16 21v-1a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v1"></path>
-            <circle cx="8.5" cy="7" r="4"></circle>
-          </svg>
-        </button>
-        <button type="button" class="footer-box home-nav-btn" data-footer-view="overview" aria-label="Overview">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M3 10.5 12 3l9 7.5"></path>
-            <path d="M5 9.5V21h14V9.5"></path>
-          </svg>
-        </button>
-        <button type="button" class="footer-box" data-footer-view="collections" aria-label="Collections">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M23 4v6h-6"></path>
-            <path d="M1 20v-6h6"></path>
-            <path d="M3.51 9a9 9 0 0 1 14.13-3.36L23 10"></path>
-            <path d="M20.49 15a9 9 0 0 1-14.13 3.36L1 14"></path>
-          </svg>
-        </button>
-        <button type="button" class="footer-box" id="admin-back-app" aria-label="Back to borrower app">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M15 18l-6-6 6-6"></path>
-            <path d="M21 12H9"></path>
-          </svg>
-        </button>
+        <button type="button" class="footer-box portal-footer-btn active" data-admin-view="overview">Overview</button>
+        <button type="button" class="footer-box portal-footer-btn" data-admin-view="applications">Applications</button>
+        <button type="button" class="footer-box portal-footer-btn" data-admin-view="borrowers">Borrowers</button>
+        <button type="button" class="footer-box portal-footer-btn" data-admin-view="support">Support</button>
+        <button type="button" class="footer-box portal-footer-btn logout" id="admin-logout-btn">Logout</button>
       </div>
     </footer>
-
-    <div class="notification-panel" id="admin-notification-panel">
-      <div class="panel-header">
-        <h3>Admin Alerts</h3>
-        <button type="button" class="close-btn" id="close-admin-notifications">&times;</button>
-      </div>
-      <div class="panel-content" id="admin-notifications-list"></div>
-    </div>
-
-    <div class="modal" id="loan-action-modal">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h3>Loan Action</h3>
-          <button type="button" class="close-btn" id="close-loan-modal">&times;</button>
-        </div>
-        <div class="modal-body">
-          <div class="loan-action-details">
-            <div class="action-detail">
-              <span class="detail-label">Loan</span>
-              <span class="detail-value" id="action-loan-id">-</span>
-            </div>
-            <div class="action-detail">
-              <span class="detail-label">Borrower</span>
-              <span class="detail-value" id="action-loan-borrower">-</span>
-            </div>
-            <div class="action-detail">
-              <span class="detail-label">Current Status</span>
-              <span class="detail-value" id="action-loan-status">-</span>
-            </div>
-          </div>
-          <div class="action-form">
-            <div class="form-group">
-              <label for="loan-action-select">Action</label>
-              <select id="loan-action-select">
-                <option value="active">Set Active</option>
-                <option value="overdue">Flag Overdue</option>
-                <option value="completed">Mark Repaid</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label for="loan-action-notes">Notes</label>
-              <textarea id="loan-action-notes" placeholder="Add an audit note..."></textarea>
-            </div>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="button button-secondary" id="cancel-loan-action">Cancel</button>
-          <button type="button" class="button button-primary" id="confirm-loan-action">Confirm</button>
-        </div>
-      </div>
-    </div>
   </div>
 
-  <script src="shared-state.js"></script>
   <script src="admin.js"></script>
 </body>
 </html>
