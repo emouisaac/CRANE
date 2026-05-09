@@ -9,6 +9,8 @@ const masterAdminElements = {
   backToAppButtons: Array.from(document.querySelectorAll('.back-to-app')),
 };
 
+const adminSession = window.CraneAdminSession;
+
 function showError(element, message) {
   if (!element) return;
   element.textContent = message;
@@ -82,13 +84,14 @@ async function handleMasterAdminLogin(event) {
   try {
     const result = await loginMasterAdmin({ username, password });
 
-    localStorage.setItem('accessToken', result.accessToken);
-    localStorage.setItem('refreshToken', result.refreshToken);
-    localStorage.setItem('userRole', 'admin');
-    localStorage.setItem('adminRole', 'master_admin');
-    localStorage.setItem('adminUsername', username);
+    adminSession.storeSession({
+      accessToken: result.accessToken,
+      refreshToken: result.refreshToken,
+      adminRole: 'master_admin',
+      username,
+    });
 
-    window.location.href = 'admin-panel.html';
+    adminSession.redirectToPanel('master_admin');
   } catch (error) {
     showError(masterAdminElements.passwordError, error.message);
   } finally {
@@ -97,18 +100,11 @@ async function handleMasterAdminLogin(event) {
 }
 
 function handleBackToApp() {
-  window.location.href = 'index.html';
+  window.location.href = '/';
 }
 
 document.addEventListener('DOMContentLoaded', () => {
   masterAdminElements.loginForm.addEventListener('submit', handleMasterAdminLogin);
   masterAdminElements.backToAppButtons.forEach((button) => button.addEventListener('click', handleBackToApp));
-
-  const token = localStorage.getItem('accessToken');
-  const role = localStorage.getItem('userRole');
-  const adminRole = localStorage.getItem('adminRole');
-
-  if (token && role === 'admin' && adminRole === 'master_admin') {
-    window.location.href = 'admin-panel.html';
-  }
+  adminSession.redirectAuthenticatedUser('master_admin');
 });

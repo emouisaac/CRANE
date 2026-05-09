@@ -12,16 +12,9 @@
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="dashboard.css">
   <link rel="stylesheet" href="admin.css">
+  <script src="admin-session.js"></script>
   <script>
-    const token = localStorage.getItem('accessToken');
-    const role = localStorage.getItem('userRole');
-    const adminRole = localStorage.getItem('adminRole');
-
-    if (token && role === 'admin' && adminRole === 'master_admin') {
-      window.location.replace('admin-panel.html');
-    } else if (!token || role !== 'admin' || adminRole !== 'admin') {
-      window.location.replace('admin-login.html');
-    }
+    window.CraneAdminSession?.ensurePanelAccess('admin', 'replace');
   </script>
 </head>
 <body class="intro-loading">
@@ -45,7 +38,7 @@
         <a href="#" class="nav-link" data-view="collections">Collections</a>
         <a href="#" class="nav-link" data-view="referrals">Referrals</a>
         <a href="#" class="nav-link" data-view="audit">Audit</a>
-        <a href="index.html" class="nav-link">Back to App</a>
+        <a href="/" class="nav-link">Back to App</a>
       </nav>
       <div class="header-actions">
         <button type="button" class="mobile-search-btn" id="admin-mobile-menu-toggle" aria-label="Open admin navigation">
@@ -131,7 +124,7 @@
           </svg>
           <span>Audit</span>
         </a>
-        <a href="index.html" class="menu-item">
+        <a href="/" class="menu-item">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path>
             <path d="M10 17l5-5-5-5"></path>

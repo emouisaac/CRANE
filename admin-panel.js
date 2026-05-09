@@ -4,6 +4,8 @@ const currencyFormatter = new Intl.NumberFormat('en-UG', {
   maximumFractionDigits: 0,
 });
 
+const adminSession = window.CraneAdminSession;
+
 const adminPanelState = {
   currentView: 'dashboard',
   adminRole: 'admin',
@@ -1118,10 +1120,8 @@ function setupActionButtons() {
     document.getElementById('admin-username').value = generateAdminUsername(fullName);
   });
   document.getElementById('admin-logout-btn')?.addEventListener('click', () => {
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('userRole');
-    localStorage.removeItem('adminRole');
-    window.location.href = 'admin-login.html';
+    adminSession.clearSession();
+    adminSession.redirectToLogin('master_admin');
   });
   document.getElementById('export-report-btn')?.addEventListener('click', handleSettingsUtility);
   document.getElementById('admin-panel-sync-btn')?.addEventListener('click', loadPortalState);
@@ -1262,15 +1262,11 @@ function setupActionButtons() {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
-  const token = localStorage.getItem('accessToken');
-  const role = localStorage.getItem('userRole');
-  const adminRole = localStorage.getItem('adminRole');
-
-  if (!token || role !== 'admin' || adminRole !== 'master_admin') {
-    window.location.href = 'master-admin-login.html';
+  if (!adminSession.ensurePanelAccess('master_admin')) {
     return;
   }
 
+  const { adminRole } = adminSession.readSession();
   adminPanelState.adminRole = adminRole || 'master_admin';
   initializeSiteIntro();
   setupNavigation();
@@ -1283,7 +1279,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   } catch (error) {
     console.error('Failed to load admin portal state:', error);
     alert('We could not load the admin portal data. Please sign in again.');
-    window.location.href = 'admin-login.html';
+    adminSession.clearSession();
+    adminSession.redirectToLogin('master_admin');
   }
 });
 

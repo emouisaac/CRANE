@@ -12,6 +12,10 @@
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="dashboard.css">
   <link rel="stylesheet" href="admin-panel.css">
+  <script src="admin-session.js"></script>
+  <script>
+    window.CraneAdminSession?.ensurePanelAccess('master_admin', 'replace');
+  </script>
 </head>
 <body class="intro-loading">
   <div class="site-intro" id="site-intro" aria-hidden="true">
@@ -43,7 +47,7 @@
         <a href="#" class="nav-link" data-view="risks">Risk Management</a>
         <a href="#" class="nav-link" data-view="settings">Settings</a>
         <a href="#" class="nav-link" data-view="audit" id="nav-audit-link">Audit Logs</a>
-        <a href="index.html" class="nav-link admin-back-link">Back to App</a>
+        <a href="/" class="nav-link admin-back-link">Back to App</a>
       </nav>
       <div class="header-actions">
         <button type="button" class="icon-btn" id="admin-panel-sync-btn" aria-label="Sync Data">

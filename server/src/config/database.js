@@ -10,6 +10,14 @@ const ADMIN_SETTINGS_KEY = "admin_settings";
 
 let db;
 
+function getLegacyDatabasePaths() {
+  return [
+    path.resolve(process.cwd(), "data", "database.sqlite"),
+    path.resolve(process.cwd(), "database.sqlite"),
+    path.resolve(process.cwd(), "server", "database.sqlite"),
+  ].filter((legacyPath) => legacyPath !== config.dbPath && fs.existsSync(legacyPath));
+}
+
 function nowIso() {
   return new Date().toISOString();
 }
@@ -33,6 +41,21 @@ function clamp(value, min, max) {
 
 function ensureDirectoryForFile(filePath) {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
+}
+
+function bootstrapDatabaseFile() {
+  if (fs.existsSync(config.dbPath)) {
+    return;
+  }
+
+  const [sourcePath] = getLegacyDatabasePaths();
+  if (!sourcePath) {
+    return;
+  }
+
+  ensureDirectoryForFile(config.dbPath);
+  fs.copyFileSync(sourcePath, config.dbPath);
+  console.log(`Bootstrapped SQLite database from ${sourcePath} to ${config.dbPath}`);
 }
 
 function ensureColumn(tableName, columnName, definition) {
@@ -969,10 +992,7 @@ function normalizeUniqueEmailAssignments() {
 }
 
 function importLegacyAuthUsers() {
-  const legacyDatabasePaths = [
-    path.resolve(process.cwd(), "database.sqlite"),
-    path.resolve(process.cwd(), "server", "database.sqlite"),
-  ].filter((legacyPath) => legacyPath !== config.dbPath && fs.existsSync(legacyPath));
+  const legacyDatabasePaths = getLegacyDatabasePaths();
 
   for (const legacyPath of legacyDatabasePaths) {
     let legacyDb;
@@ -1054,11 +1074,119 @@ function importLegacyAuthUsers() {
   }
 }
 
+function importLegacyAdminAccounts() {
+  const legacyDatabasePaths = getLegacyDatabasePaths();
+
+  for (const legacyPath of legacyDatabasePaths) {
+    let legacyDb;
+
+    try {
+      legacyDb = new DatabaseSync(legacyPath, { readonly: true });
+      const hasAdminTable = legacyDb
+        .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'admin_accounts'")
+        .get();
+
+      if (!hasAdminTable) {
+        continue;
+      }
+
+      const legacyColumns = new Set(
+        legacyDb.prepare("PRAGMA table_info(admin_accounts)").all().map((column) => column.name)
+      );
+      const selectColumns = [
+        "id",
+        "username",
+        legacyColumns.has("full_name") ? "full_name" : "'' AS full_name",
+        "email",
+        legacyColumns.has("password_hash") ? "password_hash" : "NULL AS password_hash",
+        legacyColumns.has("role") ? "role" : "'loan_officer' AS role",
+        legacyColumns.has("status") ? "status" : "'active' AS status",
+        legacyColumns.has("last_login_at") ? "last_login_at" : "NULL AS last_login_at",
+        legacyColumns.has("created_at") ? "created_at" : "NULL AS created_at",
+        legacyColumns.has("updated_at")
+          ? "updated_at"
+          : (legacyColumns.has("created_at") ? "created_at AS updated_at" : "NULL AS updated_at"),
+      ];
+      const legacyAdmins = legacyDb
+        .prepare(`
+          SELECT ${selectColumns.join(", ")}
+          FROM admin_accounts
+          ORDER BY created_at ASC
+        `)
+        .all()
+        .map(normalizeAdminAccountRow);
+
+      for (const sourceAdmin of legacyAdmins) {
+        const normalizedUsername = String(sourceAdmin?.username || "").trim();
+        if (!normalizedUsername || !sourceAdmin?.password_hash) {
+          continue;
+        }
+
+        const existingAdmin = findAdminAccountByUsername(normalizedUsername);
+        if (!existingAdmin) {
+          getDatabase()
+            .prepare(`
+              INSERT INTO admin_accounts (id, username, full_name, email, password_hash, role, status, last_login_at, created_at, updated_at)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `)
+            .run(
+              sourceAdmin.id || crypto.randomUUID(),
+              normalizedUsername,
+              sourceAdmin.full_name || "",
+              sourceAdmin.email || null,
+              sourceAdmin.password_hash,
+              sourceAdmin.role || "loan_officer",
+              sourceAdmin.status || "active",
+              sourceAdmin.last_login_at || null,
+              sourceAdmin.created_at || nowIso(),
+              sourceAdmin.updated_at || sourceAdmin.created_at || nowIso()
+            );
+          continue;
+        }
+
+        const mergedValues = {
+          fullName: existingAdmin.full_name || sourceAdmin.full_name || "",
+          email: existingAdmin.email || sourceAdmin.email || null,
+          passwordHash: existingAdmin.password_hash || sourceAdmin.password_hash,
+          role: existingAdmin.role || sourceAdmin.role || "loan_officer",
+          status: existingAdmin.status === "active" ? existingAdmin.status : sourceAdmin.status || existingAdmin.status,
+          lastLoginAt: pickLaterIso(existingAdmin.last_login_at, sourceAdmin.last_login_at),
+          createdAt: pickEarlierIso(existingAdmin.created_at, sourceAdmin.created_at) || existingAdmin.created_at,
+          updatedAt: pickLaterIso(existingAdmin.updated_at, sourceAdmin.updated_at) || nowIso(),
+        };
+
+        getDatabase()
+          .prepare(`
+            UPDATE admin_accounts
+            SET full_name = ?, email = ?, password_hash = ?, role = ?, status = ?, last_login_at = ?, created_at = ?, updated_at = ?
+            WHERE id = ?
+          `)
+          .run(
+            mergedValues.fullName,
+            mergedValues.email,
+            mergedValues.passwordHash,
+            mergedValues.role,
+            mergedValues.status,
+            mergedValues.lastLoginAt,
+            mergedValues.createdAt,
+            mergedValues.updatedAt,
+            existingAdmin.id
+          );
+      }
+    } catch (error) {
+      console.warn(`Skipping legacy admin import from ${legacyPath}: ${error.message}`);
+    } finally {
+      legacyDb?.close?.();
+    }
+  }
+}
+
 function initializeDatabase() {
   if (db) {
     return db;
   }
 
+  bootstrapDatabaseFile();
   ensureDirectoryForFile(config.dbPath);
   db = new DatabaseSync(config.dbPath);
   db.exec("PRAGMA foreign_keys = ON;");
@@ -1272,6 +1400,7 @@ function initializeDatabase() {
   ensureColumn("notifications", "meta_json", `TEXT NOT NULL DEFAULT '{}'`);
 
   importLegacyAuthUsers();
+  importLegacyAdminAccounts();
   normalizeActiveAuthUsers();
   normalizeUniqueEmailAssignments();
   ensureUniqueExpressionIndex(

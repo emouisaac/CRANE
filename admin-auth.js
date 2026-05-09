@@ -11,6 +11,8 @@ const adminElements = {
   backToAppButtons: Array.from(document.querySelectorAll('.back-to-app')),
 };
 
+const adminSession = window.CraneAdminSession;
+
 // Utility functions
 function showError(element, message) {
   if (element) {
@@ -59,7 +61,7 @@ async function adminUserLogin({ username, password }) {
     body: JSON.stringify({
       username,
       password,
-      adminType: 'admin',
+      loginType: 'admin',
       deviceId: 'admin_device_' + Date.now(),
     }),
   });
@@ -94,15 +96,14 @@ async function handleAdminUserLogin(e) {
       return;
     }
 
-    const adminRole = 'admin';
+    adminSession.storeSession({
+      accessToken: result.accessToken,
+      refreshToken: result.refreshToken,
+      adminRole: 'admin',
+      username,
+    });
 
-    localStorage.setItem('accessToken', result.accessToken);
-    localStorage.setItem('refreshToken', result.refreshToken);
-    localStorage.setItem('userRole', 'admin');
-    localStorage.setItem('adminRole', adminRole);
-    localStorage.setItem('adminUsername', username);
-
-    window.location.href = 'admin.html';
+    adminSession.redirectToPanel('admin');
   } catch (error) {
     showError(adminElements.passwordError, error.message);
   } finally {
@@ -111,27 +112,12 @@ async function handleAdminUserLogin(e) {
 }
 
 function handleBackToApp() {
-  window.location.href = 'index.html';
+  window.location.href = '/';
 }
 
 // Event listeners
 document.addEventListener('DOMContentLoaded', () => {
   adminElements.loginForm.addEventListener('submit', handleAdminUserLogin);
   adminElements.backToAppButtons.forEach((button) => button.addEventListener('click', handleBackToApp));
-
-  const token = localStorage.getItem('accessToken');
-  const role = localStorage.getItem('userRole');
-  const adminRole = localStorage.getItem('adminRole');
-
-  if (token && role === 'admin') {
-    if (adminRole === 'master_admin') {
-      window.location.href = 'admin-panel.html';
-      return;
-    }
-
-    if (adminRole === 'admin') {
-      window.location.href = 'admin.html';
-      return;
-    }
-  }
+  adminSession.redirectAuthenticatedUser('admin');
 });

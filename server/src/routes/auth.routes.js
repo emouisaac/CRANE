@@ -322,10 +322,8 @@ router.post("/login", (req, res) => {
 router.post("/admin/login", (req, res) => {
   const { username, password, deviceId, loginType, role } = req.body || {};
   const normalizedUsername = String(username || "").trim();
-  const wantsMasterAdmin =
-    normalizedUsername.toLowerCase() === config.masterAdminUsername.toLowerCase() ||
-    loginType === "master_admin" ||
-    role === "master_admin";
+  const requestedLoginType =
+    loginType === "master_admin" || role === "master_admin" ? "master_admin" : "admin";
 
   if (!password || !deviceId) {
     return res.status(400).json({
@@ -334,7 +332,7 @@ router.post("/admin/login", (req, res) => {
     });
   }
 
-  if (wantsMasterAdmin) {
+  if (requestedLoginType === "master_admin") {
     if (!normalizedUsername) {
       return res.status(400).json({
         error: "Master admin username is required",
@@ -370,6 +368,13 @@ router.post("/admin/login", (req, res) => {
     return res.status(400).json({
       error: "Username is required for admin login",
       code: "ADMIN_USERNAME_REQUIRED",
+    });
+  }
+
+  if (normalizedUsername.toLowerCase() === config.masterAdminUsername.toLowerCase()) {
+    return res.status(403).json({
+      error: "Master admin credentials must use the master admin login page.",
+      code: "MASTER_ADMIN_LOGIN_REQUIRED",
     });
   }
 

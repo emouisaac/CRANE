@@ -1,3 +1,4 @@
+const os = require("os");
 const path = require("path");
 
 require("dotenv").config();
@@ -22,7 +23,17 @@ function resolveDataDirectory() {
     return path.resolve(process.cwd(), configuredDataDir, "crane-data");
   }
 
-  return path.resolve(process.cwd(), "data");
+  if (process.platform === "win32") {
+    const appDataDir = process.env.APPDATA || path.join(os.homedir(), "AppData", "Roaming");
+    return path.join(appDataDir, "CraneCredit", "data");
+  }
+
+  if (process.platform === "darwin") {
+    return path.join(os.homedir(), "Library", "Application Support", "CraneCredit", "data");
+  }
+
+  const linuxDataDir = process.env.XDG_DATA_HOME || path.join(os.homedir(), ".local", "share");
+  return path.join(linuxDataDir, "crane-credit", "data");
 }
 
 const dataDir = resolveDataDirectory();

@@ -1,4 +1,5 @@
 const sharedStore = window.CraneSharedState;
+const adminSession = window.CraneAdminSession;
 const adminCurrencyFormatter = new Intl.NumberFormat('en-UG', {
   style: 'currency',
   currency: 'UGX',
@@ -34,36 +35,11 @@ function setupIdleDetection() {
 }
 
 function getAdminAuthState() {
-  const token = localStorage.getItem('accessToken');
-  const role = localStorage.getItem('userRole');
-  const adminRole = localStorage.getItem('adminRole');
-
-  return {
-    token,
-    role,
-    adminRole,
-    isAdmin: Boolean(token && role === 'admin' && adminRole === 'admin')
-  };
+  return adminSession.readSession();
 }
 
 function requireAdminLogin() {
-  const auth = getAdminAuthState();
-
-  if (auth.adminRole === 'master_admin') {
-    window.location.href = 'admin-panel.html';
-    return false;
-  }
-
-  if (!auth.isAdmin) {
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
-    localStorage.removeItem('userRole');
-    localStorage.removeItem('adminRole');
-    window.location.href = 'admin-login.html';
-    return false;
-  }
-
-  return true;
+  return adminSession.ensurePanelAccess('admin');
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -171,7 +147,7 @@ function setupAdminEventListeners() {
   document.getElementById('admin-refresh-btn')?.addEventListener('click', handleAdminSync);
   document.getElementById('admin-sync-btn')?.addEventListener('click', handleAdminSync);
   document.getElementById('admin-back-app')?.addEventListener('click', () => {
-    window.location.href = 'index.html';
+    window.location.href = '/';
   });
 
   document.querySelectorAll('.nav-link[data-view]').forEach((link) => {
@@ -240,15 +216,8 @@ function setupAdminEventListeners() {
 }
 
 function handleAdminLogout() {
-  // Clear admin authentication
-  localStorage.removeItem('accessToken');
-  localStorage.removeItem('refreshToken');
-  localStorage.removeItem('userRole');
-  localStorage.removeItem('adminRole');
-  localStorage.removeItem('adminUsername');
-
-  // Redirect to admin login
-  window.location.href = 'admin-login.html';
+  adminSession.clearSession();
+  adminSession.redirectToLogin('admin');
 }
 
 function handleAdminNavigation(event) {

@@ -90,7 +90,7 @@ New role selector dropdown on login page:
 - Option to login as "Master Admin" (approve loans)
 - Option to login as "Admin" (review applicants)
 
-#### Admin Panel (`admin-panel.html`)
+#### Admin Panel (`master-admin.html`)
 Dynamic UI based on logged-in role:
 
 **Master Admin Navigation:**
@@ -205,7 +205,7 @@ New role-based features:
    - `docs/admin-roles-migration.sql` - Database schema updates
 
 2. **Frontend:**
-   - `admin-panel.html` - Added new sections for admins
+   - `master-admin.html` - Added new sections for admins
    - `admin-panel.js` - Role-based UI and functionality
    - `admin-login.html` - Added role selector
    - `admin-auth.js` - Updated login to handle role selection
