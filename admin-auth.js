@@ -116,8 +116,8 @@ function handleBackToApp() {
 }
 
 // Event listeners
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   adminElements.loginForm.addEventListener('submit', handleAdminUserLogin);
   adminElements.backToAppButtons.forEach((button) => button.addEventListener('click', handleBackToApp));
-  adminSession.redirectAuthenticatedUser('admin');
+  await adminSession.redirectAuthenticatedUser('admin');
 });

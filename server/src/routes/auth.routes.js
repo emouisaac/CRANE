@@ -11,10 +11,12 @@ const {
   createAdminAccount,
   createOtpChallenge,
   createRefreshSession,
+  findRefreshSession,
   findAdminAccountById,
   findAdminAccountByUsername,
   findAuthUserByPhone,
   listAdminAccounts,
+  rotateRefreshSession,
   sanitizeAdminAccount,
   touchAdminAccountLogin,
   touchAuthUserLogin,
@@ -510,7 +512,7 @@ router.post("/refresh", (req, res) => {
 
   try {
     const session = findRefreshSession(refreshToken);
-    if (!session || session.revoked) {
+    if (!session || session.revoked_at) {
       return res.status(401).json({
         error: "Invalid or revoked refresh token",
         code: "REFRESH_TOKEN_INVALID",
@@ -529,8 +531,11 @@ router.post("/refresh", (req, res) => {
     let adminAccount = null;
     let role = session.role || "borrower";
     let username = session.username || null;
+    const isMasterAdminSession =
+      session.subject_type === "admin" &&
+      (session.role === "master_admin" || session.subject_id === "master_admin");
 
-    if (session.subject_type === "admin") {
+    if (session.subject_type === "admin" && !isMasterAdminSession) {
       adminAccount = findAdminAccountById(subjectId);
       if (!adminAccount || adminAccount.status !== "active") {
         return res.status(403).json({
@@ -540,6 +545,9 @@ router.post("/refresh", (req, res) => {
       }
       role = adminAccount.role;
       username = adminAccount.username;
+    } else if (isMasterAdminSession) {
+      role = "master_admin";
+      username = session.username || config.masterAdminUsername;
     }
 
     const newRefreshToken = rotateRefreshSession(refreshToken, getRefreshExpiryIso());

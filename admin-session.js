@@ -87,6 +87,18 @@
     return role === 'master_admin' ? ROUTES.masterAdminLogin : ROUTES.adminLogin;
   }
 
+  function getStoredAdminDestination(session = readSession()) {
+    if (session.isMasterAdmin) {
+      return 'master_admin';
+    }
+
+    if (session.isAdmin) {
+      return 'admin';
+    }
+
+    return null;
+  }
+
   function redirectToPanel(role, method = 'href') {
     const route = getPanelRoute(role);
     if (method === 'replace') {
@@ -105,20 +117,35 @@
     window.location.href = route;
   }
 
-  function redirectAuthenticatedUser(_targetRole, method = 'href') {
+  async function redirectAuthenticatedUser(targetRole, method = 'href') {
     const session = readSession();
+    const destinationRole = getStoredAdminDestination(session);
 
-    if (session.isMasterAdmin) {
-      redirectToPanel('master_admin', method);
-      return true;
+    if (!destinationRole) {
+      return false;
     }
 
-    if (session.isAdmin) {
+    if (targetRole === 'master_admin' && destinationRole === 'admin') {
       redirectToPanel('admin', method);
       return true;
     }
 
-    return false;
+    if (targetRole === 'admin' && destinationRole === 'master_admin') {
+      redirectToPanel('master_admin', method);
+      return true;
+    }
+
+    try {
+      if (session.refreshToken) {
+        await refreshAccessToken();
+      }
+    } catch (error) {
+      clearSession();
+      return false;
+    }
+
+    redirectToPanel(destinationRole, method);
+    return true;
   }
 
   function ensurePanelAccess(requiredRole, method = 'href') {

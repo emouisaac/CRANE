@@ -83,16 +83,23 @@ async function apiRequest(path, options = {}) {
         
         const retryData = await retryResponse.json().catch(() => ({}));
         if (!retryResponse.ok) {
-          throw new Error(retryData.error || 'Request failed after token refresh');
+          const retryError = new Error(retryData.error || 'Request failed after token refresh');
+          retryError.status = retryResponse.status;
+          throw retryError;
         }
         return retryData;
       } catch (refreshError) {
         console.error('Token refresh failed:', refreshError);
-        throw new Error(data.error || 'Session expired. Please sign in again.');
+        const authError = new Error(data.error || 'Session expired. Please sign in again.');
+        authError.status = 401;
+        authError.requiresReauth = true;
+        throw authError;
       }
     }
-    
-    throw new Error(data.error || 'Request failed.');
+
+    const error = new Error(data.error || 'Request failed.');
+    error.status = response.status;
+    throw error;
   }
 
   return data;
@@ -1307,15 +1314,16 @@ document.addEventListener('DOMContentLoaded', async () => {
   } catch (error) {
     console.error('Failed to load admin portal state:', error);
     console.error('Error details:', error.message);
-    
-    // Clear session to prevent redirect loop
-    adminSession.clearSession();
-    
-    // Wait a moment to ensure localStorage is cleared
-    await new Promise(resolve => setTimeout(resolve, 100));
-    
-    alert('We could not load the admin portal data. Please sign in again.');
-    adminSession.redirectToLogin('master_admin', 'replace');
+
+    if (error.requiresReauth || error.status === 401 || error.status === 403) {
+      adminSession.clearSession();
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      alert('Your admin session is no longer valid. Please sign in again.');
+      adminSession.redirectToLogin('master_admin', 'replace');
+      return;
+    }
+
+    alert(`We could not load the admin portal data: ${error.message}`);
   }
 });
 

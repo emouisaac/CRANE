@@ -103,10 +103,10 @@ function handleBackToApp() {
   window.location.href = '/';
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   // Add a safeguard: if redirectAuthenticatedUser tries to send us back, 
   // clear the session to prevent loop
-  const beforeRedirect = adminSession.redirectAuthenticatedUser('master_admin');
+  const beforeRedirect = await adminSession.redirectAuthenticatedUser('master_admin');
   if (beforeRedirect) {
     // Session was valid and we're being redirected to panel
     // This is expected behavior
