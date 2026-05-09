@@ -7,9 +7,16 @@ const { URL } = require("node:url");
 const { DatabaseSync } = require("node:sqlite");
 
 const ROOT = __dirname;
-const DATA_DIR = path.join(ROOT, "data");
-const UPLOAD_DIR = path.join(ROOT, "uploads");
-const DB_PATH = path.join(DATA_DIR, "crane.sqlite");
+loadEnvFile(path.join(ROOT, ".env"));
+
+const STORAGE_ROOT = resolveConfigPath(process.env.CRANE_STORAGE_DIR || ROOT);
+const DB_PATH = process.env.CRANE_DB_PATH
+  ? resolveConfigPath(process.env.CRANE_DB_PATH)
+  : path.join(process.env.CRANE_DATA_DIR ? resolveConfigPath(process.env.CRANE_DATA_DIR) : path.join(STORAGE_ROOT, "data"), "crane.sqlite");
+const DATA_DIR = path.dirname(DB_PATH);
+const UPLOAD_DIR = process.env.CRANE_UPLOAD_DIR
+  ? resolveConfigPath(process.env.CRANE_UPLOAD_DIR)
+  : path.join(STORAGE_ROOT, "uploads");
 const SESSION_COOKIE = "crane_session";
 const ROLE_SESSION_COOKIES = {
   borrower: "crane_session_borrower",
@@ -18,8 +25,6 @@ const ROLE_SESSION_COOKIES = {
 };
 const PORT = Number(process.env.PORT || 3000);
 const MAX_JSON_BYTES = 45 * 1024 * 1024;
-
-loadEnvFile(path.join(ROOT, ".env"));
 
 const env = {
   port: Number(process.env.PORT || PORT),
@@ -37,6 +42,7 @@ db.exec("PRAGMA foreign_keys = ON;");
 db.exec("PRAGMA journal_mode = WAL;");
 
 initializeSchema();
+applySchemaMigrations();
 seedSettings();
 
 const sseClients = new Set();
@@ -80,6 +86,7 @@ function initializeSchema() {
       full_name TEXT NOT NULL,
       phone TEXT NOT NULL UNIQUE,
       email TEXT,
+      email_normalized TEXT,
       country TEXT NOT NULL,
       pin_hash TEXT NOT NULL,
       referral_code TEXT NOT NULL UNIQUE,
@@ -94,7 +101,9 @@ function initializeSchema() {
       full_name TEXT NOT NULL,
       username TEXT NOT NULL UNIQUE,
       email TEXT,
+      email_normalized TEXT,
       phone TEXT,
+      phone_normalized TEXT,
       pin_hash TEXT NOT NULL,
       status TEXT NOT NULL DEFAULT 'active',
       permissions_json TEXT NOT NULL,
@@ -118,6 +127,9 @@ function initializeSchema() {
       amount_requested INTEGER NOT NULL,
       term_months INTEGER NOT NULL,
       purpose TEXT NOT NULL,
+      applicant_phone_normalized TEXT,
+      applicant_email_normalized TEXT,
+      applicant_id_number_normalized TEXT,
       applicant_json TEXT NOT NULL,
       employment_json TEXT NOT NULL,
       status TEXT NOT NULL,
@@ -145,6 +157,7 @@ function initializeSchema() {
       mime_type TEXT NOT NULL,
       file_name TEXT NOT NULL,
       file_path TEXT NOT NULL,
+      checksum_sha256 TEXT,
       uploaded_at TEXT NOT NULL,
       FOREIGN KEY (loan_application_id) REFERENCES loan_applications(id) ON DELETE CASCADE
     );
@@ -242,6 +255,32 @@ function initializeSchema() {
       updated_at TEXT NOT NULL
     );
   `);
+}
+
+function applySchemaMigrations() {
+  ensureColumn("borrowers", "email_normalized", "TEXT");
+  ensureColumn("admins", "email_normalized", "TEXT");
+  ensureColumn("admins", "phone_normalized", "TEXT");
+  ensureColumn("loan_applications", "applicant_phone_normalized", "TEXT");
+  ensureColumn("loan_applications", "applicant_email_normalized", "TEXT");
+  ensureColumn("loan_applications", "applicant_id_number_normalized", "TEXT");
+  ensureColumn("loan_documents", "checksum_sha256", "TEXT");
+
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_borrowers_email_normalized ON borrowers(email_normalized);
+    CREATE INDEX IF NOT EXISTS idx_admins_email_normalized ON admins(email_normalized);
+    CREATE INDEX IF NOT EXISTS idx_admins_phone_normalized ON admins(phone_normalized);
+    CREATE INDEX IF NOT EXISTS idx_loan_applications_borrower_status ON loan_applications(borrower_id, status);
+    CREATE INDEX IF NOT EXISTS idx_loan_applications_phone_normalized ON loan_applications(applicant_phone_normalized);
+    CREATE INDEX IF NOT EXISTS idx_loan_applications_email_normalized ON loan_applications(applicant_email_normalized);
+    CREATE INDEX IF NOT EXISTS idx_loan_applications_id_number_normalized ON loan_applications(applicant_id_number_normalized);
+    CREATE INDEX IF NOT EXISTS idx_loan_documents_checksum_sha256 ON loan_documents(checksum_sha256);
+  `);
+
+  backfillBorrowerNormalization();
+  backfillAdminNormalization();
+  backfillLoanApplicationNormalization();
+  backfillLoanDocumentChecksums();
 }
 
 function seedSettings() {
@@ -769,6 +808,7 @@ function registerBorrower(body) {
     body.phone || body.phoneNumber || body.phone_number || body.msisdn
   );
   const email = String(body.email || body.emailAddress || body.email_address || "").trim();
+  const emailNormalized = normalizeEmail(email);
   const pin = String(body.pin || body.pinCode || body.pin_code || body.password || "");
 
   if (!fullName || pin.length !== 6 || !/^\d{6}$/.test(pin)) {
@@ -779,18 +819,23 @@ function registerBorrower(body) {
     throw createHttpError(409, "An account with this phone number already exists.");
   }
 
+  if (emailNormalized && db.prepare("SELECT id FROM borrowers WHERE email_normalized = ?").get(emailNormalized)) {
+    throw createHttpError(409, "An account with this email address already exists.");
+  }
+
   const now = nowIso();
   const referralCode = `CRANE-${crypto.randomBytes(3).toString("hex").toUpperCase()}`;
 
   const statement = db.prepare(`
-    INSERT INTO borrowers (full_name, phone, email, country, pin_hash, referral_code, account_status, member_since, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, 'active', ?, ?)
+    INSERT INTO borrowers (full_name, phone, email, email_normalized, country, pin_hash, referral_code, account_status, member_since, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, 'active', ?, ?)
   `);
 
   const result = statement.run(
     fullName,
     phone,
     email || null,
+    emailNormalized || null,
     String(body.country || body.countryCode || body.country_code || "UG"),
     hashSecret(pin),
     referralCode,
@@ -868,12 +913,53 @@ async function createLoanApplication(borrowerId, body) {
     throw createHttpError(400, "Loan amount and preferred term are required.");
   }
 
+  const applicantPhoneNormalized = normalizePhone(
+    borrower.country,
+    body.phone || body.phoneNumber || body.phone_number || borrower.phone
+  );
+  const applicantEmailNormalized = normalizeEmail(body.email || borrower.email || "");
+  const applicantIdNumberNormalized = normalizeIdentifier(body.idNumber || body.id_number || body.nationalId || "");
+
+  if (db.prepare(`
+    SELECT id
+    FROM loan_applications
+    WHERE borrower_id = ?
+      AND status IN ('submitted', 'under_review', 'needs_documents', 'awaiting_super_admin')
+    LIMIT 1
+  `).get(borrowerId)) {
+    throw createHttpError(409, "You already have a loan application under review.");
+  }
+
+  if (applicantIdNumberNormalized && db.prepare(`
+    SELECT id
+    FROM loan_applications
+    WHERE applicant_id_number_normalized = ?
+      AND borrower_id != ?
+    LIMIT 1
+  `).get(applicantIdNumberNormalized, borrowerId)) {
+    throw createHttpError(409, "That document number is already linked to another application.");
+  }
+
+  if (db.prepare(`
+    SELECT id
+    FROM loan_applications
+    WHERE borrower_id != ?
+      AND status IN ('submitted', 'under_review', 'needs_documents', 'awaiting_super_admin')
+      AND (
+        applicant_phone_normalized = ?
+        OR (? != '' AND applicant_email_normalized = ?)
+      )
+    LIMIT 1
+  `).get(borrowerId, applicantPhoneNormalized, applicantEmailNormalized, applicantEmailNormalized)) {
+    throw createHttpError(409, "An active application already exists for this phone number or email address.");
+  }
+
   const id = createPublicId("APP");
   const now = nowIso();
   const applicant = {
     fullName: String(body.fullName || "").trim(),
-    phone: String(body.phone || "").trim(),
-    email: String(body.email || "").trim(),
+    phone: applicantPhoneNormalized,
+    email: String(body.email || borrower.email || "").trim(),
     idNumber: String(body.idNumber || "").trim(),
     dateOfBirth: String(body.dateOfBirth || ""),
     district: String(body.district || ""),
@@ -897,9 +983,10 @@ async function createLoanApplication(borrowerId, body) {
   db.prepare(`
     INSERT INTO loan_applications (
       id, borrower_id, amount_requested, term_months, purpose, applicant_json, employment_json,
+      applicant_phone_normalized, applicant_email_normalized, applicant_id_number_normalized,
       status, admin_stage, submitted_at, updated_at
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, 'submitted', 'queue', ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'submitted', 'queue', ?, ?)
   `).run(
     id,
     borrowerId,
@@ -908,6 +995,9 @@ async function createLoanApplication(borrowerId, body) {
     applicant.purpose,
     JSON.stringify(applicant),
     JSON.stringify(employment),
+    applicantPhoneNormalized,
+    applicantEmailNormalized || null,
+    applicantIdNumberNormalized || null,
     now,
     now
   );
@@ -931,16 +1021,21 @@ async function persistApplicationDocument(applicationId, uploadRoot, document) {
 
   const mimeType = base64Match[1];
   const data = base64Match[2];
+  const buffer = Buffer.from(data, "base64");
+  const checksum = hashDocumentBuffer(buffer);
+  if (db.prepare("SELECT id FROM loan_documents WHERE checksum_sha256 = ? LIMIT 1").get(checksum)) {
+    throw createHttpError(409, "One of these documents already exists in the system. Duplicate documents are not allowed.");
+  }
   const extension = extensionFromMime(mimeType);
   const safeName = slugify(document.type || "document");
   const fileName = `${safeName}-${Date.now()}.${extension}`;
   const filePath = path.join(uploadRoot, fileName);
 
-  await fsp.writeFile(filePath, Buffer.from(data, "base64"));
+  await fsp.writeFile(filePath, buffer);
 
   db.prepare(`
-    INSERT INTO loan_documents (loan_application_id, doc_type, label, mime_type, file_name, file_path, uploaded_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO loan_documents (loan_application_id, doc_type, label, mime_type, file_name, file_path, checksum_sha256, uploaded_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     applicationId,
     String(document.type || "document"),
@@ -948,6 +1043,7 @@ async function persistApplicationDocument(applicationId, uploadRoot, document) {
     mimeType,
     fileName,
     filePath,
+    checksum,
     nowIso()
   );
 }
@@ -1050,7 +1146,9 @@ function createAdmin(session, body) {
   const fullName = String(body.fullName || body.full_name || body.name || "").trim();
   const username = String(body.username || body.userName || body.adminUsername || "").trim();
   const email = String(body.email || body.emailAddress || body.email_address || "").trim();
+  const emailNormalized = normalizeEmail(email);
   const phone = String(body.phone || body.phoneNumber || body.phone_number || "").trim();
+  const phoneNormalized = normalizeLoosePhone(phone);
   const pin = String(body.pin || body.pinCode || body.pin_code || "").trim();
 
   if (!fullName || !username || !/^\d{6}$/.test(pin)) {
@@ -1061,15 +1159,23 @@ function createAdmin(session, body) {
     throw createHttpError(409, "That admin username already exists.");
   }
 
+  if (emailNormalized && db.prepare("SELECT id FROM admins WHERE email_normalized = ?").get(emailNormalized)) {
+    throw createHttpError(409, "That admin email already exists.");
+  }
+
+  if (phoneNormalized && db.prepare("SELECT id FROM admins WHERE phone_normalized = ?").get(phoneNormalized)) {
+    throw createHttpError(409, "That admin phone number already exists.");
+  }
+
   const permissions = Array.isArray(body.permissions) && body.permissions.length
     ? body.permissions
     : ["review_loans", "view_documents", "reply_support"];
 
   const now = nowIso();
   const result = db.prepare(`
-    INSERT INTO admins (full_name, username, email, phone, pin_hash, status, permissions_json, created_by, created_at)
-    VALUES (?, ?, ?, ?, ?, 'active', ?, ?, ?)
-  `).run(fullName, username, email || null, phone || null, hashSecret(pin), JSON.stringify(permissions), session.actorName, now);
+    INSERT INTO admins (full_name, username, email, email_normalized, phone, phone_normalized, pin_hash, status, permissions_json, created_by, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, 'active', ?, ?, ?)
+  `).run(fullName, username, email || null, emailNormalized || null, phone || null, phoneNormalized || null, hashSecret(pin), JSON.stringify(permissions), session.actorName, now);
 
   logActivity("super_admin", session.actorId, session.actorName, "created admin account", "admin", String(result.lastInsertRowid), {
     username
@@ -1896,6 +2002,14 @@ function nowIso() {
   return new Date().toISOString();
 }
 
+function resolveConfigPath(targetPath) {
+  const value = String(targetPath || "").trim();
+  if (!value) {
+    return ROOT;
+  }
+  return path.isAbsolute(value) ? path.normalize(value) : path.normalize(path.join(ROOT, value));
+}
+
 function addDaysIso(dateValue, days) {
   const date = new Date(dateValue);
   date.setUTCDate(date.getUTCDate() + days);
@@ -1904,6 +2018,14 @@ function addDaysIso(dateValue, days) {
 
 function ensureDirectory(targetPath) {
   fs.mkdirSync(targetPath, { recursive: true });
+}
+
+function ensureColumn(tableName, columnName, definition) {
+  const columns = db.prepare(`PRAGMA table_info(${tableName})`).all();
+  if (columns.some((column) => column.name === columnName)) {
+    return;
+  }
+  db.exec(`ALTER TABLE ${tableName} ADD COLUMN ${columnName} ${definition}`);
 }
 
 function hashSecret(secret) {
@@ -1921,6 +2043,22 @@ function verifySecret(secret, encoded) {
   return crypto.timingSafeEqual(Buffer.from(digest, "hex"), Buffer.from(parts[2], "hex"));
 }
 
+function normalizeEmail(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function normalizeLoosePhone(value) {
+  const digits = String(value || "").replace(/\D/g, "");
+  return digits ? `+${digits}` : "";
+}
+
+function normalizeIdentifier(value) {
+  return String(value || "")
+    .trim()
+    .toUpperCase()
+    .replace(/\s+/g, "");
+}
+
 function normalizePhone(country, rawPhone) {
   const dialCodes = {
     UG: "+256",
@@ -1930,15 +2068,22 @@ function normalizePhone(country, rawPhone) {
   };
   const digits = String(rawPhone || "").replace(/\D/g, "");
   const prefix = dialCodes[String(country || "UG").toUpperCase()] || "+256";
+  const prefixDigits = prefix.replace(/\D/g, "");
   if (!digits) {
     throw createHttpError(400, "Phone number is required.");
   }
-  const normalized = digits.startsWith("0") ? digits.slice(1) : digits;
+  const normalized = digits.startsWith(prefixDigits)
+    ? digits.slice(prefixDigits.length)
+    : (digits.startsWith("0") ? digits.slice(1) : digits);
   return `${prefix}${normalized}`;
 }
 
 function createPublicId(prefix) {
   return `${prefix}-${crypto.randomBytes(3).toString("hex").toUpperCase()}`;
+}
+
+function hashDocumentBuffer(buffer) {
+  return crypto.createHash("sha256").update(buffer).digest("hex");
 }
 
 function slugify(value) {
@@ -1956,6 +2101,59 @@ function extensionFromMime(mimeType) {
     "image/webp": "webp"
   };
   return map[mimeType] || "png";
+}
+
+function backfillBorrowerNormalization() {
+  const borrowers = db.prepare("SELECT id, email FROM borrowers").all();
+  const statement = db.prepare("UPDATE borrowers SET email_normalized = ? WHERE id = ?");
+  for (const borrower of borrowers) {
+    statement.run(normalizeEmail(borrower.email), borrower.id);
+  }
+}
+
+function backfillAdminNormalization() {
+  const admins = db.prepare("SELECT id, email, phone FROM admins").all();
+  const statement = db.prepare("UPDATE admins SET email_normalized = ?, phone_normalized = ? WHERE id = ?");
+  for (const admin of admins) {
+    statement.run(normalizeEmail(admin.email), normalizeLoosePhone(admin.phone), admin.id);
+  }
+}
+
+function backfillLoanApplicationNormalization() {
+  const applications = db.prepare("SELECT id, borrower_id, applicant_json FROM loan_applications").all();
+  const statement = db.prepare(`
+    UPDATE loan_applications
+    SET applicant_phone_normalized = ?, applicant_email_normalized = ?, applicant_id_number_normalized = ?
+    WHERE id = ?
+  `);
+
+  for (const application of applications) {
+    const borrower = getBorrowerById(application.borrower_id);
+    const applicant = safeJsonParse(application.applicant_json, {});
+    const phone = applicant.phone
+      ? normalizePhone(borrower?.country || "UG", applicant.phone)
+      : "";
+    statement.run(
+      phone || null,
+      normalizeEmail(applicant.email) || null,
+      normalizeIdentifier(applicant.idNumber) || null,
+      application.id
+    );
+  }
+}
+
+function backfillLoanDocumentChecksums() {
+  const documents = db.prepare("SELECT id, file_path, checksum_sha256 FROM loan_documents").all();
+  const statement = db.prepare("UPDATE loan_documents SET checksum_sha256 = ? WHERE id = ?");
+
+  for (const document of documents) {
+    if (document.checksum_sha256 || !document.file_path || !fs.existsSync(document.file_path)) {
+      continue;
+    }
+
+    const checksum = hashDocumentBuffer(fs.readFileSync(document.file_path));
+    statement.run(checksum, document.id);
+  }
 }
 
 function mimeTypeForPath(filePath) {
