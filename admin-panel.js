@@ -63,7 +63,35 @@ async function apiRequest(path, options = {}) {
   });
 
   const data = await response.json().catch(() => ({}));
+  
   if (!response.ok) {
+    // If we get a 401, try to refresh the token
+    if (response.status === 401) {
+      try {
+        console.log('Access token expired, attempting refresh...');
+        await adminSession.refreshAccessToken();
+        console.log('Token refreshed successfully, retrying request...');
+        
+        // Retry the original request with the new token
+        const retryResponse = await fetch(path, {
+          headers: {
+            ...getHeaders(),
+            ...(options.headers || {}),
+          },
+          ...options,
+        });
+        
+        const retryData = await retryResponse.json().catch(() => ({}));
+        if (!retryResponse.ok) {
+          throw new Error(retryData.error || 'Request failed after token refresh');
+        }
+        return retryData;
+      } catch (refreshError) {
+        console.error('Token refresh failed:', refreshError);
+        throw new Error(data.error || 'Session expired. Please sign in again.');
+      }
+    }
+    
     throw new Error(data.error || 'Request failed.');
   }
 
@@ -1278,9 +1306,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     await loadPortalState();
   } catch (error) {
     console.error('Failed to load admin portal state:', error);
-    alert('We could not load the admin portal data. Please sign in again.');
+    console.error('Error details:', error.message);
+    
+    // Clear session to prevent redirect loop
     adminSession.clearSession();
-    adminSession.redirectToLogin('master_admin');
+    
+    // Wait a moment to ensure localStorage is cleared
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
+    alert('We could not load the admin portal data. Please sign in again.');
+    adminSession.redirectToLogin('master_admin', 'replace');
   }
 });
 

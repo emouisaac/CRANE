@@ -34,6 +34,39 @@
     };
   }
 
+  async function refreshAccessToken() {
+    const session = readSession();
+    if (!session.refreshToken) {
+      throw new Error('No refresh token available');
+    }
+
+    try {
+      const response = await fetch('/api/auth/refresh', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          refreshToken: session.refreshToken,
+        }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || 'Token refresh failed');
+      }
+
+      const data = await response.json();
+      localStorage.setItem(STORAGE_KEYS.accessToken, data.accessToken);
+      localStorage.setItem(STORAGE_KEYS.refreshToken, data.refreshToken);
+
+      return data.accessToken;
+    } catch (error) {
+      console.error('Token refresh error:', error);
+      throw error;
+    }
+  }
+
   function clearSession() {
     Object.values(STORAGE_KEYS).forEach((key) => localStorage.removeItem(key));
   }
@@ -132,5 +165,6 @@
     redirectToLogin,
     redirectAuthenticatedUser,
     ensurePanelAccess,
+    refreshAccessToken,
   };
 })();

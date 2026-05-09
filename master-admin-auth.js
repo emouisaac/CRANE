@@ -104,7 +104,16 @@ function handleBackToApp() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  // Add a safeguard: if redirectAuthenticatedUser tries to send us back, 
+  // clear the session to prevent loop
+  const beforeRedirect = adminSession.redirectAuthenticatedUser('master_admin');
+  if (beforeRedirect) {
+    // Session was valid and we're being redirected to panel
+    // This is expected behavior
+    return;
+  }
+  
+  // If we reach here, no valid session exists, set up the form
   masterAdminElements.loginForm.addEventListener('submit', handleMasterAdminLogin);
   masterAdminElements.backToAppButtons.forEach((button) => button.addEventListener('click', handleBackToApp));
-  adminSession.redirectAuthenticatedUser('master_admin');
 });

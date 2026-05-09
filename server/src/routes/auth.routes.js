@@ -522,6 +522,94 @@ router.post("/biometric/assertion", (req, res) => {
   });
 });
 
+router.post("/refresh", (req, res) => {
+  const { refreshToken } = req.body || {};
+
+  if (!refreshToken) {
+    return res.status(400).json({
+      error: "Refresh token is required",
+      code: "REFRESH_TOKEN_REQUIRED",
+    });
+  }
+
+  try {
+    const session = findRefreshSession(refreshToken);
+    if (!session || session.revoked) {
+      return res.status(401).json({
+        error: "Invalid or revoked refresh token",
+        code: "REFRESH_TOKEN_INVALID",
+      });
+    }
+
+    const expiresAt = new Date(session.expires_at);
+    if (expiresAt < new Date()) {
+      return res.status(401).json({
+        error: "Refresh token has expired",
+        code: "REFRESH_TOKEN_EXPIRED",
+      });
+    }
+
+    let subjectId = session.subject_id;
+    let adminAccount = null;
+    let role = session.role || "borrower";
+    let username = session.username || null;
+
+    if (session.subject_type === "admin") {
+      adminAccount = findAdminAccountById(subjectId);
+      if (!adminAccount || adminAccount.status !== "active") {
+        return res.status(403).json({
+          error: "Admin account is not active",
+          code: "ADMIN_ACCOUNT_INACTIVE",
+        });
+      }
+      role = adminAccount.role;
+      username = adminAccount.username;
+    }
+
+    const newRefreshToken = rotateRefreshSession(refreshToken, getRefreshExpiryIso());
+    if (session.subject_type === "admin") {
+      const newAccessToken = jwt.sign(
+        {
+          sub: subjectId,
+          scope: session.scope,
+          role,
+          username,
+          adminAccountId: adminAccount?.id || null,
+          adminBusinessRole: adminAccount?.role || null,
+        },
+        config.jwtSecret,
+        { expiresIn: config.jwtExpiry }
+      );
+
+      return res.json({
+        accessToken: newAccessToken,
+        refreshToken: newRefreshToken,
+        role,
+      });
+    }
+
+    const newAccessToken = jwt.sign(
+      {
+        sub: subjectId,
+        scope: session.scope,
+      },
+      config.jwtSecret,
+      { expiresIn: config.jwtExpiry }
+    );
+
+    return res.json({
+      accessToken: newAccessToken,
+      refreshToken: newRefreshToken,
+    });
+  } catch (error) {
+    console.error("Token refresh error:", error);
+    return res.status(401).json({
+      error: "Token refresh failed",
+      code: "REFRESH_FAILED",
+    });
+  }
+});
+
 router.post("/logout", (req, res) => {
   return res.status(204).send();
 });
