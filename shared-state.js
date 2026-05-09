@@ -1,22 +1,80 @@
 (function attachCraneShared(global) {
-  const apiBase = "";
+  const apiBase = resolveApiBase();
+  const apiOrigin = apiBase ? new URL(apiBase, global.location.href).origin : global.location.origin;
+  const useCrossOriginCredentials = apiOrigin !== global.location.origin;
+
+  function resolveApiBase() {
+    const metaValue = global.document?.querySelector('meta[name="crane-api-base"]')?.content?.trim() || "";
+    const globalValue = typeof global.CRANE_API_BASE === "string" ? global.CRANE_API_BASE.trim() : "";
+    const rawValue = metaValue || globalValue;
+
+    if (!rawValue || rawValue === "/") {
+      return "";
+    }
+
+    return rawValue.replace(/\/+$/, "");
+  }
+
+  function buildApiUrl(path) {
+    const normalizedPath = String(path || "").startsWith("/") ? String(path || "") : `/${String(path || "")}`;
+    return `${apiBase}${normalizedPath}`;
+  }
+
+  function getRequestCredentials() {
+    return useCrossOriginCredentials ? "include" : "same-origin";
+  }
+
+  function getUnavailableMessage() {
+    return apiBase
+      ? `Could not reach the Crane backend at ${apiBase}.`
+      : "Crane backend is unavailable. If the frontend is deployed separately, set the crane-api-base meta tag to your backend URL.";
+  }
+
+  function parsePayload(response, text) {
+    if (!text) {
+      return {};
+    }
+
+    const contentType = response.headers.get("content-type") || "";
+    if (contentType.includes("application/json")) {
+      try {
+        return JSON.parse(text);
+      } catch (error) {
+        return { error: "The server returned invalid JSON." };
+      }
+    }
+
+    try {
+      return JSON.parse(text);
+    } catch (error) {
+      return { error: text.trim() || "Unexpected server response." };
+    }
+  }
 
   async function request(path, options = {}) {
-    const response = await fetch(`${apiBase}${path}`, {
-      method: options.method || "GET",
-      credentials: "same-origin",
-      headers: {
-        "Content-Type": "application/json",
-        ...(options.headers || {})
-      },
-      body: options.body ? JSON.stringify(options.body) : undefined
-    });
+    let response;
+
+    try {
+      response = await fetch(buildApiUrl(path), {
+        method: options.method || "GET",
+        credentials: getRequestCredentials(),
+        headers: {
+          "Content-Type": "application/json",
+          ...(options.headers || {})
+        },
+        body: options.body ? JSON.stringify(options.body) : undefined
+      });
+    } catch (error) {
+      const networkError = new Error(getUnavailableMessage());
+      networkError.cause = error;
+      throw networkError;
+    }
 
     const text = await response.text();
-    const payload = text ? JSON.parse(text) : {};
+    const payload = parsePayload(response, text);
 
     if (!response.ok) {
-      const error = new Error(payload.error || "Request failed.");
+      const error = new Error(payload.error || getUnavailableMessage());
       error.status = response.status;
       throw error;
     }
@@ -25,7 +83,20 @@
   }
 
   function connectEvents(onRefresh) {
-    const source = new EventSource("/api/events");
+    if (typeof global.EventSource !== "function") {
+      return null;
+    }
+
+    let source;
+    try {
+      source = useCrossOriginCredentials
+        ? new EventSource(buildApiUrl("/api/events"), { withCredentials: true })
+        : new EventSource(buildApiUrl("/api/events"));
+    } catch (error) {
+      console.warn(getUnavailableMessage(), error);
+      return null;
+    }
+
     const handleRefresh = () => onRefresh?.();
 
     source.addEventListener("refresh", handleRefresh);
@@ -170,6 +241,9 @@
   }
 
   global.CraneShared = {
+    apiBase,
+    buildApiUrl,
+    getRequestCredentials,
     request,
     connectEvents,
     fileToDataUrl,

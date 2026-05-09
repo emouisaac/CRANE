@@ -1,4 +1,5 @@
 (function adminWorkspace() {
+  const shared = window.CraneShared;
   const state = {
     dashboard: null,
     currentView: "overview",
@@ -90,8 +91,7 @@
   }
 
   function connectEvents() {
-    const source = new EventSource("/api/events");
-    source.addEventListener("refresh", () => loadDashboard());
+    shared.connectEvents(() => loadDashboard());
   }
 
   function render() {
@@ -414,22 +414,7 @@
   }
 
   async function api(path, options = {}) {
-    const response = await fetch(path, {
-      method: options.method || "GET",
-      credentials: "same-origin",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: options.body ? JSON.stringify(options.body) : undefined
-    });
-
-    const payload = await response.json();
-    if (!response.ok) {
-      const error = new Error(payload.error || "Request failed.");
-      error.status = response.status;
-      throw error;
-    }
-    return payload;
+    return shared.request(path, options);
   }
 
   function formatCurrency(value) {

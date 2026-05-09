@@ -21,6 +21,7 @@ const env = {
   sessionDays: Number(process.env.REFRESH_EXPIRY_DAYS || 30),
   masterAdminUsername: process.env.MASTER_ADMIN_USERNAME || "master_admin",
   masterAdminPassword: process.env.MASTER_ADMIN_PASSWORD || "CraneMaster@2026",
+  corsOrigins: parseCsv(process.env.CORS_ORIGINS || ""),
 };
 
 ensureDirectory(DATA_DIR);
@@ -37,6 +38,13 @@ const sseClients = new Set();
 
 const server = http.createServer(async (req, res) => {
   try {
+    applyCorsHeaders(req, res);
+    if (req.method === "OPTIONS") {
+      res.writeHead(204);
+      res.end();
+      return;
+    }
+
     const url = new URL(req.url, `http://${req.headers.host || "localhost"}`);
     const pathname = decodeURIComponent(url.pathname);
 
@@ -313,7 +321,7 @@ async function handleApiRequest(req, res, url, pathname) {
     const body = await readJson(req);
     const borrower = registerBorrower(body);
     const session = createSession("borrower", String(borrower.id), borrower.full_name);
-    setSessionCookie(res, session.token);
+    setSessionCookie(req, res, session.token);
     broadcastPublicRefresh();
     sendJson(res, 201, { ok: true, borrower: sanitizeBorrower(borrower) });
     return;
@@ -323,7 +331,7 @@ async function handleApiRequest(req, res, url, pathname) {
     const body = await readJson(req);
     const borrower = loginBorrower(body);
     const session = createSession("borrower", String(borrower.id), borrower.full_name);
-    setSessionCookie(res, session.token);
+    setSessionCookie(req, res, session.token);
     sendJson(res, 200, { ok: true, borrower: sanitizeBorrower(borrower) });
     return;
   }
@@ -406,7 +414,7 @@ async function handleApiRequest(req, res, url, pathname) {
     const body = await readJson(req);
     const admin = loginAdmin(body);
     const session = createSession("admin", String(admin.id), admin.full_name);
-    setSessionCookie(res, session.token);
+    setSessionCookie(req, res, session.token);
     sendJson(res, 200, { ok: true, admin: sanitizeAdmin(admin) });
     return;
   }
@@ -454,7 +462,7 @@ async function handleApiRequest(req, res, url, pathname) {
     const body = await readJson(req);
     assertSuperAdminCredentials(body);
     const session = createSession("super_admin", "env-super-admin", "Super Admin");
-    setSessionCookie(res, session.token);
+    setSessionCookie(req, res, session.token);
     sendJson(res, 200, { ok: true, superAdmin: { username: env.masterAdminUsername } });
     return;
   }
@@ -1635,15 +1643,15 @@ function clearCurrentSession(req, res) {
   if (cookies[SESSION_COOKIE]) {
     db.prepare("DELETE FROM sessions WHERE token = ?").run(cookies[SESSION_COOKIE]);
   }
-  clearSessionCookie(res);
+  clearSessionCookie(req, res);
 }
 
-function setSessionCookie(res, token) {
-  res.setHeader("Set-Cookie", `${SESSION_COOKIE}=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${env.sessionDays * 24 * 60 * 60}`);
+function setSessionCookie(req, res, token) {
+  res.setHeader("Set-Cookie", buildSessionCookie(req, `${SESSION_COOKIE}=${token}`, env.sessionDays * 24 * 60 * 60));
 }
 
-function clearSessionCookie(res) {
-  res.setHeader("Set-Cookie", `${SESSION_COOKIE}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0`);
+function clearSessionCookie(req, res) {
+  res.setHeader("Set-Cookie", buildSessionCookie(req, `${SESSION_COOKIE}=`, 0));
 }
 
 function openEventStream(req, res, session) {
@@ -1881,6 +1889,63 @@ function createHttpError(status, message) {
   const error = new Error(message);
   error.status = status;
   return error;
+}
+
+function parseCsv(value) {
+  return String(value || "")
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function applyCorsHeaders(req, res) {
+  const allowedOrigin = getAllowedOrigin(req);
+  if (!allowedOrigin) {
+    return;
+  }
+
+  res.setHeader("Access-Control-Allow-Origin", allowedOrigin);
+  res.setHeader("Access-Control-Allow-Credentials", "true");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  res.setHeader("Access-Control-Allow-Methods", "GET,POST,PATCH,DELETE,OPTIONS");
+  res.setHeader("Vary", "Origin");
+}
+
+function getAllowedOrigin(req) {
+  const origin = req.headers.origin || "";
+  if (!origin || !env.corsOrigins.length) {
+    return "";
+  }
+
+  if (env.corsOrigins.includes("*") || env.corsOrigins.includes(origin)) {
+    return origin;
+  }
+
+  return "";
+}
+
+function buildSessionCookie(req, basePair, maxAgeSeconds) {
+  const attributes = [basePair, "Path=/", "HttpOnly", `Max-Age=${maxAgeSeconds}`];
+  if (shouldUseCrossSiteCookie(req)) {
+    attributes.push("SameSite=None", "Secure");
+  } else {
+    attributes.push("SameSite=Lax");
+  }
+  return attributes.join("; ");
+}
+
+function shouldUseCrossSiteCookie(req) {
+  const origin = getAllowedOrigin(req);
+  if (!origin) {
+    return false;
+  }
+
+  try {
+    const parsed = new URL(origin);
+    return parsed.protocol === "https:" && !["localhost", "127.0.0.1"].includes(parsed.hostname);
+  } catch (error) {
+    return false;
+  }
 }
 
 function loadEnvFile(filePath) {

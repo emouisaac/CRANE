@@ -448,6 +448,8 @@
       state.bootstrap = await shared.request("/api/public/bootstrap");
       renderAll();
     } catch (error) {
+      state.bootstrap = null;
+      renderAll();
       if (!options.quiet) {
         console.error(error);
       }
