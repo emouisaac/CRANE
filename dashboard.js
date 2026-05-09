@@ -63,10 +63,10 @@
       "profile-customer-id", "profile-member-since", "profile-credit-score", "profile-phone-info", "profile-email",
       "profile-account-status", "profile-last-login-info", "change-pin-btn", "security-settings-btn", "notification-prefs-btn",
       "help-btn", "terms-btn", "profile-logout-btn", "login-modal", "login-modal-close", "login-form", "login-country",
-      "login-phone", "login-phone-error", "login-pin", "login-pin-error", "login-submit-btn", "forgot-pin-link",
+      "login-phone", "login-phone-error", "login-pin", "login-pin-error", "login-submit-btn", "login-spinner", "forgot-pin-link",
       "switch-to-register", "register-form", "register-full-name", "register-name-error", "register-country", "register-phone",
       "register-phone-error", "register-email", "register-email-error", "register-pin", "register-pin-error",
-      "register-pin-confirm", "register-pin-confirm-error", "register-submit-btn", "switch-to-login", "chat-container",
+      "register-pin-confirm", "register-pin-confirm-error", "register-submit-btn", "register-spinner", "switch-to-login", "chat-container",
       "chat-close-btn", "chat-messages", "chat-input", "chat-send-btn", "view-loan-options", "view-all-loans"
     ];
 
@@ -254,14 +254,28 @@
     dom.loginForm?.addEventListener("submit", async (event) => {
       event.preventDefault();
       clearAuthErrors();
+      const phone = dom.loginPhone.value.trim();
+      const pin = dom.loginPin.value.trim();
+
+      if (!phone) {
+        dom.loginPhoneError.textContent = "Enter the phone number linked to your account.";
+        return;
+      }
+
+      if (!/^\d{6}$/.test(pin)) {
+        dom.loginPinError.textContent = "Enter your 6-digit PIN.";
+        return;
+      }
+
+      setAuthButtonBusy(dom.loginSubmitBtn, dom.loginSpinner, true);
 
       try {
         await shared.request("/api/auth/login", {
           method: "POST",
           body: {
             country: dom.loginCountry.value,
-            phone: dom.loginPhone.value,
-            pin: dom.loginPin.value
+            phone,
+            pin
           }
         });
 
@@ -269,6 +283,8 @@
         await refreshDashboard();
       } catch (error) {
         dom.loginPinError.textContent = error.message;
+      } finally {
+        setAuthButtonBusy(dom.loginSubmitBtn, dom.loginSpinner, false);
       }
     });
 
@@ -280,6 +296,8 @@
         dom.registerPinConfirmError.textContent = "PIN confirmation does not match.";
         return;
       }
+
+      setAuthButtonBusy(dom.registerSubmitBtn, dom.registerSpinner, true);
 
       try {
         await shared.request("/api/auth/register", {
@@ -297,6 +315,8 @@
         await refreshDashboard();
       } catch (error) {
         dom.registerPhoneError.textContent = error.message;
+      } finally {
+        setAuthButtonBusy(dom.registerSubmitBtn, dom.registerSpinner, false);
       }
     });
 
@@ -917,6 +937,8 @@
   function closeLoginModal() {
     dom.loginModal.classList.remove("active");
     clearAuthErrors();
+    setAuthButtonBusy(dom.loginSubmitBtn, dom.loginSpinner, false);
+    setAuthButtonBusy(dom.registerSubmitBtn, dom.registerSpinner, false);
     dom.loginForm.reset();
     dom.registerForm.reset();
   }
@@ -940,6 +962,24 @@
         dom[key].textContent = "";
       }
     });
+  }
+
+  function setAuthButtonBusy(button, spinner, busy) {
+    if (!button) {
+      return;
+    }
+
+    button.disabled = busy;
+    button.setAttribute("aria-busy", busy ? "true" : "false");
+
+    const text = button.querySelector(".btn-text");
+    if (text) {
+      text.style.opacity = busy ? "0.7" : "1";
+    }
+
+    if (spinner) {
+      spinner.style.display = busy ? "block" : "none";
+    }
   }
 
   function openContactModal() {

@@ -1572,6 +1572,10 @@ select {
   display: none;
 }
 
+.form-error:not(:empty) {
+  display: block;
+}
+
 .phone-input-group {
   display: flex;
   gap: 0.5rem;
@@ -2454,6 +2458,10 @@ select {
   font-size: 0.75rem;
   margin-top: 0.25rem;
   display: none;
+}
+
+.form-error:not(:empty) {
+  display: block;
 }
 
 .auth-submit-btn {
