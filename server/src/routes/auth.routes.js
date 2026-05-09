@@ -21,7 +21,7 @@ const {
   upsertAuthUser,
   updateAdminAccount,
 } = require("../config/database");
-const { authenticate } = require("../middleware/authenticate");
+const { requireMasterAdmin } = require("../middleware/authorize");
 
 const router = express.Router();
 
@@ -131,30 +131,6 @@ function issueAdminSession({ subject, deviceId, role, username = null, adminAcco
           lastLoginAt: null,
         },
   };
-}
-
-function authenticateAdminToken(req, res, next) {
-  authenticate(req, res, () => {
-    if (!req.user?.scope || !req.user.scope.includes("admin")) {
-      return res.status(403).json({
-        error: "Admin access required",
-        code: "ADMIN_ACCESS_REQUIRED",
-      });
-    }
-
-    return next();
-  });
-}
-
-function requireMasterAdmin(req, res, next) {
-  if (req.user?.role !== "master_admin") {
-    return res.status(403).json({
-      error: "Master admin access required",
-      code: "MASTER_ADMIN_ONLY",
-    });
-  }
-
-  return next();
 }
 
 function isDuplicateResourceError(error) {
@@ -398,13 +374,13 @@ router.post("/admin/login", (req, res) => {
   );
 });
 
-router.get("/admin/accounts", authenticateAdminToken, requireMasterAdmin, (req, res) => {
+router.get("/admin/accounts", requireMasterAdmin, (req, res) => {
   return res.json({
     accounts: listAdminAccounts(),
   });
 });
 
-router.post("/admin/accounts", authenticateAdminToken, requireMasterAdmin, (req, res) => {
+router.post("/admin/accounts", requireMasterAdmin, (req, res) => {
   const { username, fullName, email, password, role = "loan_officer" } = req.body || {};
 
   if (!username || !String(username).trim()) {
@@ -455,7 +431,7 @@ router.post("/admin/accounts", authenticateAdminToken, requireMasterAdmin, (req,
   }
 });
 
-router.patch("/admin/accounts/:adminId", authenticateAdminToken, requireMasterAdmin, (req, res) => {
+router.patch("/admin/accounts/:adminId", requireMasterAdmin, (req, res) => {
   const { adminId } = req.params;
   const updates = { ...req.body };
 
@@ -497,7 +473,7 @@ router.patch("/admin/accounts/:adminId", authenticateAdminToken, requireMasterAd
   }
 });
 
-router.delete("/admin/accounts/:adminId", authenticateAdminToken, requireMasterAdmin, (req, res) => {
+router.delete("/admin/accounts/:adminId", requireMasterAdmin, (req, res) => {
   const { adminId } = req.params;
   const existingAccount = findAdminAccountById(adminId);
 

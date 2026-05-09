@@ -36,5 +36,5 @@ server.listen(config.port, () => {
   const host = address.address === "::" || address.address === "0.0.0.0" ? "localhost" : address.address;
   const url = `http://${host}:${address.port}`;
 
-  console.log(`SwiftLend backend listening at ${url}`);
+  console.log(`${config.serviceName} backend listening at ${url}`);
 });

@@ -20,44 +20,13 @@ const {
   updateLoanApplication,
   updateRiskAlertStatus,
 } = require("../config/database");
-const { authenticate } = require("../middleware/authenticate");
+const {
+  requireAdmin,
+  requireMasterAdmin,
+  requireRegularAdmin,
+} = require("../middleware/authorize");
 
 const router = express.Router();
-
-function requireAdmin(req, res, next) {
-  authenticate(req, res, () => {
-    if (!req.user?.scope || !req.user.scope.includes("admin")) {
-      return res.status(403).json({
-        error: "Admin access required",
-        code: "ADMIN_ACCESS_REQUIRED",
-      });
-    }
-
-    return next();
-  });
-}
-
-function requireMasterAdmin(req, res, next) {
-  if (req.user?.role !== "master_admin") {
-    return res.status(403).json({
-      error: "Master admin access required",
-      code: "MASTER_ADMIN_ONLY",
-    });
-  }
-
-  return next();
-}
-
-function requireRegularAdmin(req, res, next) {
-  if (req.user?.role !== "admin") {
-    return res.status(403).json({
-      error: "Regular admin access required",
-      code: "REGULAR_ADMIN_ONLY",
-    });
-  }
-
-  return next();
-}
 
 function getActorName(req) {
   if (req.user?.role === "master_admin") {

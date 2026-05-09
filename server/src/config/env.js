@@ -3,6 +3,14 @@ const path = require("path");
 
 require("dotenv").config();
 
+const managedDataDirEnvKeys = [
+  "DATA_DIR",
+  "CRANE_DATA_DIR",
+  "PERSISTENT_STORAGE_DIR",
+  "RENDER_DISK_PATH",
+  "RAILWAY_VOLUME_MOUNT_PATH",
+];
+
 function resolveConfiguredPath(inputPath) {
   if (!inputPath) {
     return null;
@@ -11,13 +19,13 @@ function resolveConfiguredPath(inputPath) {
   return path.resolve(process.cwd(), inputPath);
 }
 
+function getManagedDataRoot() {
+  const envKey = managedDataDirEnvKeys.find((key) => process.env[key]);
+  return envKey ? process.env[envKey] : null;
+}
+
 function resolveDataDirectory() {
-  const configuredDataDir =
-    process.env.DATA_DIR ||
-    process.env.CRANE_DATA_DIR ||
-    process.env.PERSISTENT_STORAGE_DIR ||
-    process.env.RENDER_DISK_PATH ||
-    process.env.RAILWAY_VOLUME_MOUNT_PATH;
+  const configuredDataDir = getManagedDataRoot();
 
   if (configuredDataDir) {
     return path.resolve(process.cwd(), configuredDataDir, "crane-data");
@@ -38,22 +46,19 @@ function resolveDataDirectory() {
 
 const dataDir = resolveDataDirectory();
 const dbPath = resolveConfiguredPath(process.env.DB_PATH) || path.join(dataDir, "database.sqlite");
+const managedDataRoot = getManagedDataRoot();
 
 const config = {
+  serviceName: "Crane Credit",
+  serviceSlug: "crane-credit",
   port: Number(process.env.PORT || 3000),
   jwtSecret: process.env.JWT_SECRET || "replace-in-production",
   jwtExpiry: process.env.JWT_EXPIRY || "15m",
   refreshExpiryDays: Number(process.env.REFRESH_EXPIRY_DAYS || 30),
   dataDir,
   dbPath,
-  usingManagedDataDir: Boolean(
-    process.env.DATA_DIR ||
-      process.env.CRANE_DATA_DIR ||
-      process.env.PERSISTENT_STORAGE_DIR ||
-      process.env.RENDER_DISK_PATH ||
-      process.env.RAILWAY_VOLUME_MOUNT_PATH ||
-      process.env.DB_PATH
-  ),
+  usingManagedDataDir: Boolean(managedDataRoot || process.env.DB_PATH),
+  managedDataDirEnvKeys,
 
   // Admin credentials
   adminUsername: process.env.ADMIN_USERNAME || "admin",

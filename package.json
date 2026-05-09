@@ -1,8 +1,8 @@
 {
-  "name": "swiftlend-backend-starter",
+  "name": "crane-credit",
   "version": "1.0.0",
   "private": true,
-  "description": "Express + WebSocket backend starter for a quick loan onboarding platform.",
+  "description": "Crane Credit web app and Express backend for loan onboarding and administration.",
   "main": "server.js",
   "scripts": {
     "dev": "node server.js",

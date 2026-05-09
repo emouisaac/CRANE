@@ -5,8 +5,36 @@ const morgan = require("morgan");
 const path = require("path");
 
 const apiRoutes = require("./routes");
+const { config } = require("./config/env");
 const { auditContext } = require("./middleware/auditContext");
 const { notFoundHandler, errorHandler } = require("./middleware/errors");
+
+const staticAssetExtensions = new Set([
+  ".avif",
+  ".css",
+  ".gif",
+  ".jpeg",
+  ".jpg",
+  ".js",
+  ".png",
+  ".svg",
+  ".webp",
+  ".woff",
+  ".woff2",
+]);
+
+function setStaticAssetHeaders(res, filePath) {
+  const extension = path.extname(filePath).toLowerCase();
+
+  if (staticAssetExtensions.has(extension)) {
+    res.setHeader("Cache-Control", "public, max-age=86400, stale-while-revalidate=604800");
+    return;
+  }
+
+  if (extension === ".html") {
+    res.setHeader("Cache-Control", "no-cache");
+  }
+}
 
 function createApp() {
   const app = express();
@@ -20,7 +48,14 @@ function createApp() {
     { route: "/privacy", file: "privacy.html" },
     { route: "/terms", file: "terms.html" },
   ];
+  const redirects = [
+    { from: "/index.html", to: "/" },
+    { from: "/admin-panel", to: "/master-admin" },
+    { from: "/admin-panel.html", to: "/master-admin" },
+  ];
 
+  app.disable("x-powered-by");
+  app.set("etag", "strong");
   app.use(helmet());
   app.use(cors());
   app.use(express.json({ limit: "10mb" }));
@@ -41,25 +76,24 @@ function createApp() {
       });
     });
 
-  app.get("/index.html", (req, res) => {
-    res.redirect(302, "/");
+  redirects.forEach(({ from, to }) => {
+    app.get(from, (req, res) => {
+      res.redirect(302, to);
+    });
   });
 
-  app.get("/admin-panel", (req, res) => {
-    res.redirect(302, "/master-admin");
-  });
-
-  app.get("/admin-panel.html", (req, res) => {
-    res.redirect(302, "/master-admin");
-  });
-
-  // Serve static files from the root directory
-  app.use(express.static(webRoot));
+  app.use(
+    express.static(webRoot, {
+      etag: true,
+      lastModified: true,
+      setHeaders: setStaticAssetHeaders,
+    })
+  );
 
   app.get("/api", (req, res) => {
     res.json({
       ok: true,
-      message: "SwiftLend backend is running",
+      message: `${config.serviceName} backend is running`,
       apiRoot: "/api",
       health: "/health",
     });
@@ -68,7 +102,7 @@ function createApp() {
   app.get("/health", (req, res) => {
     res.json({
       ok: true,
-      service: "swiftlend-backend-starter",
+      service: config.serviceSlug,
       time: new Date().toISOString(),
     });
   });

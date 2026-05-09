@@ -1,4 +1,4 @@
--- SwiftLend Complete Database Schema
+-- Crane Credit complete database schema
 -- Quick Loan Application - Full Database Design
 -- PostgreSQL Compatible
 

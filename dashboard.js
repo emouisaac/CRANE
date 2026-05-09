@@ -1,4 +1,4 @@
-// SwiftLend Dashboard JavaScript
+// Crane Credit dashboard behaviors
 
 // Dashboard State
 const dashboardState = {

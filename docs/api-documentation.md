@@ -1,4 +1,4 @@
-# SwiftLend API Documentation
+# Crane Credit API Documentation
 
 ## Quick Loan Application Backend
 
