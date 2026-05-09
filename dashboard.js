@@ -36,7 +36,7 @@
     populateSubcounties(dom.applicantDistrict.value || "kampala");
     toggleEmploymentFields();
     refreshDashboard();
-    state.eventSource = shared.connectEvents(() => refreshDashboard({ quiet: true }));
+    state.eventSource = shared.connectEvents("borrower", () => refreshDashboard({ quiet: true }));
   });
 
   function cacheDom() {

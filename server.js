@@ -11,6 +11,11 @@ const DATA_DIR = path.join(ROOT, "data");
 const UPLOAD_DIR = path.join(ROOT, "uploads");
 const DB_PATH = path.join(DATA_DIR, "crane.sqlite");
 const SESSION_COOKIE = "crane_session";
+const ROLE_SESSION_COOKIES = {
+  borrower: "crane_session_borrower",
+  admin: "crane_session_admin",
+  super_admin: "crane_session_super_admin"
+};
 const PORT = Number(process.env.PORT || 3000);
 const MAX_JSON_BYTES = 45 * 1024 * 1024;
 
@@ -286,13 +291,14 @@ async function handleApiRequest(req, res, url, pathname) {
   }
 
   if (pathname === "/api/events" && req.method === "GET") {
-    const session = getSessionFromRequest(req);
+    const requestedRole = String(url.searchParams.get("role") || "").trim();
+    const session = getSessionFromRequest(req, requestedRole || undefined);
     openEventStream(req, res, session);
     return;
   }
 
   if (pathname === "/api/public/bootstrap" && req.method === "GET") {
-    const session = getSessionFromRequest(req);
+    const session = getSessionFromRequest(req, "borrower");
     const payload = buildPublicBootstrap(session);
     sendJson(res, 200, payload);
     return;
@@ -312,7 +318,7 @@ async function handleApiRequest(req, res, url, pathname) {
   }
 
   if (pathname === "/api/shared-state" && req.method === "GET") {
-    const session = getSessionFromRequest(req);
+    const session = getSessionFromRequest(req, "borrower");
     sendJson(res, 200, buildLegacySharedState(session));
     return;
   }
@@ -321,7 +327,7 @@ async function handleApiRequest(req, res, url, pathname) {
     const body = await readJson(req);
     const borrower = registerBorrower(body);
     const session = createSession("borrower", String(borrower.id), borrower.full_name);
-    setSessionCookie(req, res, session.token);
+    setSessionCookie(req, res, session.token, "borrower");
     broadcastPublicRefresh();
     sendJson(res, 201, { ok: true, borrower: sanitizeBorrower(borrower) });
     return;
@@ -331,13 +337,13 @@ async function handleApiRequest(req, res, url, pathname) {
     const body = await readJson(req);
     const borrower = loginBorrower(body);
     const session = createSession("borrower", String(borrower.id), borrower.full_name);
-    setSessionCookie(req, res, session.token);
+    setSessionCookie(req, res, session.token, "borrower");
     sendJson(res, 200, { ok: true, borrower: sanitizeBorrower(borrower) });
     return;
   }
 
   if (pathname === "/api/auth/logout" && req.method === "POST") {
-    clearCurrentSession(req, res);
+    clearCurrentSession(req, res, "borrower");
     sendJson(res, 200, { ok: true });
     return;
   }
@@ -414,7 +420,7 @@ async function handleApiRequest(req, res, url, pathname) {
     const body = await readJson(req);
     const admin = loginAdmin(body);
     const session = createSession("admin", String(admin.id), admin.full_name);
-    setSessionCookie(req, res, session.token);
+    setSessionCookie(req, res, session.token, "admin");
     sendJson(res, 200, { ok: true, admin: sanitizeAdmin(admin) });
     return;
   }
@@ -426,7 +432,7 @@ async function handleApiRequest(req, res, url, pathname) {
   }
 
   if (pathname === "/api/admin/logout" && req.method === "POST") {
-    clearCurrentSession(req, res);
+    clearCurrentSession(req, res, "admin");
     sendJson(res, 200, { ok: true });
     return;
   }
@@ -472,7 +478,7 @@ async function handleApiRequest(req, res, url, pathname) {
     const body = await readJson(req);
     assertSuperAdminCredentials(body);
     const session = createSession("super_admin", "env-super-admin", "Super Admin");
-    setSessionCookie(req, res, session.token);
+    setSessionCookie(req, res, session.token, "super_admin");
     sendJson(res, 200, { ok: true, superAdmin: { username: env.masterAdminUsername } });
     return;
   }
@@ -484,7 +490,7 @@ async function handleApiRequest(req, res, url, pathname) {
   }
 
   if (pathname === "/api/super-admin/logout" && req.method === "POST") {
-    clearCurrentSession(req, res);
+    clearCurrentSession(req, res, "super_admin");
     sendJson(res, 200, { ok: true });
     return;
   }
@@ -1659,33 +1665,30 @@ function createSession(actorRole, actorId, actorName) {
   return { token, expiresAt };
 }
 
-function getSessionFromRequest(req) {
-  const token = parseCookies(req.headers.cookie || "")[SESSION_COOKIE];
-  if (!token) {
-    return null;
+function getSessionFromRequest(req, expectedRole) {
+  const cookies = parseCookies(req.headers.cookie || "");
+  const tokens = expectedRole
+    ? getSessionTokensForRole(cookies, expectedRole)
+    : getAllSessionTokens(cookies);
+
+  for (const token of tokens) {
+    const session = getSessionByToken(token);
+    if (!session) {
+      continue;
+    }
+
+    if (expectedRole && session.actorRole !== expectedRole) {
+      continue;
+    }
+
+    return session;
   }
 
-  const session = db.prepare("SELECT * FROM sessions WHERE token = ?").get(token);
-  if (!session) {
-    return null;
-  }
-
-  if (new Date(session.expires_at).getTime() <= Date.now()) {
-    db.prepare("DELETE FROM sessions WHERE token = ?").run(token);
-    return null;
-  }
-
-  return {
-    token: session.token,
-    actorRole: session.actor_role,
-    actorId: session.actor_id,
-    actorName: session.actor_name,
-    expiresAt: session.expires_at
-  };
+  return null;
 }
 
 function requireSession(req, expectedRole) {
-  const session = getSessionFromRequest(req);
+  const session = getSessionFromRequest(req, expectedRole);
   if (!session) {
     throw createHttpError(401, "Sign in is required.");
   }
@@ -1697,20 +1700,28 @@ function requireSession(req, expectedRole) {
   return session;
 }
 
-function clearCurrentSession(req, res) {
+function clearCurrentSession(req, res, role) {
   const cookies = parseCookies(req.headers.cookie || "");
-  if (cookies[SESSION_COOKIE]) {
-    db.prepare("DELETE FROM sessions WHERE token = ?").run(cookies[SESSION_COOKIE]);
+  for (const token of role ? getSessionTokensForRole(cookies, role) : getAllSessionTokens(cookies)) {
+    db.prepare("DELETE FROM sessions WHERE token = ?").run(token);
   }
-  clearSessionCookie(req, res);
+  clearSessionCookie(req, res, role);
 }
 
-function setSessionCookie(req, res, token) {
-  res.setHeader("Set-Cookie", buildSessionCookie(req, `${SESSION_COOKIE}=${token}`, env.sessionDays * 24 * 60 * 60));
+function setSessionCookie(req, res, token, role) {
+  const cookies = [buildSessionCookie(req, `${getSessionCookieName(role)}=${token}`, env.sessionDays * 24 * 60 * 60)];
+  if (role && getSessionCookieName(role) !== SESSION_COOKIE) {
+    cookies.push(buildSessionCookie(req, `${SESSION_COOKIE}=`, 0));
+  }
+  res.setHeader("Set-Cookie", cookies);
 }
 
-function clearSessionCookie(req, res) {
-  res.setHeader("Set-Cookie", buildSessionCookie(req, `${SESSION_COOKIE}=`, 0));
+function clearSessionCookie(req, res, role) {
+  const cookieNames = role
+    ? [getSessionCookieName(role), SESSION_COOKIE]
+    : [SESSION_COOKIE, ...Object.values(ROLE_SESSION_COOKIES)];
+  const cookies = [...new Set(cookieNames)].map((cookieName) => buildSessionCookie(req, `${cookieName}=`, 0));
+  res.setHeader("Set-Cookie", cookies);
 }
 
 function openEventStream(req, res, session) {
@@ -1834,6 +1845,51 @@ function parseCookies(cookieHeader) {
       acc[key] = decodeURIComponent(value);
       return acc;
     }, {});
+}
+
+function getSessionCookieName(role) {
+  return ROLE_SESSION_COOKIES[role] || SESSION_COOKIE;
+}
+
+function getSessionTokensForRole(cookies, role) {
+  const tokens = [];
+  const roleCookie = cookies[getSessionCookieName(role)];
+  if (roleCookie) {
+    tokens.push(roleCookie);
+  }
+  if (cookies[SESSION_COOKIE] && cookies[SESSION_COOKIE] !== roleCookie) {
+    tokens.push(cookies[SESSION_COOKIE]);
+  }
+  return tokens;
+}
+
+function getAllSessionTokens(cookies) {
+  const tokens = [cookies[SESSION_COOKIE], ...Object.values(ROLE_SESSION_COOKIES).map((name) => cookies[name])].filter(Boolean);
+  return [...new Set(tokens)];
+}
+
+function getSessionByToken(token) {
+  if (!token) {
+    return null;
+  }
+
+  const session = db.prepare("SELECT * FROM sessions WHERE token = ?").get(token);
+  if (!session) {
+    return null;
+  }
+
+  if (new Date(session.expires_at).getTime() <= Date.now()) {
+    db.prepare("DELETE FROM sessions WHERE token = ?").run(token);
+    return null;
+  }
+
+  return {
+    token: session.token,
+    actorRole: session.actor_role,
+    actorId: session.actor_id,
+    actorName: session.actor_name,
+    expiresAt: session.expires_at
+  };
 }
 
 function nowIso() {

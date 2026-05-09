@@ -82,16 +82,20 @@
     return payload;
   }
 
-  function connectEvents(onRefresh) {
+  function connectEvents(roleOrRefresh, maybeRefresh) {
     if (typeof global.EventSource !== "function") {
       return null;
     }
 
+    const role = typeof roleOrRefresh === "string" ? roleOrRefresh : "";
+    const onRefresh = typeof roleOrRefresh === "function" ? roleOrRefresh : maybeRefresh;
+    const eventsPath = role ? `/api/events?role=${encodeURIComponent(role)}` : "/api/events";
+
     let source;
     try {
       source = useCrossOriginCredentials
-        ? new EventSource(buildApiUrl("/api/events"), { withCredentials: true })
-        : new EventSource(buildApiUrl("/api/events"));
+        ? new EventSource(buildApiUrl(eventsPath), { withCredentials: true })
+        : new EventSource(buildApiUrl(eventsPath));
     } catch (error) {
       console.warn(getUnavailableMessage(), error);
       return null;
@@ -103,7 +107,7 @@
     source.addEventListener("error", () => {
       if (source.readyState === EventSource.CLOSED) {
         source.close();
-        setTimeout(() => connectEvents(onRefresh), 1500);
+        setTimeout(() => connectEvents(role || onRefresh, role ? onRefresh : undefined), 1500);
       }
     });
 

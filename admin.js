@@ -91,7 +91,7 @@
   }
 
   function connectEvents() {
-    shared.connectEvents(() => loadDashboard());
+    shared.connectEvents("admin", () => loadDashboard());
   }
 
   function render() {
