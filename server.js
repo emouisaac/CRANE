@@ -290,6 +290,25 @@ async function handleApiRequest(req, res, url, pathname) {
     return;
   }
 
+  if (pathname === "/api/profile" && req.method === "GET") {
+    const session = requireSession(req, "borrower");
+    const borrower = getBorrowerById(Number(session.actorId));
+    if (!borrower) {
+      throw createHttpError(404, "Borrower profile not found.");
+    }
+    sendJson(res, 200, {
+      ok: true,
+      profile: buildBorrowerViewModel(borrower).profile
+    });
+    return;
+  }
+
+  if (pathname === "/api/shared-state" && req.method === "GET") {
+    const session = getSessionFromRequest(req);
+    sendJson(res, 200, buildLegacySharedState(session));
+    return;
+  }
+
   if (pathname === "/api/auth/register" && req.method === "POST") {
     const body = await readJson(req);
     const borrower = registerBorrower(body);
@@ -558,6 +577,52 @@ function buildPublicBootstrap(session) {
   return payload;
 }
 
+function buildLegacySharedState(session) {
+  const bootstrap = buildPublicBootstrap(session);
+  const borrower = bootstrap.auth?.borrower || null;
+  const safeLoan = borrower?.loans?.[0] || null;
+
+  return {
+    ok: true,
+    loggedIn: Boolean(bootstrap.auth?.loggedIn),
+    marketing: bootstrap.marketing,
+    profile: borrower?.profile || null,
+    borrower: borrower,
+    notifications: borrower?.notifications || [],
+    supportMessages: borrower?.supportMessages || [],
+    referrals: borrower?.referrals?.items || [],
+    referralCode: borrower?.referrals?.code || null,
+    referralLink: borrower?.referrals?.link || "",
+    score: borrower?.score || {
+      current: null,
+      grade: "No score yet",
+      drivers: [],
+      history: []
+    },
+    loans: borrower?.loans || [],
+    applications: borrower?.applications || [],
+    activeLoan: safeLoan ? {
+      ...safeLoan,
+      nextDueDate: safeLoan.nextDueDate || null
+    } : {
+      id: null,
+      nextDueDate: null,
+      installmentAmount: 0,
+      outstandingAmount: 0,
+      status: "none"
+    },
+    snapshot: borrower?.snapshot || {
+      title: "No live account activity yet",
+      message: "Sign in to view current balances, due dates, and real account alerts.",
+      badge: "Awaiting sign in",
+      activeLoans: 0,
+      outstandingBalance: 0,
+      nextDue: null,
+      unreadAlerts: 0
+    }
+  };
+}
+
 function buildBorrowerViewModel(borrower) {
   const loans = getBorrowerLoans(borrower.id);
   const applications = getBorrowerApplications(borrower.id);
@@ -658,10 +723,19 @@ function buildSuperAdminDashboard(session) {
 }
 
 function registerBorrower(body) {
-  const fullName = String(body.fullName || "").trim();
-  const phone = normalizePhone(body.country, body.phone);
-  const email = String(body.email || "").trim();
-  const pin = String(body.pin || "");
+  const fullName = String(
+    body.fullName ||
+    body.full_name ||
+    body.name ||
+    body.displayName ||
+    ""
+  ).trim();
+  const phone = normalizePhone(
+    body.country || body.countryCode || body.country_code,
+    body.phone || body.phoneNumber || body.phone_number || body.msisdn
+  );
+  const email = String(body.email || body.emailAddress || body.email_address || "").trim();
+  const pin = String(body.pin || body.pinCode || body.pin_code || body.password || "");
 
   if (!fullName || pin.length !== 6 || !/^\d{6}$/.test(pin)) {
     throw createHttpError(400, "Enter a full name and a 6-digit PIN.");
@@ -683,7 +757,7 @@ function registerBorrower(body) {
     fullName,
     phone,
     email || null,
-    String(body.country || "UG"),
+    String(body.country || body.countryCode || body.country_code || "UG"),
     hashSecret(pin),
     referralCode,
     now,
@@ -696,8 +770,11 @@ function registerBorrower(body) {
 }
 
 function loginBorrower(body) {
-  const phone = normalizePhone(body.country, body.phone);
-  const pin = String(body.pin || "");
+  const phone = normalizePhone(
+    body.country || body.countryCode || body.country_code,
+    body.phone || body.phoneNumber || body.phone_number || body.msisdn
+  );
+  const pin = String(body.pin || body.pinCode || body.pin_code || body.password || "");
   const borrower = db.prepare("SELECT * FROM borrowers WHERE phone = ?").get(phone);
 
   if (!borrower || !verifySecret(pin, borrower.pin_hash)) {
@@ -1638,7 +1715,10 @@ async function serveStatic(pathname, res) {
   }
 
   const contentType = mimeTypeForPath(filePath);
-  res.writeHead(200, { "Content-Type": contentType });
+  res.writeHead(200, {
+    "Content-Type": contentType,
+    "Cache-Control": isCacheSensitive(filePath) ? "no-store" : "public, max-age=86400"
+  });
   fs.createReadStream(filePath).pipe(res);
 }
 
@@ -1769,6 +1849,10 @@ function mimeTypeForPath(filePath) {
     ".avif": "image/avif"
   };
   return map[ext] || "application/octet-stream";
+}
+
+function isCacheSensitive(filePath) {
+  return [".html", ".js"].includes(path.extname(filePath).toLowerCase());
 }
 
 function safeJsonParse(value, fallback) {
