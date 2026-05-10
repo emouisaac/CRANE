@@ -26,6 +26,12 @@ const UPLOAD_DIR = ensureDirectory(configuredUploadDir, path.join(ROOT, "uploads
 const DB_PATH = configuredDbPath
   ? path.join(DATA_DIR, path.basename(configuredDbPath))
   : path.join(DATA_DIR, "crane.sqlite");
+const STORAGE_CONFIGURED = Boolean(
+  process.env.CRANE_STORAGE_DIR ||
+  process.env.CRANE_DB_PATH ||
+  process.env.CRANE_DATA_DIR ||
+  process.env.CRANE_UPLOAD_DIR
+);
 const SESSION_COOKIE = "crane_session";
 const ROLE_SESSION_COOKIES = {
   borrower: "crane_session_borrower",
@@ -49,6 +55,10 @@ ensureDirectory(UPLOAD_DIR);
 const db = new DatabaseSync(DB_PATH);
 db.exec("PRAGMA foreign_keys = ON;");
 db.exec("PRAGMA journal_mode = WAL;");
+
+console.log(
+  `[storage] db=${DB_PATH} data=${DATA_DIR} uploads=${UPLOAD_DIR} render=${process.env.RENDER === "true"} configured=${STORAGE_CONFIGURED}`
+);
 
 initializeSchema();
 applySchemaMigrations();
@@ -98,6 +108,7 @@ function initializeSchema() {
       email_normalized TEXT,
       country TEXT NOT NULL,
       pin_hash TEXT NOT NULL,
+      profile_json TEXT NOT NULL DEFAULT '{}',
       referral_code TEXT NOT NULL UNIQUE,
       account_status TEXT NOT NULL DEFAULT 'active',
       member_since TEXT NOT NULL,
@@ -268,6 +279,7 @@ function initializeSchema() {
 
 function applySchemaMigrations() {
   ensureColumn("borrowers", "email_normalized", "TEXT");
+  ensureColumn("borrowers", "profile_json", "TEXT NOT NULL DEFAULT '{}'");
   ensureColumn("admins", "email_normalized", "TEXT");
   ensureColumn("admins", "phone_normalized", "TEXT");
   ensureColumn("loan_applications", "applicant_phone_normalized", "TEXT");
@@ -287,6 +299,7 @@ function applySchemaMigrations() {
   `);
 
   backfillBorrowerNormalization();
+  backfillBorrowerProfiles();
   backfillAdminNormalization();
   backfillLoanApplicationNormalization();
   backfillLoanDocumentChecksums();
@@ -334,7 +347,23 @@ function seedSettings() {
 
 async function handleApiRequest(req, res, url, pathname) {
   if (pathname === "/api/health" && req.method === "GET") {
-    sendJson(res, 200, { ok: true, now: nowIso() });
+    sendJson(res, 200, {
+      ok: true,
+      now: nowIso(),
+      storage: {
+        root: STORAGE_ROOT,
+        dataDir: DATA_DIR,
+        uploadDir: UPLOAD_DIR,
+        dbPath: DB_PATH,
+        configured: STORAGE_CONFIGURED,
+        runningOnRender: process.env.RENDER === "true"
+      },
+      counts: {
+        borrowers: db.prepare("SELECT COUNT(*) AS total FROM borrowers").get().total,
+        applications: db.prepare("SELECT COUNT(*) AS total FROM loan_applications").get().total,
+        loans: db.prepare("SELECT COUNT(*) AS total FROM loans").get().total
+      }
+    });
     return;
   }
 
@@ -798,6 +827,12 @@ function buildSuperAdminDashboard(session) {
     },
     applications: applications.map(mapApplicationForAdmin),
     admins: admins.map(sanitizeAdmin),
+    borrowers: borrowers.map((borrower) => ({
+      ...sanitizeBorrower(borrower),
+      applications: getBorrowerApplications(borrower.id).map(mapApplicationForClient),
+      loanSummary: getBorrowerLoans(borrower.id).map(mapLoanForClient),
+      latestScore: ensureScoreSnapshot(borrower.id)
+    })),
     audit: getRecentActivity(60),
     notifications: getNotifications("super_admin", String(session.actorId)),
     publicContent
@@ -835,9 +870,10 @@ function registerBorrower(body) {
   const now = nowIso();
   const referralCode = `CRANE-${crypto.randomBytes(3).toString("hex").toUpperCase()}`;
 
+  const country = String(body.country || body.countryCode || body.country_code || "UG");
   const statement = db.prepare(`
-    INSERT INTO borrowers (full_name, phone, email, email_normalized, country, pin_hash, referral_code, account_status, member_since, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, 'active', ?, ?)
+    INSERT INTO borrowers (full_name, phone, email, email_normalized, country, pin_hash, profile_json, referral_code, account_status, member_since, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?)
   `);
 
   const result = statement.run(
@@ -845,14 +881,35 @@ function registerBorrower(body) {
     phone,
     email || null,
     emailNormalized || null,
-    String(body.country || body.countryCode || body.country_code || "UG"),
+    country,
     hashSecret(pin),
+    JSON.stringify(createBorrowerProfileSnapshot({
+      account: {
+        fullName,
+        phone,
+        email: email || null,
+        country
+      },
+      registration: {
+        fullName,
+        phone,
+        email: email || null,
+        country,
+        registeredAt: now
+      },
+      updatedAt: now
+    })),
     referralCode,
     now,
     now
   );
 
   addSupportMessage(Number(result.lastInsertRowid), "system", "system", "Welcome to Crane Credit Support! Ask us anything about your application, repayments, or account.");
+  logActivity("borrower", result.lastInsertRowid, fullName, "created account", "borrower", String(result.lastInsertRowid), {
+    phone,
+    email: email || null,
+    country
+  });
 
   return getBorrowerById(Number(result.lastInsertRowid));
 }
@@ -874,6 +931,7 @@ function loginBorrower(body) {
   }
 
   db.prepare("UPDATE borrowers SET last_login_at = ? WHERE id = ?").run(nowIso(), borrower.id);
+  logActivity("borrower", borrower.id, borrower.full_name, "signed in", "session", String(borrower.id), {});
   return getBorrowerById(borrower.id);
 }
 
@@ -989,33 +1047,52 @@ async function createLoanApplication(borrowerId, body) {
     existingObligations: String(body.existingObligations || "")
   };
 
-  db.prepare(`
-    INSERT INTO loan_applications (
-      id, borrower_id, amount_requested, term_months, purpose, applicant_json, employment_json,
-      applicant_phone_normalized, applicant_email_normalized, applicant_id_number_normalized,
-      status, admin_stage, submitted_at, updated_at
-    )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'submitted', 'queue', ?, ?)
-  `).run(
-    id,
-    borrowerId,
-    amountRequested,
-    termMonths,
-    applicant.purpose,
-    JSON.stringify(applicant),
-    JSON.stringify(employment),
-    applicantPhoneNormalized,
-    applicantEmailNormalized || null,
-    applicantIdNumberNormalized || null,
-    now,
-    now
-  );
-
   const uploadRoot = path.join(UPLOAD_DIR, id);
   ensureDirectory(uploadRoot);
 
-  for (const document of documents) {
-    await persistApplicationDocument(id, uploadRoot, document);
+  try {
+    db.prepare(`
+      INSERT INTO loan_applications (
+        id, borrower_id, amount_requested, term_months, purpose, applicant_json, employment_json,
+        applicant_phone_normalized, applicant_email_normalized, applicant_id_number_normalized,
+        status, admin_stage, submitted_at, updated_at
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'submitted', 'queue', ?, ?)
+    `).run(
+      id,
+      borrowerId,
+      amountRequested,
+      termMonths,
+      applicant.purpose,
+      JSON.stringify(applicant),
+      JSON.stringify(employment),
+      applicantPhoneNormalized,
+      applicantEmailNormalized || null,
+      applicantIdNumberNormalized || null,
+      now,
+      now
+    );
+
+    upsertBorrowerProfileSnapshot(borrowerId, {
+      latestApplication: {
+        id,
+        submittedAt: now,
+        amountRequested,
+        termMonths,
+        purpose: applicant.purpose,
+        applicant,
+        employment,
+        documentTypes: documents.map((document) => String(document.type || "document"))
+      }
+    });
+
+    for (const document of documents) {
+      await persistApplicationDocument(id, uploadRoot, document);
+    }
+  } catch (error) {
+    db.prepare("DELETE FROM loan_applications WHERE id = ?").run(id);
+    removeUploadDirectory(uploadRoot);
+    throw error;
   }
 
   ensureScoreSnapshot(borrowerId);
@@ -1659,7 +1736,10 @@ async function serveDocument(req, res, documentId) {
   const fileBuffer = await fsp.readFile(documentRow.file_path);
   res.writeHead(200, {
     "Content-Type": documentRow.mime_type,
-    "Content-Length": fileBuffer.length
+    "Content-Length": fileBuffer.length,
+    "Cache-Control": "private, no-store, no-cache, must-revalidate",
+    Pragma: "no-cache",
+    Expires: "0"
   });
   res.end(fileBuffer);
 }
@@ -1748,7 +1828,8 @@ function sanitizeBorrower(borrower) {
     accountStatus: borrower.account_status,
     memberSince: borrower.member_since,
     lastLoginAt: borrower.last_login_at,
-    referralCode: borrower.referral_code
+    referralCode: borrower.referral_code,
+    profileData: safeJsonParse(borrower.profile_json, {})
   };
 }
 
@@ -1939,12 +2020,22 @@ async function readJson(req) {
 }
 
 function sendJson(res, status, payload) {
-  res.writeHead(status, { "Content-Type": "application/json; charset=utf-8" });
+  res.writeHead(status, {
+    "Content-Type": "application/json; charset=utf-8",
+    "Cache-Control": "no-store, no-cache, must-revalidate",
+    Pragma: "no-cache",
+    Expires: "0"
+  });
   res.end(JSON.stringify(payload));
 }
 
 function sendText(res, status, text) {
-  res.writeHead(status, { "Content-Type": "text/plain; charset=utf-8" });
+  res.writeHead(status, {
+    "Content-Type": "text/plain; charset=utf-8",
+    "Cache-Control": "no-store, no-cache, must-revalidate",
+    Pragma: "no-cache",
+    Expires: "0"
+  });
   res.end(text);
 }
 
@@ -2109,6 +2200,62 @@ function createPublicId(prefix) {
   return `${prefix}-${crypto.randomBytes(3).toString("hex").toUpperCase()}`;
 }
 
+function createBorrowerProfileSnapshot(seed) {
+  return {
+    account: seed.account || {},
+    registration: seed.registration || null,
+    latestApplication: seed.latestApplication || null,
+    updatedAt: seed.updatedAt || nowIso()
+  };
+}
+
+function buildBorrowerApplicationSnapshot(application) {
+  return {
+    id: application.id,
+    submittedAt: application.submitted_at,
+    amountRequested: application.amount_requested,
+    termMonths: application.term_months,
+    purpose: application.purpose,
+    status: application.status,
+    applicant: safeJsonParse(application.applicant_json, {}),
+    employment: safeJsonParse(application.employment_json, {})
+  };
+}
+
+function upsertBorrowerProfileSnapshot(borrowerId, patch) {
+  const borrower = getBorrowerById(borrowerId);
+  if (!borrower) {
+    return;
+  }
+
+  const current = safeJsonParse(borrower.profile_json, {});
+  const next = createBorrowerProfileSnapshot({
+    ...current,
+    ...patch,
+    account: {
+      ...(current.account || {}),
+      fullName: borrower.full_name,
+      phone: borrower.phone,
+      email: borrower.email,
+      country: borrower.country,
+      accountStatus: borrower.account_status,
+      memberSince: borrower.member_since,
+      referralCode: borrower.referral_code,
+      ...((patch && patch.account) || {})
+    },
+    registration: current.registration || {
+      fullName: borrower.full_name,
+      phone: borrower.phone,
+      email: borrower.email,
+      country: borrower.country,
+      registeredAt: borrower.created_at
+    },
+    updatedAt: nowIso()
+  });
+
+  db.prepare("UPDATE borrowers SET profile_json = ? WHERE id = ?").run(JSON.stringify(next), borrowerId);
+}
+
 function hashDocumentBuffer(buffer) {
   return crypto.createHash("sha256").update(buffer).digest("hex");
 }
@@ -2130,11 +2277,59 @@ function extensionFromMime(mimeType) {
   return map[mimeType] || "png";
 }
 
+function removeUploadDirectory(targetPath) {
+  if (!targetPath || !fs.existsSync(targetPath)) {
+    return;
+  }
+
+  const uploadRoot = path.resolve(UPLOAD_DIR);
+  const resolvedTarget = path.resolve(targetPath);
+  if (!resolvedTarget.startsWith(uploadRoot) || resolvedTarget === uploadRoot) {
+    return;
+  }
+
+  fs.rmSync(resolvedTarget, { recursive: true, force: true });
+}
+
 function backfillBorrowerNormalization() {
   const borrowers = db.prepare("SELECT id, email FROM borrowers").all();
   const statement = db.prepare("UPDATE borrowers SET email_normalized = ? WHERE id = ?");
   for (const borrower of borrowers) {
     statement.run(normalizeEmail(borrower.email), borrower.id);
+  }
+}
+
+function backfillBorrowerProfiles() {
+  const borrowers = getAllBorrowers();
+  const statement = db.prepare("UPDATE borrowers SET profile_json = ? WHERE id = ?");
+
+  for (const borrower of borrowers) {
+    const current = safeJsonParse(borrower.profile_json, {});
+    const latestApplication = getBorrowerApplications(borrower.id)[0];
+    const next = createBorrowerProfileSnapshot({
+      ...current,
+      account: {
+        ...(current.account || {}),
+        fullName: borrower.full_name,
+        phone: borrower.phone,
+        email: borrower.email,
+        country: borrower.country,
+        accountStatus: borrower.account_status,
+        memberSince: borrower.member_since,
+        referralCode: borrower.referral_code
+      },
+      registration: current.registration || {
+        fullName: borrower.full_name,
+        phone: borrower.phone,
+        email: borrower.email,
+        country: borrower.country,
+        registeredAt: borrower.created_at
+      },
+      latestApplication: latestApplication ? buildBorrowerApplicationSnapshot(latestApplication) : (current.latestApplication || null),
+      updatedAt: current.updatedAt || borrower.created_at
+    });
+
+    statement.run(JSON.stringify(next), borrower.id);
   }
 }
 
@@ -2200,7 +2395,7 @@ function mimeTypeForPath(filePath) {
 }
 
 function isCacheSensitive(filePath) {
-  return [".html", ".js"].includes(path.extname(filePath).toLowerCase());
+  return [".html", ".js", ".css"].includes(path.extname(filePath).toLowerCase());
 }
 
 function safeJsonParse(value, fallback) {
