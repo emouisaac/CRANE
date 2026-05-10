@@ -10,13 +10,22 @@ const ROOT = __dirname;
 loadEnvFile(path.join(ROOT, ".env"));
 
 const STORAGE_ROOT = resolveConfigPath(process.env.CRANE_STORAGE_DIR || ROOT);
-const DB_PATH = process.env.CRANE_DB_PATH
-  ? resolveConfigPath(process.env.CRANE_DB_PATH)
-  : path.join(process.env.CRANE_DATA_DIR ? resolveConfigPath(process.env.CRANE_DATA_DIR) : path.join(STORAGE_ROOT, "data"), "crane.sqlite");
-const DATA_DIR = path.dirname(DB_PATH);
-const UPLOAD_DIR = process.env.CRANE_UPLOAD_DIR
+const DEFAULT_DATA_DIR = path.join(STORAGE_ROOT, "data");
+const DEFAULT_UPLOAD_DIR = path.join(STORAGE_ROOT, "uploads");
+const configuredDbPath = process.env.CRANE_DB_PATH ? resolveConfigPath(process.env.CRANE_DB_PATH) : null;
+const configuredDataDir = configuredDbPath
+  ? path.dirname(configuredDbPath)
+  : process.env.CRANE_DATA_DIR
+  ? resolveConfigPath(process.env.CRANE_DATA_DIR)
+  : DEFAULT_DATA_DIR;
+const configuredUploadDir = process.env.CRANE_UPLOAD_DIR
   ? resolveConfigPath(process.env.CRANE_UPLOAD_DIR)
-  : path.join(STORAGE_ROOT, "uploads");
+  : DEFAULT_UPLOAD_DIR;
+const DATA_DIR = ensureDirectory(configuredDataDir, path.join(ROOT, "data"), "data directory");
+const UPLOAD_DIR = ensureDirectory(configuredUploadDir, path.join(ROOT, "uploads"), "upload directory");
+const DB_PATH = configuredDbPath
+  ? path.join(DATA_DIR, path.basename(configuredDbPath))
+  : path.join(DATA_DIR, "crane.sqlite");
 const SESSION_COOKIE = "crane_session";
 const ROLE_SESSION_COOKIES = {
   borrower: "crane_session_borrower",
@@ -2016,8 +2025,26 @@ function addDaysIso(dateValue, days) {
   return date.toISOString();
 }
 
-function ensureDirectory(targetPath) {
-  fs.mkdirSync(targetPath, { recursive: true });
+function ensureDirectory(targetPath, fallbackPath, label) {
+  try {
+    fs.mkdirSync(targetPath, { recursive: true });
+    return targetPath;
+  } catch (error) {
+    if (fallbackPath && fallbackPath !== targetPath) {
+      console.warn(
+        `[WARNING] Unable to create ${label} at ${targetPath}. Falling back to ${fallbackPath}.`,
+        error.message
+      );
+      try {
+        fs.mkdirSync(fallbackPath, { recursive: true });
+        return fallbackPath;
+      } catch (fallbackError) {
+        error.message += `; fallback failed: ${fallbackError.message}`;
+        throw error;
+      }
+    }
+    throw error;
+  }
 }
 
 function ensureColumn(tableName, columnName, definition) {
