@@ -2568,12 +2568,9 @@ body.mobile-menu-open {
 
 @media (max-width: 640px) {
   .live-status-fab {
-    left: 8%;
-    right: 0;
-    margin: 0 auto;
-    width: min(calc(100% - 2rem), 50%);
-    min-width: 50vw;
-    max-width: 16rem;
+    left: 50%;
+    right: auto;
+    width: min(50vw, calc(100% - 2rem), 16rem);
     bottom: 3.8rem;
     padding: 0.35rem 0.5rem;
     font-size: 0.82rem;
