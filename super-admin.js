@@ -216,6 +216,22 @@
           : `<div class="detail-panel-empty">No documents available.</div>`}
       </div>
     `;
+
+    updateDecisionButtons(selected);
+  }
+
+  function getDecisionButton(decision) {
+    return decision === "approve" ? dom.decisionApprove : dom.decisionReject;
+  }
+
+  function updateDecisionButtons(selected) {
+    const disabled = !selected;
+    if (dom.decisionApprove) {
+      dom.decisionApprove.disabled = disabled;
+    }
+    if (dom.decisionReject) {
+      dom.decisionReject.disabled = disabled;
+    }
   }
 
   function renderAdminAccounts() {
@@ -314,6 +330,10 @@
       return;
     }
 
+    const actionButton = getDecisionButton(decision);
+    if (actionButton) {
+      actionButton.disabled = true;
+    }
     dom.decisionFeedback.textContent = "";
 
     try {
@@ -332,6 +352,9 @@
       await loadDashboard();
     } catch (error) {
       dom.decisionFeedback.textContent = error.message;
+      if (actionButton) {
+        actionButton.disabled = false;
+      }
     }
   }
 

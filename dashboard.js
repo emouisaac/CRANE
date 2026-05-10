@@ -42,7 +42,7 @@
   function cacheDom() {
     const ids = [
       "site-intro", "header-brand-btn", "contact-us-link", "desktop-login-btn", "mobile-login-btn", "mobile-search-toggle",
-      "notification-btn", "sidebar-overlay", "dashboard-sidebar", "mobile-contact-us-btn", "overview-view", "user-name",
+      "notification-btn", "live-status-fab", "live-status-message", "live-status-badge", "sidebar-overlay", "dashboard-sidebar", "mobile-contact-us-btn", "overview-view", "user-name",
       "refresh-dashboard", "section-wave-canvas", "loan-balance-amount", "ticker-content", "offer-title", "offer-amount",
       "offer-rate", "offer-installment", "offer-payout", "offer-message", "apply-offer-btn", "stat-approved", "stat-approval",
       "stat-repeat", "snapshot-title", "snapshot-message", "snapshot-badge", "snapshot-active-loans", "snapshot-outstanding-balance",
@@ -185,16 +185,15 @@
     });
 
     dom.notificationBtn?.addEventListener("click", async () => {
-      dom.notificationPanel?.classList.add("active");
-      if (state.bootstrap?.auth?.loggedIn) {
-        try {
-          await shared.request("/api/borrower/notifications/read", { method: "POST" });
-        } catch (error) {
-          console.warn(error);
-        }
-      }
+      await openNotificationsPanel();
     });
-    dom.closeNotifications?.addEventListener("click", () => dom.notificationPanel?.classList.remove("active"));
+    dom.liveStatusFab?.addEventListener("click", async () => {
+      await openNotificationsPanel();
+    });
+    dom.closeNotifications?.addEventListener("click", () => {
+      dom.notificationPanel?.classList.remove("active");
+      dom.notificationPanel?.classList.remove("open");
+    });
 
     dom.footerChatBtn?.addEventListener("click", () => dom.chatContainer?.classList.add("active"));
     dom.chatCloseBtn?.addEventListener("click", () => dom.chatContainer?.classList.remove("active"));
@@ -780,6 +779,54 @@
           </article>
         `).join("")
       : `<div class="panel-empty-state">No notifications yet. New account alerts will appear here.</div>`;
+
+    renderLiveStatusButton(notifications);
+  }
+
+  function renderLiveStatusButton(notifications = []) {
+    const isLoggedIn = Boolean(state.bootstrap?.auth?.loggedIn);
+    const unread = notifications.filter((item) => !item.isRead);
+    const latest = unread[0] || notifications[0] || null;
+    let message;
+
+    if (!isLoggedIn) {
+      message = "Sign in to receive live loan status updates.";
+    } else if (!latest) {
+      message = "No live loan updates yet.";
+    } else {
+      const statusText = latest.title.toLowerCase().includes("application update")
+        ? latest.message
+        : `${latest.title}: ${latest.message}`;
+      message = statusText;
+    }
+
+    const truncated = String(message).length > 52 ? `${String(message).slice(0, 49)}…` : String(message);
+    if (dom.liveStatusMessage) {
+      dom.liveStatusMessage.textContent = truncated;
+    }
+
+    if (dom.liveStatusBadge) {
+      const count = isLoggedIn ? unread.length : 0;
+      dom.liveStatusBadge.textContent = String(count);
+      dom.liveStatusBadge.style.display = count > 0 ? "flex" : "none";
+    }
+
+    if (dom.liveStatusFab) {
+      dom.liveStatusFab.classList.toggle("has-unread", unread.length > 0);
+    }
+  }
+
+  async function openNotificationsPanel() {
+    dom.notificationPanel?.classList.add("active");
+    dom.notificationPanel?.classList.add("open");
+    if (state.bootstrap?.auth?.loggedIn) {
+      try {
+        await shared.request("/api/borrower/notifications/read", { method: "POST" });
+        await refreshDashboard({ quiet: true });
+      } catch (error) {
+        console.warn(error);
+      }
+    }
   }
 
   function renderProfile() {

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="crane-api-base" content="">
+  <meta name="crane-api-base" content="http://127.0.0.1:3000">
   <title>Crane Credit | Loan Dashboard</title>
   <meta name="description" content="Professional loan management dashboard with real-time tracking, AI insights, and seamless repayment">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -958,6 +958,15 @@
         <div class="panel-empty-state">No notifications yet. New account alerts will appear here.</div>
       </div>
     </div>
+
+    <button type="button" class="live-status-fab" id="live-status-fab" aria-label="Live loan status updates" aria-live="polite">
+      <span class="live-status-indicator">
+        <span class="live-dot"></span>
+        LIVE
+      </span>
+      <span class="live-status-title" id="live-status-message">Checking your loan application status…</span>
+      <span class="live-status-badge" id="live-status-badge" style="display:none;">0</span>
+    </button>
 
     <div class="modal" id="payment-modal">
       <div class="modal-content">

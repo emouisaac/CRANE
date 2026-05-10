@@ -2486,8 +2486,99 @@ body.mobile-menu-open {
   transition: right var(--transition-normal);
 }
 
-.notification-panel.open {
+.notification-panel.open,
+.notification-panel.active {
   right: 0;
+}
+
+.live-status-fab {
+  position: fixed;
+  left: 1rem;
+  bottom: 6.5rem;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 280px;
+  max-width: min(94vw, 360px);
+  padding: 0.95rem 1rem;
+  background: linear-gradient(135deg, rgba(13, 139, 99, 0.95), rgba(20, 96, 67, 0.92));
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+  box-shadow: 0 18px 38px rgba(0, 0, 0, 0.18);
+  font-size: 0.88rem;
+  line-height: 1.3;
+  z-index: 1200;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.live-status-fab:hover,
+.live-status-fab:focus-visible {
+  transform: translateY(-2px);
+  box-shadow: 0 22px 46px rgba(0, 0, 0, 0.24);
+}
+
+.live-status-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.2rem 0.5rem;
+  background: rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.live-dot {
+  width: 0.65rem;
+  height: 0.65rem;
+  border-radius: 50%;
+  background: #ff5b5b;
+  box-shadow: 0 0 0 6px rgba(255, 91, 91, 0.12);
+}
+
+.live-status-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.live-status-badge {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.65rem;
+  min-height: 1.65rem;
+  padding: 0 0.5rem;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #0f4a2f;
+  font-weight: 700;
+  font-size: 0.75rem;
+}
+
+.live-status-fab.has-unread {
+  background: linear-gradient(135deg, rgba(20, 137, 87, 0.97), rgba(15, 84, 55, 0.94));
+}
+
+@media (max-width: 640px) {
+  .live-status-fab {
+    left: 0.75rem;
+    right: 0.75rem;
+    width: auto;
+    min-width: auto;
+    bottom: 6.25rem;
+    grid-template-columns: 1fr auto;
+  }
+
+  .live-status-badge {
+    margin-left: 0.5rem;
+  }
 }
 
 .panel-header {

@@ -184,6 +184,7 @@
 
     if (!selected) {
       dom.adminApplicationDetail.innerHTML = `<div class="detail-panel-empty">Select an application to view borrower details, documents, and review actions.</div>`;
+      updateReviewActionButtons(null);
       return;
     }
 
@@ -228,6 +229,40 @@
         </div>
       </div>
     `;
+
+    updateReviewActionButtons(selected);
+  }
+
+  function getReviewActionButton(status) {
+    switch (status) {
+      case "under_review":
+        return dom.actionUnderReview;
+      case "needs_documents":
+        return dom.actionNeedsDocs;
+      case "awaiting_super_admin":
+        return dom.actionSendSuper;
+      case "rejected_by_admin":
+        return dom.actionReject;
+      default:
+        return null;
+    }
+  }
+
+  function updateReviewActionButtons(selected) {
+    const status = selected?.status || "";
+    const buttons = [
+      { button: dom.actionUnderReview, disableWhen: status === "under_review" },
+      { button: dom.actionNeedsDocs, disableWhen: status === "needs_documents" },
+      { button: dom.actionSendSuper, disableWhen: status === "awaiting_super_admin" },
+      { button: dom.actionReject, disableWhen: status === "rejected_by_admin" }
+    ];
+
+    buttons.forEach(({ button, disableWhen }) => {
+      if (!button) {
+        return;
+      }
+      button.disabled = !selected || disableWhen;
+    });
   }
 
   function renderBorrowers() {
@@ -355,7 +390,11 @@
       return;
     }
 
+    const actionButton = getReviewActionButton(status);
     dom.reviewFeedback.textContent = "";
+    if (actionButton) {
+      actionButton.disabled = true;
+    }
 
     try {
       await api(`/api/admin/applications/${applicationId}/review`, {
@@ -373,6 +412,9 @@
       await loadDashboard();
     } catch (error) {
       dom.reviewFeedback.textContent = error.message;
+      if (actionButton) {
+        actionButton.disabled = false;
+      }
     }
   }
 
