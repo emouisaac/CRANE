@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="crane-api-base" content="">
+  <title>Crane Credit | User Login</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+  <link rel="icon" href="img/Crane Credit.png" type="image/png">
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body.login-page {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Manrope', sans-serif;
+    }
+
+    .login-container {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+      width: 100%;
+      max-width: 420px;
+      padding: 40px;
+      animation: slideUp 0.4s ease-out;
+    }
+
+    @keyframes slideUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .login-header {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+
+    .login-header img {
+      width: 60px;
+      height: 60px;
+      margin-bottom: 15px;
+    }
+
+    .login-header h1 {
+      font-size: 24px;
+      color: #1a1a1a;
+      margin: 0 0 10px 0;
+    }
+
+    .login-header p {
+      color: #666;
+      font-size: 14px;
+      margin: 0;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 8px;
+      color: #333;
+      font-weight: 500;
+      font-size: 14px;
+    }
+
+    .form-group input {
+      width: 100%;
+      padding: 12px 15px;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      font-size: 14px;
+      font-family: 'Manrope', sans-serif;
+      transition: all 0.3s ease;
+    }
+
+    .form-group input:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+
+    .password-strength {
+      height: 4px;
+      background: #f0f0f0;
+      border-radius: 2px;
+      margin-top: 8px;
+      overflow: hidden;
+    }
+
+    .password-strength-bar {
+      height: 100%;
+      width: 0%;
+      background: #667eea;
+      transition: all 0.3s ease;
+    }
+
+    .password-strength-bar.weak {
+      width: 25%;
+      background: #ff6b6b;
+    }
+
+    .password-strength-bar.fair {
+      width: 50%;
+      background: #ffa500;
+    }
+
+    .password-strength-bar.good {
+      width: 75%;
+      background: #4ecdc4;
+    }
+
+    .password-strength-bar.strong {
+      width: 100%;
+      background: #2ecc71;
+    }
+
+    .btn-login {
+      width: 100%;
+      padding: 12px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      margin-top: 10px;
+    }
+
+    .btn-login:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+    }
+
+    .btn-login:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .login-footer {
+      text-align: center;
+      margin-top: 20px;
+      padding-top: 20px;
+      border-top: 1px solid #f0f0f0;
+    }
+
+    .login-footer p {
+      color: #666;
+      font-size: 14px;
+      margin: 0;
+    }
+
+    .login-footer a {
+      color: #667eea;
+      text-decoration: none;
+      font-weight: 600;
+      transition: color 0.3s ease;
+    }
+
+    .login-footer a:hover {
+      color: #764ba2;
+    }
+
+    .admin-links {
+      text-align: center;
+      margin-top: 20px;
+      padding-top: 20px;
+      border-top: 1px solid #f0f0f0;
+    }
+
+    .admin-links p {
+      color: #999;
+      font-size: 12px;
+      margin: 0 0 10px 0;
+    }
+
+    .admin-links a {
+      display: inline-block;
+      margin: 0 10px;
+      padding: 8px 12px;
+      background: #f5f5f5;
+      color: #667eea;
+      text-decoration: none;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      transition: all 0.3s ease;
+    }
+
+    .admin-links a:hover {
+      background: #667eea;
+      color: white;
+    }
+
+    .error-message {
+      background: #ffe0e0;
+      color: #d32f2f;
+      padding: 12px;
+      border-radius: 6px;
+      margin-bottom: 20px;
+      display: none;
+      font-size: 14px;
+    }
+
+    .error-message.show {
+      display: block;
+    }
+
+    .loading {
+      opacity: 0.6;
+      pointer-events: none;
+    }
+
+    @media (max-width: 520px) {
+      body.login-page {
+        padding: 16px;
+      }
+
+      .login-container {
+        padding: 28px 20px;
+        border-radius: 20px;
+      }
+
+      .admin-links a {
+        display: block;
+        margin: 8px 0 0;
+      }
+    }
+  </style>
+</head>
+<body class="login-page">
+  <div class="login-container">
+    <div class="login-header">
+      <img src="img/black crane.png" alt="Crane Credit">
+      <h1>Crane Credit</h1>
+      <p>Loan Application Portal</p>
+    </div>
+
+    <form id="login-form">
+      <div class="error-message" id="error-message"></div>
+
+      <div class="form-group">
+        <label for="email">Email Address</label>
+        <input type="email" id="email" name="email" placeholder="your@email.com" required>
+      </div>
+
+      <div class="form-group">
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password" placeholder="Enter your password" required>
+        <div class="password-strength">
+          <div class="password-strength-bar"></div>
+        </div>
+      </div>
+
+      <button type="submit" class="btn-login" id="login-btn">Login</button>
+    </form>
+
+    <div class="login-footer">
+      <p>Don't have an account? <a href="index.html">Create your account on the main portal</a></p>
+    </div>
+
+    <div class="admin-links">
+      <p>Are you an admin?</p>
+      <a href="admin-login.html">Admin Login</a>
+      <a href="super-admin-login.html">Super Admin</a>
+    </div>
+  </div>
+
+  <script src="frontend/js/api-client.js"></script>
+  <script src="frontend/js/auth-manager.js"></script>
+  <script src="frontend/js/utils/form-validator.js"></script>
+  <script src="frontend/js/utils/notifications.js"></script>
+  <script src="frontend/js/pages/login-page.js"></script>
+</body>
+</html>

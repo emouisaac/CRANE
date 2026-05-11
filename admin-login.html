@@ -13,133 +13,52 @@
   <link rel="stylesheet" href="dashboard.css">
   <link rel="stylesheet" href="admin-suite.css">
 </head>
-<body class="portal-page intro-complete">
-  <div class="page-glow page-glow-left"></div>
-  <div class="page-glow page-glow-right"></div>
-
-  <div class="app-shell portal-login-shell">
-    <header class="dashboard-header">
-      <button type="button" class="header-brand" id="admin-login-brand-btn" aria-label="Go to home">
-        <div class="logo-icon"><img src="img/black crane.png" alt=""></div>
-        <span>Crane Credit</span>
-      </button>
-      <nav class="header-nav">
-        <a href="index.html" class="nav-link">Home</a>
-        <a href="index.html" class="nav-link">Borrower</a>
-        <a href="terms.html" class="nav-link">Terms</a>
-        <a href="privacy.html" class="nav-link">Privacy</a>
-        <a href="admin-login.html" class="nav-link active">Admin Login</a>
-      </nav>
-      <div class="header-actions">
-        <button type="button" class="mobile-search-btn" id="admin-login-home-btn" aria-label="Go to borrower home">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M3 10.5 12 3l9 7.5"></path>
-            <path d="M5 9.5V21h14V9.5"></path>
-          </svg>
+<body class="portal-page unified-login-page">
+  <div class="unified-login-shell">
+    <main class="unified-login-card">
+      <div class="unified-login-header">
+        <button type="button" class="unified-login-brand" id="admin-login-brand-btn" aria-label="Go to home">
+          <div class="logo-icon"><img src="img/black crane.png" alt="Crane Credit"></div>
+          <span class="unified-login-brand-text">Crane Credit</span>
         </button>
-        <button type="button" class="icon-btn" id="admin-login-support-btn" aria-label="Open terms and privacy">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="9"></circle>
-            <path d="M9.09 9a3 3 0 0 1 5.82 1c0 2-3 3-3 3"></path>
-            <path d="M12 17h.01"></path>
-          </svg>
-        </button>
+        <div class="unified-login-meta">
+          <span class="unified-login-pill">Operations Workspace</span>
+          <span class="unified-login-pill is-accent">Responsive Login</span>
+        </div>
+        <h1>Admin Login</h1>
+        <p>Sign in to review borrower applications, manage support threads, and prepare verified requests for super admin approval.</p>
       </div>
-    </header>
 
-    <main class="portal-login-main">
-      <section class="portal-login-hero">
-        <span class="portal-kicker">Operations workspace</span>
-        <h1>Review borrower requests with live control over the public dashboard.</h1>
-        <p>Admin accounts are issued by the super admin only. Once signed in, you can inspect application documents, monitor borrower activity, reply to support threads, and escalate ready loans for final approval.</p>
-        <div class="portal-login-points">
-          <article class="portal-login-point">
-            <div class="badge info">01</div>
-            <div>
-              <strong>Verify documents clearly</strong>
-              <div class="muted-copy">Inspect every uploaded identity, income, and selfie document from the same pipeline borrowers use.</div>
-            </div>
-          </article>
-          <article class="portal-login-point">
-            <div class="badge success">02</div>
-            <div>
-              <strong>Escalate ready loans</strong>
-              <div class="muted-copy">Send strong applications to the super admin with recommended amounts, rates, and notes.</div>
-            </div>
-          </article>
-          <article class="portal-login-point">
-            <div class="badge warning">03</div>
-            <div>
-              <strong>Keep support in sync</strong>
-              <div class="muted-copy">Reply to borrower conversations and watch updates flow across panels in real time.</div>
-            </div>
-          </article>
-        </div>
-      </section>
+      <div class="unified-login-actions">
+        <button type="button" class="unified-login-quick-btn" id="admin-login-home-btn">Borrower Home</button>
+        <button type="button" class="unified-login-quick-btn" id="admin-login-support-btn">Terms & Privacy</button>
+      </div>
 
-      <section class="portal-login-form-card">
-        <div class="portal-section-title">
-          <div>
-            <h2>Admin sign in</h2>
-            <p class="muted-copy">Use the credentials created for you by the super admin.</p>
-          </div>
+      <form id="admin-login-form" class="portal-form">
+        <div class="portal-field">
+          <label for="admin-username">Username</label>
+          <input id="admin-username" class="portal-input" type="text" placeholder="e.g. operations_kampala" required>
         </div>
-        <form id="admin-login-form" class="portal-form">
-          <div class="portal-field">
-            <label for="admin-username">Username</label>
-            <input id="admin-username" class="portal-input" type="text" placeholder="e.g. operations_kampala" required>
-          </div>
-          <div class="portal-field">
-            <label for="admin-pin">6-digit PIN</label>
-            <input id="admin-pin" class="portal-input" type="password" inputmode="numeric" maxlength="6" placeholder="Enter your PIN" required>
-          </div>
-          <div id="admin-login-error" class="portal-error"></div>
-          <button type="submit" class="portal-submit">Enter Admin Workspace</button>
-        </form>
-        <p class="portal-copy">If you do not yet have an admin account, request one from the Crane super admin team.</p>
-      </section>
+        <div class="portal-field">
+          <label for="admin-pin">6-digit PIN</label>
+          <input id="admin-pin" class="portal-input" type="password" inputmode="numeric" maxlength="6" placeholder="Enter your PIN" required>
+        </div>
+        <div id="admin-login-error" class="portal-error"></div>
+        <button type="submit" class="portal-submit">Enter Admin Workspace</button>
+      </form>
+
+      <p class="unified-login-note">If you do not yet have an admin account, request one from the Crane super admin team.</p>
+
+      <div class="unified-login-footer">
+        <p>Need another page?</p>
+        <div class="unified-login-footer-links">
+          <a href="index.html">Borrower Home</a>
+          <a href="terms.html">Terms</a>
+          <a href="privacy.html">Privacy</a>
+          <a href="super-admin-login.html">Super Admin</a>
+        </div>
+      </div>
     </main>
-
-    <footer class="footer-card portal-footer">
-      <div class="footer-grid">
-        <a href="index.html" class="footer-box portal-footer-btn" aria-label="Home">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-            <path d="M3 10.5 12 3l9 7.5"></path>
-            <path d="M5 9.5V21h14V9.5"></path>
-          </svg>
-          <span class="footer-label">Home</span>
-        </a>
-        <a href="terms.html" class="footer-box portal-footer-btn" aria-label="Terms">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-            <path d="M14 3h5a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-5"></path>
-            <path d="M9 17l-5-5 5-5"></path>
-            <path d="M4 12h12"></path>
-          </svg>
-          <span class="footer-label">Terms</span>
-        </a>
-        <a href="privacy.html" class="footer-box portal-footer-btn" aria-label="Privacy">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
-          </svg>
-          <span class="footer-label">Privacy</span>
-        </a>
-        <a href="index.html" class="footer-box portal-footer-btn" aria-label="Borrower dashboard">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-            <rect x="2" y="6" width="20" height="12" rx="2"></rect>
-            <circle cx="12" cy="12" r="2.5"></circle>
-            <path d="M6 12h.01M18 12h.01"></path>
-          </svg>
-          <span class="footer-label">Borrower</span>
-        </a>
-        <a href="admin-login.html" class="footer-box portal-footer-btn active" aria-label="Admin login">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-            <circle cx="12" cy="8" r="4"></circle>
-            <path d="M4 21a8 8 0 0 1 16 0"></path>
-          </svg>
-          <span class="footer-label">Admin</span>
-        </a>
-      </div>
-    </footer>
   </div>
 
   <script src="shared-state.js?v=20260509c"></script>

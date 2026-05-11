@@ -23,7 +23,7 @@
       "admin-name-display", "metric-pending", "metric-review", "metric-awaiting", "metric-borrowers", "metric-support",
       "overview-application-feed", "overview-notification-feed", "overview-activity-feed", "admin-application-list",
       "admin-application-detail", "review-amount", "review-rate", "review-installment", "review-payout", "review-note",
-      "review-feedback", "action-under-review", "action-needs-docs", "action-send-super", "action-reject", "borrower-list",
+      "review-feedback", "action-under-review", "action-needs-docs", "action-send-super", "action-reject", "action-reminder", "borrower-list",
       "borrower-detail", "support-thread-list", "support-thread-title", "support-thread-subtitle", "support-message-list",
       "support-reply-form", "support-reply-input", "support-feedback", "admin-logout-btn", "admin-header-brand-btn",
       "admin-quick-view-btn", "admin-notification-btn", "admin-notification-badge", "admin-notification-panel",
@@ -54,6 +54,7 @@
     dom.actionNeedsDocs?.addEventListener("click", () => submitReview("needs_documents"));
     dom.actionSendSuper?.addEventListener("click", () => submitReview("awaiting_super_admin"));
     dom.actionReject?.addEventListener("click", () => submitReview("rejected_by_admin"));
+    dom.actionReminder?.addEventListener("click", sendRepaymentReminder);
     dom.supportReplyForm?.addEventListener("submit", submitSupportReply);
     dom.adminLogoutBtn?.addEventListener("click", logout);
     dom.adminHeaderBrandBtn?.addEventListener("click", () => setView("overview"));
@@ -184,7 +185,7 @@
 
     if (!selected) {
       dom.adminApplicationDetail.innerHTML = `<div class="detail-panel-empty">Select an application to view borrower details, documents, and review actions.</div>`;
-      updateReviewActionButtons(null);
+      updateReviewFormState(null);
       return;
     }
 
@@ -230,7 +231,7 @@
       </div>
     `;
 
-    updateReviewActionButtons(selected);
+    updateReviewFormState(selected);
   }
 
   function getReviewActionButton(status) {
@@ -248,20 +249,35 @@
     }
   }
 
-  function updateReviewActionButtons(selected) {
+  function updateReviewFormState(selected) {
     const status = selected?.status || "";
+    const isMutableReview = ["submitted", "under_review", "needs_documents"].includes(status);
+    const reviewFields = [
+      dom.reviewAmount,
+      dom.reviewRate,
+      dom.reviewInstallment,
+      dom.reviewPayout,
+      dom.reviewNote
+    ];
+    reviewFields.forEach((field) => {
+      if (field) {
+        field.disabled = !selected || !isMutableReview;
+      }
+    });
+
     const buttons = [
-      { button: dom.actionUnderReview, disableWhen: status === "under_review" },
-      { button: dom.actionNeedsDocs, disableWhen: status === "needs_documents" },
-      { button: dom.actionSendSuper, disableWhen: status === "awaiting_super_admin" },
-      { button: dom.actionReject, disableWhen: status === "rejected_by_admin" }
+      { button: dom.actionUnderReview, disabled: !selected || !isMutableReview || status === "under_review" },
+      { button: dom.actionNeedsDocs, disabled: !selected || !isMutableReview || status === "needs_documents" },
+      { button: dom.actionSendSuper, disabled: !selected || !isMutableReview },
+      { button: dom.actionReject, disabled: !selected || !isMutableReview },
+      { button: dom.actionReminder, disabled: !selected || status !== "approved" }
     ];
 
-    buttons.forEach(({ button, disableWhen }) => {
+    buttons.forEach(({ button, disabled }) => {
       if (!button) {
         return;
       }
-      button.disabled = !selected || disableWhen;
+      button.disabled = disabled;
     });
   }
 
@@ -415,6 +431,27 @@
       if (actionButton) {
         actionButton.disabled = false;
       }
+    }
+  }
+
+  async function sendRepaymentReminder() {
+    const applicationId = state.selectedApplicationId;
+    if (!applicationId || !dom.actionReminder) {
+      return;
+    }
+
+    dom.reviewFeedback.textContent = "";
+    dom.actionReminder.disabled = true;
+
+    try {
+      await api(`/api/admin/applications/${applicationId}/reminder`, {
+        method: "POST"
+      });
+      dom.reviewFeedback.textContent = `Repayment reminder sent for ${applicationId}.`;
+      await loadDashboard();
+    } catch (error) {
+      dom.reviewFeedback.textContent = error.message;
+      dom.actionReminder.disabled = false;
     }
   }
 

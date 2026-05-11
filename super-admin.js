@@ -182,7 +182,9 @@
     });
 
     if (!selected) {
+      state.selectedApplicationId = null;
       dom.decisionApplicationDetail.innerHTML = `<div class="detail-panel-empty">Select a queued application to review admin recommendations and uploaded documents.</div>`;
+      updateDecisionFormState(null);
       return;
     }
 
@@ -217,15 +219,27 @@
       </div>
     `;
 
-    updateDecisionButtons(selected);
+    updateDecisionFormState(selected);
   }
 
   function getDecisionButton(decision) {
     return decision === "approve" ? dom.decisionApprove : dom.decisionReject;
   }
 
-  function updateDecisionButtons(selected) {
-    const disabled = !selected;
+  function updateDecisionFormState(selected) {
+    const disabled = !selected || selected.status !== "awaiting_super_admin";
+    [
+      dom.decisionAmount,
+      dom.decisionRate,
+      dom.decisionInstallment,
+      dom.decisionTerm,
+      dom.decisionNote
+    ].forEach((field) => {
+      if (field) {
+        field.disabled = disabled;
+      }
+    });
+
     if (dom.decisionApprove) {
       dom.decisionApprove.disabled = disabled;
     }

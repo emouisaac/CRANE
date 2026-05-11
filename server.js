@@ -541,6 +541,15 @@ async function handleApiRequest(req, res, url, pathname) {
     return;
   }
 
+  if (pathname.startsWith("/api/admin/applications/") && pathname.endsWith("/reminder") && req.method === "POST") {
+    const session = requireSession(req, "admin");
+    const applicationId = pathname.split("/")[4];
+    sendRepaymentReminderByAdmin(session, applicationId);
+    broadcastRoleRefresh(["borrower", "admin"]);
+    sendJson(res, 200, { ok: true });
+    return;
+  }
+
   if (pathname.startsWith("/api/admin/borrowers/") && pathname.endsWith("/pin") && req.method === "PATCH") {
     const session = requireSession(req, "admin");
     const borrowerId = pathname.split("/")[4];
@@ -1181,6 +1190,18 @@ function reviewApplicationByAdmin(session, applicationId, body) {
     throw createHttpError(404, "Loan application not found.");
   }
 
+  if (application.status === "awaiting_super_admin") {
+    throw createHttpError(409, "This application has already been sent to super admin and is locked for admin actions.");
+  }
+
+  if (application.status === "approved") {
+    throw createHttpError(409, "This application has already been approved and can no longer be changed.");
+  }
+
+  if (application.status === "rejected_by_admin" || application.status === "rejected_by_super_admin") {
+    throw createHttpError(409, "This application has already been rejected and can no longer be changed.");
+  }
+
   const status = String(body.status || "");
   const allowed = new Set(["under_review", "needs_documents", "rejected_by_admin", "awaiting_super_admin"]);
   if (!allowed.has(status)) {
@@ -1197,7 +1218,7 @@ function reviewApplicationByAdmin(session, applicationId, body) {
   db.prepare(`
     UPDATE loan_applications
     SET status = ?, admin_stage = ?, admin_note = ?, recommended_amount = ?, recommended_rate = ?,
-        recommended_installment = ?, payout_eta = ?, admin_id = ?, updated_at = ?
+        recommended_installment = ?, payout_eta = ?, admin_id = ?, rejected_at = ?, updated_at = ?
     WHERE id = ?
   `).run(
     status,
@@ -1208,6 +1229,7 @@ function reviewApplicationByAdmin(session, applicationId, body) {
     installment,
     payoutEta,
     Number(session.actorId),
+    status === "rejected_by_admin" ? now : null,
     now,
     applicationId
   );
@@ -1226,6 +1248,36 @@ function reviewApplicationByAdmin(session, applicationId, body) {
     installment
   });
   ensureScoreSnapshot(application.borrower_id);
+}
+
+function sendRepaymentReminderByAdmin(session, applicationId) {
+  const application = db.prepare("SELECT * FROM loan_applications WHERE id = ?").get(applicationId);
+  if (!application) {
+    throw createHttpError(404, "Loan application not found.");
+  }
+
+  if (application.status !== "approved") {
+    throw createHttpError(409, "Repayment reminders are only available after a loan has been approved.");
+  }
+
+  const loan = db.prepare("SELECT * FROM loans WHERE application_id = ?").get(applicationId);
+  if (!loan) {
+    throw createHttpError(404, "Approved loan record not found for this application.");
+  }
+
+  if (loan.status !== "active") {
+    throw createHttpError(409, "Repayment reminders can only be sent for active approved loans.");
+  }
+
+  const dueDate = formatDisplayDate(loan.next_due_date);
+  const message = `Friendly reminder: your loan ${loan.id} payment is due by ${dueDate}. Please pay on time to keep your account in good standing.`;
+
+  createNotification("borrower", String(application.borrower_id), "Repayment reminder", message, "warning");
+  addSupportMessage(application.borrower_id, "admin", String(session.actorId), message);
+  logActivity("admin", session.actorId, session.actorName, "sent repayment reminder", "loan_application", applicationId, {
+    loanId: loan.id,
+    dueDate: loan.next_due_date
+  });
 }
 
 function createAdmin(session, body) {
@@ -1343,6 +1395,18 @@ function decideApplicationBySuperAdmin(session, applicationId, body) {
   const application = db.prepare("SELECT * FROM loan_applications WHERE id = ?").get(applicationId);
   if (!application) {
     throw createHttpError(404, "Loan application not found.");
+  }
+
+  if (application.status === "approved") {
+    throw createHttpError(409, "This application has already been approved and can no longer be changed.");
+  }
+
+  if (application.status === "rejected_by_admin" || application.status === "rejected_by_super_admin") {
+    throw createHttpError(409, "This application has already been rejected and can no longer be changed.");
+  }
+
+  if (application.status !== "awaiting_super_admin") {
+    throw createHttpError(409, "This application is not currently waiting for super admin approval.");
   }
 
   const decision = String(body.decision || "");
@@ -2418,6 +2482,18 @@ function formatCurrency(value) {
     currency: "UGX",
     maximumFractionDigits: 0
   }).format(Number(value || 0));
+}
+
+function formatDisplayDate(value) {
+  if (!value) {
+    return "the scheduled due date";
+  }
+
+  return new Intl.DateTimeFormat("en-UG", {
+    day: "numeric",
+    month: "short",
+    year: "numeric"
+  }).format(new Date(value));
 }
 
 function createHttpError(status, message) {
